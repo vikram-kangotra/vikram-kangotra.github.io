@@ -5,7 +5,6 @@ class Cubie {
     }
 
     show() {
-        fill(255);
         stroke(0);
         strokeWeight(8);
         push();
