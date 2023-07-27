@@ -10,7 +10,7 @@ export default function InterestCard({heading, subheading, imageSrc, className})
                 <h1 className={`font-bold text-3xl ${syne.className}`}>{heading}</h1>
                 <h2 className='text-base font-medium leading-tight text-left opacity-70'>{subheading}</h2>
             </div>
-            <Image className='object-cover overflow-hidden rounded-lg grayscale' src={imageSrc} alt={heading} />
+            <Image className='object-cover overflow-hidden rounded-lg' src={imageSrc} alt={heading} />
         </div>
     )
 }
