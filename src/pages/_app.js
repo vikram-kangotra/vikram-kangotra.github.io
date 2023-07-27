@@ -38,11 +38,6 @@ export default function App({ Component, pageProps }) {
 
   return (
       <div ref={vantaRef}>
-          <Head>
-            <title>Vikram Kangotra</title>
-            <meta name="description" content="Vikram Kangotra's personal website" />
-            <meta name="google-site-verification" content="nWHT--ANnA0sf0jq0z-R3ou6RtZRUAQD0H0goY5Hvck" />
-          </Head>
           <Component {...pageProps} />
           <Footer />
       </div>
