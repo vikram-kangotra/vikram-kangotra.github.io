@@ -10,7 +10,8 @@ export default function Introduction() {
                 <div className="pt-6 my-auto text-center space-y-4">
                     <div>
                         <p className="mb-3 text-xl font-semibold tracking-wide text-gray-700 md:text-3xl dark:text-gray-200">
-                            Greetings, tech adventurer! <br/>Welcome to my domain where coding and Linux collide.</p>
+                            Greetings, fellow tech explorer!<br/>
+Step into my realm, where the worlds of coding and Linux converge in captivating harmony.</p>
                         <p className="py-3 italic font-medium tracking-wide text-md md:text-lg opacity-90">
                             I&apos;m a software developer fueled by a love for coding and Linux. 
                             <br/>Every now and then I <del className="px-1 text-white line-through bg-red-600 dark:bg-red-600"> break</del> <ins className="px-1 text-white bg-blue-800 dark:bg-blue-600"> tinker</ins> my linux machine. <br/> Sharing experiences and insights through writing.

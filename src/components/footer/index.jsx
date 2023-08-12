@@ -17,7 +17,7 @@ export default function Footer() {
                     </ul>
                 </div>
                 <div className="overflow-hidden text-sm font-medium text-center opacity-50 md:text-base">
-                    &copy; {new Date().getFullYear()} VICIverse by Vikram Kangotra. All rights reserved.
+                    &copy; {new Date().getFullYear()} Site by Vikram Kangotra. All rights reserved.
                 </div>
             </div>
         </footer>

@@ -18,7 +18,7 @@ export default function Hero() {
         <div className="flex flex-col items-center justify-center px-5">
           <h1 className={`z-10 text-4xl font-bold text-center md:text-6xl text-tertiary leading-12 ${syne.className}`}>Code. Passion. Linux.</h1>
           <p className="max-w-xl my-5 text-sm text-center opacity-90 md:text-lg text-tertiary leading-7">
-            Welcome to the VICIverse, the virtual hub of Vikram Kangotra – a software developer who codes with passion and adores everything Linux and open-source. Prepare to be amazed by a fantastic blend of projects, blogs, and insights into the thrilling realm of software development.
+Discover the captivating universe of Vikram Kangotra, a passionate programming enthusiast on a continuous learning odyssey. Explore intricate code creations driven by Linux and open-source harmony, unveiling a symphony of unity. Immerse yourself in innovative projects, enlightening insights, and the evolving artistry of software development. Join me on this thrilling tech journey, crafting our digital masterpiece together, keystroke by keystroke.
           </p>
             <div className="flex flex-col justify-center md:flex-row gap-3">
               <HeroButton link="projects" bgColor="slate-800" textColor="tertiary">View Projects</HeroButton>
