@@ -6,7 +6,7 @@ const syne = Syne({ subsets: ['latin'], weights: ['400', '700'] })
 export default function Introduction() {
     return (
         <div className="flex flex-col items-center justify-start p-10 overflow-hidden">
-            <div className="flex flex-col items-start content-start justify-start max-w-4xl">
+            <div className="z-10 flex flex-col items-start content-start justify-start max-w-4xl">
                 <div className="pt-6 my-auto text-center space-y-4">
                     <div>
                         <p className="mb-3 text-xl font-semibold tracking-wide text-gray-700 md:text-3xl dark:text-gray-200">

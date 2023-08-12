@@ -1,45 +1,81 @@
 import Footer from '@/components/footer'
 import '@/styles/globals.css'
-import {useEffect, useRef, useState} from 'react';
-import TOPOLOGY from 'vanta/dist/vanta.topology.min';
+import Particles from 'react-particles'
+import { loadFull } from 'tsparticles'
+
+const options = {
+    background: {
+        color: {
+            value: "#001",
+        },
+    },
+    fpsLimit: 120,
+    interactivity: {
+        events: {
+            onClick: {
+                enable: true,
+                mode: "grab",
+            },
+            onHover: {
+                enable: true,
+                mode: "grab",
+            },
+            resize: true,
+        },
+        modes: {
+            grab: {
+                distance: 200,
+                links: {
+                    opacity: 0.3,
+                },
+            },
+        },
+    },
+    particles: {
+        color: {
+            value: "#ffffff",
+        },
+        move: {
+            direction: "none",
+            enable: true,
+            outModes: {
+                default: "bounce",
+            },
+            random: false,
+            speed: 6,
+            straight: false,
+        },
+        number: {
+            density: {
+                enable: true,
+                area: 800,
+            },
+            value: 80,
+        },
+        opacity: {
+            value: 0.1,
+        },
+        shape: {
+            type: "circle",
+        },
+        size: {
+            value: { min: 1, max: 5 },
+        },
+    },
+    detectRetina: true,
+};
 
 export default function App({ Component, pageProps }) {
 
-    const vantaRef = useRef(null);
-    const [vantaEffect, setVantaEffect] = useState(0);
+    const particlesInit = async (main) => {
+        await loadFull(main);
+    }
 
-    useEffect(() => {
-
-        const THREE = require("three");
-        const p5 = require("p5");
-
-        if (!vantaEffect) {
-            setVantaEffect(
-                TOPOLOGY({
-                  el: vantaRef.current,
-                  p5: p5,
-                  THREE: THREE,
-                  mouseControls: true,
-                  touchControls: true,
-                  gyroControls: false,
-                  minHeight: 200.00,
-                  minWidth: 200.00,
-                  scale: 1.00,
-                  scaleMobile: 1.00,
-                  color: 0x5086e,
-                  backgroundColor: 0x000
-                })
-            );
-        }
-        return () => {
-            if (vantaEffect) vantaEffect.destroy()
-        }
-    }, [vantaEffect])
-
-  return (
-      <div ref={vantaRef}>
-          <Component {...pageProps} />
-          <Footer />
-      </div>
-  )
+    return (
+        <div>
+            <Particles init={particlesInit} options={options} />
+            <Component {...pageProps} />
+            <Footer />
+        </div>
+    )
 }
