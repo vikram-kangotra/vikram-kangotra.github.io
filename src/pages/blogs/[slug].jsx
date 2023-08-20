@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useEffect, useState} from "react";
 import Head from "next/head";
 import Image from "next/image";
 import rehypeCodeTitles from "rehype-code-titles";
@@ -15,6 +15,12 @@ const league_spartan = League_Spartan({ subsets: ['latin'], weights: ['400', '70
 
 export default function Blog({ post: {source, frontmatter} }) {
 
+    const [date, setDate] = useState(null);
+
+    useEffect(() => {
+        setDate(dayjs(frontmatter.publishedAt).format('MMMM D, YYYY'));
+    }, []);
+
     return (
         <React.Fragment>
             <Head>
@@ -28,7 +34,7 @@ export default function Blog({ post: {source, frontmatter} }) {
                             <div className="inline-flex items-center mr-3 text-sm text-gray-900 dark:text-white">
                                 <div>
                                     <p className="text-base font-light text-gray-500 dark:text-gray-400">
-                                      {dayjs(frontmatter.publishedAt).format('MMMM D, YYYY')} &mdash;{' '}
+                                      {date} &mdash;{' '}
                                       {frontmatter.readingTime}
                                     </p>
                                 </div>
