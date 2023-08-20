@@ -8,8 +8,8 @@ export default function Navbar() {
         <nav className="bg-[#000011] sticky top-0">
           <div className="flex flex-wrap items-center justify-between p-4 mx-auto max-w-screen-xl">
             <Link href="/" className="flex items-center">
-                <span className="self-center text-4xl font-semibold text-transparent whitespace-nowrap bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">Vikram Kang
-                <svg className="inline w-6 fill-pink-400"
+                <span className="self-center text-2xl font-semibold text-transparent md:text-4xl whitespace-nowrap bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">Vikram Kang
+                <svg className="inline w-4 md:w-6 fill-pink-400"
                     viewBox="0 0 192.000000 192.000000"
                     preserveAspectRatio="xMidYMid meet"> 
                     <g transform="translate(0.000000,192.000000) scale(0.100000,-0.100000)" stroke="none">
