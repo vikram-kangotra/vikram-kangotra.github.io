@@ -46,7 +46,7 @@ export default function Navbar() {
               <ul className="flex flex-col p-4 mt-4 font-medium border border-gray-100 border-gray-700 rounded-lg md:p-0 md:flex-row md:space-x-8 md:mt-0 md:border-0">
                 <li>
                     <button className="px-5 border border-2 rounded-full rouneded border-slate-400 hover:bg-purple-500" onClick={() => router.back() }> 
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-6 h-6">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="white" className="w-6 h-6">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M21 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.953l7.108-4.062A1.125 1.125 0 0121 8.688v8.123zM11.25 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.953L9.567 7.71a1.125 1.125 0 011.683.977v8.123z" />
                         </svg>
                     </button>

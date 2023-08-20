@@ -14,7 +14,7 @@ export default function BlogCard({blog}) {
         <Link href={`/blogs/${blog.slug}`} className="flex flex-col items-center border rounded-lg shadow md:flex-row border-quaternary bg-slate-950 group">
             <div className="flex flex-col justify-between p-4 leading-normal">
                 <h5 className="mb-2 text-lg font-semibold tracking-tight text-white text-gray-900 group-hover:text-purple-400 md:text-xl transition duration-300">{blog.title}</h5>
-                    <p className="text-base italic font-light text-gray-500 dark:text-gray-400">
+                    <p className="text-base italic font-light text-gray-400">
                       {date} &mdash;{' '}
                       {blog.readingTime}
                     </p>
