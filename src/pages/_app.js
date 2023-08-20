@@ -1,6 +1,7 @@
 import Footer from '@/components/footer'
 import Navbar from '@/components/navbar';
 import '@/styles/globals.css'
+import {useRouter} from 'next/router';
 import Particles from 'react-particles'
 import { loadFull } from 'tsparticles'
 
@@ -72,11 +73,14 @@ export default function App({ Component, pageProps }) {
         await loadFull(main);
     }
 
+    const router = useRouter();
+    const isHomePage = router.pathname == '/';
+
     return (
         <div>
             <Particles init={particlesInit} options={options} />
             <div className='relative'>
-                { Component.name !== 'Home' && (<Navbar />) }
+                { !isHomePage && (<Navbar />) }
                 <Component {...pageProps} />
             </div>
             <Footer />

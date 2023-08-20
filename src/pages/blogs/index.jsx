@@ -1,6 +1,5 @@
 import {getAllBlogs} from "@/utils/mdx"
 import { BlogCard } from "@/components/blogs"
-import dayjs from "dayjs";
 
 export default function BlogPage({blogs}) {
     return (
