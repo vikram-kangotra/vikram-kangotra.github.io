@@ -6,7 +6,7 @@ export default function Footer() {
         <footer className="relative flex flex-col items-center content-center justify-center p-10 gap-5">
             <div className="flex flex-col items-center content-center max-w-4xl gap-10">
                 <div className="flex items-center justify-center">
-                    <ul className="flex flex-wrap items-center text-sm text-gray-500 sm:mb-0 dark:text-gray-400">
+                    <ul className="flex flex-wrap items-center text-sm text-gray-500 sm:mb-0">
                     {socialMedia?.map((media, index) => (
                         <li key={index} className="mr-4 md:mr-6">
                         <Link href={media.link} aria-label={media.name}>

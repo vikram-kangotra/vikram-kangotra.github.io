@@ -1,4 +1,5 @@
 import Footer from '@/components/footer'
+import Navbar from '@/components/navbar';
 import '@/styles/globals.css'
 import Particles from 'react-particles'
 import { loadFull } from 'tsparticles'
@@ -74,7 +75,10 @@ export default function App({ Component, pageProps }) {
     return (
         <div>
             <Particles init={particlesInit} options={options} />
-            <Component {...pageProps} />
+            <div className='relative'>
+                { Component.name !== 'Home' && (<Navbar />) }
+                <Component {...pageProps} />
+            </div>
             <Footer />
         </div>
     )
