@@ -1,6 +1,5 @@
 import Blogs from "@/components/blogs";
 import Hero from "@/components/hero";
-import Interest from "@/components/interest";
 import Introduction from "@/components/introduction";
 import Projects from "@/components/projects";
 import {getAllBlogs} from "@/utils/mdx"
