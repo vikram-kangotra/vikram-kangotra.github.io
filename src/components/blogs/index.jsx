@@ -5,7 +5,7 @@ export default function Blogs({blogs}) {
     return (
         <div className="flex flex-col items-center justify-start p-10 overflow-hidden">
             <div className="flex flex-col items-start content-start justify-start max-w-4xl overflow-visible gap-5 min-h-max">
-                <p className="text-2xl font-medium text-white opacity-60">Blogs</p>
+                <p className="text-2xl font-medium text-white opacity-60">Latest Blogs</p>
                 <div className="grid grid-cols-1 gap-5">
                     {
                         blogs.reverse().slice(0,3).map((blog, index) => (
