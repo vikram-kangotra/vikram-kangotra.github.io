@@ -14,7 +14,6 @@ export default function Blogs({blogs}) {
                     }
                 </div>
                 <p className="w-full text-base text-right text-gray-500">
-                    You can&apos;t miss reading rest of the blogs.
                     <Link href="/blogs" className="inline-flex items-center font-medium text-purple-600 hover:underline">
                         Read all blogs
                         <svg className="w-4 h-4 ml-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
