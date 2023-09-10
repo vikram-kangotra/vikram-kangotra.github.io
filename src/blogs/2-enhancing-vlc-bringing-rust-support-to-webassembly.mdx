@@ -28,7 +28,18 @@ The work I did can be found in this [merge request](https://code.videolan.org/vi
 
     One crucial aspect of enabling Rust support for WebAssembly was configuring the appropriate target architecture. This was achieved by introducing the choice of `wasm32-unknown-emscripten` as the target triple for writing Rust modules in VLC.
 
-This configuration ensures that Rust generates code compatible with the WebAssembly platform, paving the way for the seamless integration of Rust modules into VLC's codebase.
+3. **Host Checking and Rust Enablement**
+
+    Although this work was not included in the commit, this step is necessary to successfully compile rust to wasm target. To enable Rust for compiling, I had to check if the host was correctly set and then enable Rust. This was done using the following code in the `configure.ac` file.
+
+    ```rust
+    AS_IF([test "$\{host_os\}" = "emscripten" -a "$\{host_cpu\}" = "wasm32"],[
+        AC_SUBST([RUST_TARGET], ["wasm32-unknown-emscripten"])
+        ],[
+        AC_MSG_WARN([no suitable rust target found (only x86_64 linux-gnu and wasm32 emscripten are supported). Your host is $\{host_os\} $\{host_cpu\}])
+        enable_rust = no
+    ])
+    ```
 
 **The Simplicity of the Task:**
 
@@ -39,4 +50,3 @@ From a technical standpoint, this task didn't require a complex thought process 
 This task, although seemingly small, reflects the collaborative and incremental nature of open-source development. Each improvement, regardless of its size, contributes to the overall growth and versatility of VLC. It also showcases the adaptability and extensibility of the VLC build system, which allows for the seamless integration of new technologies like Rust for WebAssembly.
 
 As my journey with VLC continued, I ventured into more intricate and impactful projects, each building upon the foundation laid by tasks like this one. Stay tuned for further technical insights into my contributions to VLC and the broader world of open-source development.
-
