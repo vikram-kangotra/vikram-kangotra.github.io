@@ -24,7 +24,7 @@ export default function Blog({ post: {source, frontmatter} }) {
     return (
         <React.Fragment>
             <Head>
-                <title>{frontmatter.title} | My blog</title>
+                <title>{frontmatter.title}</title>
             </Head>
             <div className="flex flex-col items-center content-center p-10 overflow-hidden flex-nowrap">
                 <div className="max-w-4xl">
