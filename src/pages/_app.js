@@ -5,6 +5,10 @@ import {useRouter} from 'next/router';
 import Particles from 'react-particles'
 import { loadFull } from 'tsparticles'
 
+import "../styles/code-theme.css";
+import "../styles/custom-code-theme.css";
+import "../styles/code-line-number.css";
+
 const options = {
     background: {
         color: {

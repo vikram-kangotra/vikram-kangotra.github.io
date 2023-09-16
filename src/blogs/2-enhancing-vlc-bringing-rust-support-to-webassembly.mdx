@@ -32,7 +32,7 @@ The work I did can be found in this [merge request](https://code.videolan.org/vi
 
     Although this work was not included in the commit, this step is necessary to successfully compile rust to wasm target. To enable Rust for compiling, I had to check if the host was correctly set and then enable Rust. This was done using the following code in the `configure.ac` file.
 
-    ```rust
+    ```bash
     AS_IF([test "$\{host_os\}" = "emscripten" -a "$\{host_cpu\}" = "wasm32"],[
         AC_SUBST([RUST_TARGET], ["wasm32-unknown-emscripten"])
         ],[

@@ -3,15 +3,24 @@ import Head from "next/head";
 import Image from "next/image";
 import rehypeCodeTitles from "rehype-code-titles";
 import rehypeHighlight from "rehype-highlight";
+import rehypePrism from "rehype-prism-plus";
 import rehypeSlug from "rehype-slug";
 import { getBlogFromSlug, getSlug } from "@/utils/mdx";
 import { serialize } from "next-mdx-remote/serialize";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import dayjs from "dayjs";
 import {MDXRemote} from "next-mdx-remote";
-import { League_Spartan } from "next/font/google";
+import localFont from "@next/font/local";
 
-const league_spartan = League_Spartan({ subsets: ['latin'], weights: ['400', '700'] })
+const noirpro = localFont({
+    src: [
+        {
+            path: '../../assets/noirpro/NoirPro-Regular.otf',
+            weight: '400',
+        },
+    ],
+    variable: '--font-niorpro',
+});
 
 export default function Blog({ post: {source, frontmatter} }) {
 
@@ -26,10 +35,10 @@ export default function Blog({ post: {source, frontmatter} }) {
             <Head>
                 <title>{frontmatter.title}</title>
             </Head>
-            <div className="flex flex-col items-center content-center p-10 overflow-hidden flex-nowrap">
+            <div className="flex flex-col p-10 md:items-center">
                 <div className="max-w-4xl">
                     <header className="mb-4 lg:mb-6 not-format">
-                        <h1 className="mb-4 text-3xl font-extrabold leading-tight text-white lg:mb-6 lg:text-4xl">{frontmatter.title}</h1>
+                        <h1 className="mb-4 text-3xl font-extrabold leading-tight text-white lg:mb-6 lg:text-4xl ${noirpro.variable}">{frontmatter.title}</h1>
                         <address className="flex items-center mb-6 not-italic">
                             <div className="inline-flex items-center mr-3 text-sm text-white">
                                 <div>
@@ -42,7 +51,7 @@ export default function Blog({ post: {source, frontmatter} }) {
                         </address>
                     </header>
 
-                    <article className={`font-sans text-white max-w-none md:prose-lg lg:prose-xl prose dark:prose-invert ${league_spartan.className}`}>
+                    <article className={`font-sans text-white max-w-none md:prose-md lg:prose-lg prose dark:prose-invert ${noirpro.variable}`}>
                       <MDXRemote {...source} components={{ Image }} />
                     </article>
                 </div>
@@ -78,7 +87,7 @@ export async function getStaticProps({params}) {
                         behavior: "wrap",
                     },
                 ],
-                rehypeHighlight,
+                rehypePrism,
                 rehypeCodeTitles,
             ],
         }
