@@ -31,7 +31,7 @@ export default function Blog({ post: {source, frontmatter} }) {
     }, []);
 
     return (
-        <React.Fragment>
+        <>
             <Head>
                 <title>{frontmatter.title}</title>
             </Head>
@@ -56,7 +56,7 @@ export default function Blog({ post: {source, frontmatter} }) {
                     </article>
                 </div>
             </div>
-        </React.Fragment>
+        </>
     )
 }
 
