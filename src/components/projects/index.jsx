@@ -10,7 +10,7 @@ export default function Projects() {
         <div className="flex flex-col items-center justify-start p-10 overflow-hidden">
             <div className="flex flex-col items-start content-start justify-start max-w-4xl overflow-visible gap-5 min-h-max">
                 <p className="text-2xl font-medium text-white opacity-60">Projects</p>
-                <div className="grid grid-cols-2 grid-rows-2 gap-2 md:gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-2 md:gap-5">
                     {
                         projects.map((project, index) => (
                             <ProjectCard key={index} href={projects[index].href} imageSrc={projects[index].imageSrc} projectName={projects[index].name} />
