@@ -11,6 +11,7 @@ import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import dayjs from "dayjs";
 import {MDXRemote} from "next-mdx-remote";
 import localFont from "@next/font/local";
+import Link from "next/link";
 
 const noirpro = localFont({
     src: [
@@ -22,7 +23,49 @@ const noirpro = localFont({
     variable: '--font-niorpro',
 });
 
-export default function Blog({ post: {source, frontmatter} }) {
+function Previous({link}) {
+
+    if (link === null) {
+        return <></>;
+    }
+
+    return (
+        <Link href={link} className="flex justify-center w-full h-20 border rounded-lg md:flex-col md:h-32 group md:text-2xl border-violet-400 border-opacity-60 md:border-opacity-0 hover:border-opacity-60 transition duration-500">
+            <div className="flex items-center justify-center">
+                <span className="md:opacity-0 group-hover:visible group-hover:opacity-80 transition duration-300 delay-200">&lt;</span>
+                <span className="md:opacity-0 group-hover:visible group-hover:opacity-90 transition duration-300 delay-100">&lt;</span>
+                <span className="md:opacity-0 group-hover:visible group-hover:opacity-100 transition duration-300">&lt;&nbsp;</span>
+                <div className="font-bold">Previous</div>
+            </div>
+            <div className="justify-center hidden text-base md:flex">
+                {link}
+            </div>
+        </Link>
+    )
+}
+
+function Next({link}) {
+
+    if (link === null) {
+        return <></>;
+    }
+
+    return (
+        <Link href={link} className="flex justify-center w-full h-20 border rounded-lg md:flex-col md:h-32 group md:text-2xl border-violet-400 border-opacity-60 md:border-opacity-0 hover:border-opacity-60 transition duration-500">
+            <div className="flex items-center justify-center">
+                <div className="font-bold">Next</div>
+                <span className="md:opacity-0 group-hover:visible group-hover:opacity-100 transition duration-300 ">&nbsp;&gt;</span>
+                <span className="md:opacity-0 group-hover:visible group-hover:opacity-90 transition duration-300 delay-100">&gt;</span>
+                <span className="md:opacity-0 group-hover:visible group-hover:opacity-80 transition duration-300 delay-200">&gt;</span>
+            </div>
+            <div className="justify-center hidden text-base md:flex">
+                {link}
+            </div>
+        </Link>
+    )
+}
+
+export default function Blog({ post: {source, frontmatter}, previous, next }) {
 
     const [date, setDate] = useState(null);
 
@@ -54,6 +97,11 @@ export default function Blog({ post: {source, frontmatter} }) {
                     <article className={`font-sans text-white max-w-none md:prose-md lg:prose-lg prose dark:prose-invert ${noirpro.variable}`}>
                       <MDXRemote {...source} components={{ Image }} />
                     </article>
+                    
+                    <div className="flex h-32 my-10 text-pink-500 gap-1">
+                        <Previous link={previous}/>
+                        <Next link={next}/>
+                    </div>
                 </div>
             </div>
         </>
@@ -93,12 +141,20 @@ export async function getStaticProps({params}) {
         }
     });
 
+    const paths = await getSlug();
+    const index = paths.findIndex((p) => p == slug);
+
+    const next = index == 0 ? null : paths[index - 1];
+    const previous = index == paths.length - 1 ? null : paths[index + 1];
+
     return {
         props: {
             post: {
                 source: mdxSource,
                 frontmatter,
-            }
+            },
+            previous,
+            next,
         }
     }
 }
