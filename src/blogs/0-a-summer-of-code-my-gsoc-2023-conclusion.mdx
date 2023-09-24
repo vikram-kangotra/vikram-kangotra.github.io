@@ -169,3 +169,103 @@ This marked a profound shift in our objectives. Our challenge was now to port VL
         at main.js:719:14
         at callMain (main.js:1539:15)
         ```
+        
+        A call to action was necessary, so I settled down and delved into the enlightening pages of "Programming Webassembly with Rust" by Kevin Hoffman. This book opened up a world of insights regarding WebAssembly, revealing that its significance extends far beyond web browsers.
+
+        Here's what I gleaned from my exploration:
+
+        * The wasm32-unknown-emscripten target lacks wasm_bindgen code generation. This issue needs attention.
+        
+        * Attempting to use --post-js to incorporate JS code from wasm-bindgen becomes problematic, as both emscripten and wasm-bindgen JS code invoke their own WebAssembly.instantiate() functions.
+        
+        * Creating a library file from Rust code with the wasm32-unknown-unknown target and linking it with C++ code using emcc works seamlessly, provided that wasm_bindgen's exported functions remain untouched.
+        
+        * My solution: Generate a Rust library file without the JS glue code, link it to a C++ file, and then use emcc for wasm compilation once wasm-bindgen supports emscripten targets.
+        
+        * It's crucial to enable emscripten target support in wasm-bindgen.
+        
+        After extensive experimentation, I arrived at this solution: [link to solution](https://github.com/vikram-kangotra/wasm-web-test/tree/main). 
+        
+        However, a lingering issue remained at the forefront: the inability to call JavaScript functions from the main thread. This predicament called for a solution of its own.
+
+        ### Streamlining the Process
+        
+        In search of a comprehensive solution to my challenges, I contemplated harnessing Emscripten directly from within Rust. The idea was to invoke Emscripten functions from Rust, effectively bridging the gap between the two.
+        
+        Initially, it appeared promising, but a significant hurdle remained. I needed to execute functions on the main thread, which proved tricky since modules ran on threads and consequently on WebWorkers within the web environment, making direct execution impossible.
+        
+        In the realm of C/C++, Emscripten offers macros like MAIN_THREAD_EM_ASM, within which JavaScript code runs on the main thread—a perfect fit for my needs. However, Rust lacked such conveniences, prompting me to take matters into my own hands.
+        
+        My quest led me to discover the emscripten_asm_const_int_sync_on_main_thread() function for calling JavaScript code from the main thread. Yet, when I attempted to use it, errors surfaced.
+        
+        ```sh
+        error: undefined symbol: emscripten_asm_const_async_on_main_thread (referenced by root reference (e.g. compiled C/C++ code))
+        ```
+
+        This anomaly baffled me. If other Emscripten functions could be invoked without issue, why was this one undefined?
+        
+        Diving into the Emscripten source code, I found that MAIN_THREAD_EM_ASM was defined as follows:
+        
+        ```C
+        #define MAIN_THREAD_EM_ASM(code, ...) ((void)emscripten_asm_const_int_sync_on_main_thread(CODE_EXPR(#code) _EM_ASM_PREP_ARGS(__VA_ARGS__)))
+        ```
+
+        Puzzlingly, I noticed the presence of CODE_EXPR. Investigating its definition shed light on the matter:
+        
+        ```C
+        #define CODE_EXPR(code) (__extension__({           \
+            __attribute__((section("em_asm"), aligned(1))) \
+            static const char x[] = code;                  \
+            x;                                             \
+          }))
+        ```
+
+        There it was, concealed within the extensive codebase. The key issue lay in the requirement for the string I passed to reside within the "em_asm" section—an essential aspect of Emscripten's functionality.
+        
+        The solution was to instruct Rust to write to the "em_asm" section, which could be achieved using the #[link_section = "em_asm"] attribute. Sounds straightforward, right?
+        
+        However, Rust introduced its own twist to the tale. When defining a section, Rust generates a custom section instead. Resolving this dilemma presented two options: either submit a Merge Request to Rust's compiler, rustc, to adopt a different approach, or adapt to the existing ecosystem.
+        
+        Enter `wasm-bindgen`, a library we had discussed earlier, which relied on the custom section for its operations. Disrupting this balance was out of the question, given the risk of breaking libraries upstream. Thus, the most sensible and straightforward course of action was to propose patches to Emscripten, incorporating data from the custom section.
+        
+        The details of this journey are documented in this commit: [GitHub - Emscripten PR #20219](https://github.com/emscripten-core/emscripten/pull/20219).
+
+        ### Addressing WebAssembly Custom Section Challenges: A Deep Dive into Emscripten and Data Handling
+         
+        This solution still presents some issues. Specifically, the custom section lacks an address and is subsequently omitted from the final WebAssembly (wasm) output. Here are some observations:
+
+          * In Rust, when writing to the custom section using em_asm, it appears to write to both the custom section and the data section simultaneously, based on my observations.
+        
+          * When passing a string to Emscripten's main thread function, it passes the address of the string in the data section rather than the em_asm section.
+        
+          * The code I've written to read from the custom section retrieves the string's address from the custom section, resulting in different addresses.
+        
+        To resolve this issue, I need a way to instruct wasm to read the string from the custom section address stored in ASM_CONSTS rather than from the data section. Previously, I was passing the address of the string from the data section, but it required manual updates to the offset in Emscripten.
+        
+        For further reference, here are links that support my theory:
+        
+        1. [Issue 13838 on GitHub comment-819061085](https://github.com/emscripten-core/emscripten/issues/13838#issuecomment-819061085)
+        2. [Issue 13838 on GitHub comment-819088055](https://github.com/emscripten-core/emscripten/issues/13838#issuecomment-819088055)
+
+        The address passed to the Emscripten function pertains to the data string in the data section, while the dictionary I create in Emscripten's Python code contains the address from the custom section before being excluded from the final output. My goal is to obtain the address from the data section instead.
+        
+        I am still grappling with this problem, and it remains unsolved until I find a viable solution. You can find the final working code for capturing video streams from a web camera [here](https://github.com/vikram-kangotra/vlc-web-camera-prototype)
+
+### Concluding Thoughts: Navigating Open Source and WebAssembly Challenges
+My journey during Google Summer of Code 2023 has been transformative. From rewriting C modules to venturing into the world of WebAssembly, I've encountered challenges and seized opportunities that have enriched my understanding of open source development.
+
+I've learned that open source is a dynamic world where adaptability and creativity are key. Each problem I faced provided a unique opportunity to learn and grow. From enabling Rust support in VLC to overcoming path errors, undefined constants, and atomics issues, I've expanded my knowledge and problem-solving skills.
+
+One crucial lesson I've gained is the power of collaboration and mentorship. My mentor and the open-source community have been invaluable in helping me navigate the complexities of open source development. I'm immensely grateful to my mentor and VideoLan for this incredible opportunity.
+
+As I move forward, I carry with me the knowledge and experiences gained during GSoC 2023, and I'm more confident in my abilities as a programmer and open source contributor. I look forward to applying what I've learned to future projects and contributing to the global open source community.
+
+### Signing Off: Embracing the Open Source Odyssey
+Closing this blog post, I reflect on the incredible journey that Google Summer of Code 2023 has been. It's been a summer of challenges, discoveries, and growth, from rewriting code to diving into the world of WebAssembly.
+
+Open source is a dynamic realm where adaptability and creativity thrive. Each challenge is an opportunity to learn and innovate. As we continue coding, keep collaborating, and pushing boundaries, we shape the future of technology and the open source community.
+
+To my fellow open source enthusiasts, keep coding, keep collaborating, and keep innovating. Our contributions today pave the way for the technologies of tomorrow.
+
+Thank you for joining me on this journey. Until next time, happy coding!
+
