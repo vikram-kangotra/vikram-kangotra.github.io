@@ -4,85 +4,168 @@ publishedAt: "2023-09-23"
 excerpt: ""
 ---
 
+<div className='w-full flex justify-center'>
+    <Image src='/assets/gsoc.png' width='300' height='300'/>
+</div>
+
 ## Introduction
 
 My name is Vikram Kangotra, and as of September 24, 2023, I am a Computer Science and Engineering undergraduate student at the National Institute of Technology Srinagar. I am an avid programmer who loves to contribute to open source projects. Open source has always fascinated me, but like many others, I felt a barrier before diving into open source contribution. Google Summer of Code (GSoC) provided me with the opportunity to overcome that barrier and gain confidence in my skills and contributions. This summer, I had the privilege of working on the VLC media player project.
 
-## Project Overview
+## What is Google Summer of Code (GSoC)?
 
-Initially, the project I selected was to "rewrite some C modules into Rust." Given my confidence in Rust, this project seemed like a natural choice. However, as the project kicked off, my mentor and I decided to expand the scope. Our new objective was to enable VLC to run directly in a web browser. Achieving this required me to create new Rust modules that could function seamlessly on the web.
+Google Summer of Code (GSoC) is a prestigious global program that brings together talented student developers from around the world to work on open-source software projects. Organized and sponsored by Google, GSoC provides an opportunity for students to collaborate with established open-source organizations and contribute to their projects during the summer break.
+
+Participating in GSoC is a remarkable experience for aspiring developers like me. It offers a unique platform to dive into the world of open source, gain hands-on experience, and make meaningful contributions to real-world projects. The program is not just about coding; it's about learning, problem-solving, and becoming a part of the global open-source community.
+
+GSoC provides students with stipends, mentorship, and a structured environment for their contributions. It's a journey of personal growth, skill development, and community engagement. Over the course of several weeks, students work closely with their mentors to complete project tasks, meet deadlines, and produce high-quality code.
+
+The program encourages students to embrace challenges, push their boundaries, and turn their passion for programming into tangible results. It's a stepping stone for budding developers to establish themselves in the world of open source and gain recognition for their contributions.
+
+<div className='w-full flex justify-center'>
+    <Image src='/assets/vlc.png' width='300' height='300'/>
+</div>
+
+## Project Evolution: Shifting Goals and Expanding Horizons
+
+Initially, I embarked on this journey with the intention of "rewriting some C modules into Rust." Given my proficiency in Rust programming, this project choice seemed like a natural fit. However, the project's trajectory took an intriguing turn during my very first discussion with my mentor. We collectively decided to expand the project's scope significantly – our new mission: bringing the VLC media player into the realm of web browsers.
+
+This marked a profound shift in our objectives. Our challenge was now to port VLC to web browsers, requiring the creation of entirely new Rust modules capable of functioning seamlessly within the web environment. This pivot introduced a fresh set of complexities and opportunities, pushing the boundaries of what I could achieve during Google Summer of Code (GSoC) 2023.
 
 ## Project Work
 
 ### 1. Enabling Rust Support in VLC
 
-Before diving into the technical details, it's crucial to understand VLC's build system and the role of "contribs." VLC relies on numerous third-party libraries, codecs, and tools, collectively known as "contribs," to provide its extensive feature set. These contribs are precompiled and integrated into VLC's build process, simplifying compilation and ensuring consistency across various platforms.
+  * #### Understanding Contribs and Their Role
 
-**The Objective:** The goal of my task was to introduce Rust, a systems programming language known for its performance and safety features, into VLC's WebAssembly (WebAssembly) builds. This integration would open up new possibilities for performance optimizations and expand VLC's development horizons.
+    Before delving into the technical details, it's crucial to grasp VLC's intricate build system and the pivotal role played by "contribs." VLC relies heavily on a vast array of third-party libraries, codecs, and tools collectively known as "contribs." These contribs are precompiled and seamlessly integrated into VLC's build process, streamlining compilation and ensuring consistent performance across diverse platforms.
 
-**The Merge Request:** You can find the work I did in [this merge request](URL).
+  * #### The Objective: Bringing Rust to VLC
 
-**Technical Details:**
+    The primary objective of this task was to introduce Rust, a powerful systems programming language renowned for its performance and safety features, into the VLC ecosystem. Specifically, the goal was to enable Rust's integration within VLC's WebAssembly (Wasm) builds. This ambitious undertaking promised to unlock new horizons for performance optimization and significantly broaden VLC's development possibilities.
 
-- Upgrading Rust and Cargoc Versions: The initial step involved updating the Rust and Cargoc versions used in VLC's build environment. This update was necessary for the wasm32-unknown-emscripten build, which depends on cargo-c version 0.9.20 and a minimum Rust version of 1.69.0.
+  * #### The Merge Request: Ushering in Rust
 
-- Setting the RUST_TARGET: To enable Rust support for WebAssembly, it was essential to configure the appropriate target architecture. This was achieved by introducing wasm32-unknown-emscripten as the target triple for writing Rust modules in VLC.
+    The work undertaken for this task is meticulously documented in this [merge request](https://code.videolan.org/videolan/vlc/-/merge_requests/3755). The focus of this merge request was to upgrade the Rust and Cargoc versions utilized in VLC's build system and configure the appropriate Rust target for WebAssembly.
 
-- Host Checking and Rust Enablement: While not included in the commit, enabling Rust for compilation involved host checking and Rust activation based on specific conditions in the configure.ac file.
+    ### The Technical Details
 
-**The Simplicity of the Task:** From a technical perspective, this task didn't demand complex thinking or extensive code changes. Instead, it revolved around ensuring that the build environment was up-to-date and properly configured for WebAssembly. The process was straightforward, and the merge request marked a successful enhancement to VLC's capabilities.
+      * #### Upgrading Rust and Cargoc Versions
 
-### 2. Solving Include Path Errors and Other Challenges
+        The initial phase of this endeavor revolved around upgrading the Rust and Cargoc versions utilized within VLC's build environment. This upgrade was indispensable for the `wasm32-unknown-emscripten` build, as it hinged on cargo-c version 0.9.20. Additionally, cargo-c mandated a minimum Rust version of 1.69.0.
 
-After the initial work, I encountered path errors in some `build.rs` files. The solution was simple: add the include path from the emscripten SDK. However, I then faced undefined errors, as certain C/C++ constants couldn't be correctly ported to Rust due to the complexity of associated macros. To overcome this, I explicitly added the missing constants in C/C++, which enabled bindgen to port them to Rust.
+      * #### Setting the RUST_TARGET
 
-The progress up to this point can be found in [this commit](URL).
+        A pivotal aspect of enabling Rust support for WebAssembly was configuring the precise target architecture. This was accomplished by introducing the selection of `wasm32-unknown-emscripten` as the target triple for authoring Rust modules within the VLC project.
+
+      * #### Host Checking and Rust Enablement
+
+        While this specific aspect wasn't encompassed within the commit, it was a critical step in the process of successfully compiling Rust for the wasm target. To enable Rust compilation, a host check was imperative to ascertain the correct configuration. The following code, excerpted from the configure.ac file, illustrates this process:
+
+        ```sh
+        AS_IF([test "$\{host_os\}" = "emscripten" -a "$\{host_cpu\}" = "wasm32"],[
+            AC_SUBST([RUST_TARGET], ["wasm32-unknown-emscripten"])
+            ],[
+            AC_MSG_WARN([no suitable rust target found (only x86_64 linux-gnu and wasm32 emscripten are supported). Your host is $\{host_os\} $\{host_cpu\}])
+            enable_rust = no
+        ])
+        ```
+
+        #### The Simplicity of the Task
+
+        From a technical standpoint, this task didn't demand intricate problem-solving or extensive code alterations. Instead, it revolved around ensuring that the build environment was up-to-date and meticulously configured to accommodate WebAssembly. The process was straightforward, culminating in the acceptance of the merge request, marking a significant enhancement to VLC's capabilities.
+
+### 2. Overcoming Path Errors and Undefined Constants
+
+  * Following the initial phase of the project, a new set of challenges emerged. Path errors surfaced in some `build.rs` files, creating hurdles that needed to be addressed promptly. Fortunately, the initial problem was relatively straightforward to solve – adding the necessary include path from the emscripten SDK resolved these path errors effectively.
+
+    However, the journey did not end there. As I proceeded with the project, a more intricate issue surfaced – undefined constants. These constants were a vital component of the project, yet they proved challenging to port from their original C/C++ codebase to Rust. The primary challenge stemmed from the intricate nature of the macros defined within the C/C++ code, which proved to be too complex for `bindgen` to seamlessly translate into Rust.
+
+    > `Bindgen` is a tool that automatically generates Rust code to bridge the gap between Rust and C/C++ code, making it easier to use C/C++ libraries in Rust projects. It parses C/C++ header files and creates Rust bindings, simplifying interoperability between the two languages.
+
+    To surmount this obstacle, a strategic decision was made. Rather than grappling with the limitations of automated translation tools, I opted for a proactive approach. This involved manually adding the missing constants directly to the C/C++ codebase. This adjustment allowed bindgen to successfully port these essential constants to the Rust ecosystem.
+
+    This meticulous approach ensured that vital elements of the project remained intact and that the Rust implementation could seamlessly integrate with the existing C/C++ components.
+
+    For a detailed record of the progress made up to this point, you can refer to [this commit](https://code.videolan.org/vikram-kangotra/vlc/-/commit/fda6363bf65034733a68236eb4de9d7318434231), which encapsulate the journey of overcoming these technical challenges
 
 ### 3. Adding Atomics Feature for WASM Compilation
 
-During compilation, I encountered an error related to atomics support:
+  * As I progressed with the project, a new challenge surfaced during the compilation phase, specifically related to atomics support. The error message I encountered highlighted the issue:
 
-```sh
-wasm-ld: error: --shared-memory is disallowed by rav1e-80a20d22ae9816b4.23l01rh5fhv9a8sh.rcgu.o
+    ```sh
+    wasm-ld: error: --shared-memory is disallowed by rav1e-80a20d22ae9816b4.23l01rh5fhv9a8sh.rcgu.o
     because it was not compiled with 'atomics' or 'bulk-memory' features.
-```
+    ```
 
+    To address this hurdle, I devised a straightforward solution. I provided specific flags to `Cargo` as outlined in [this commit](https://code.videolan.org/vikram-kangotra/vlc/-/commit/2b0780a8f51ff49f95492412e9a217417f9029f7). This adjustment enabled the necessary atomics support, resolving the compilation error and ensuring the project's continued progress.
 
-The solution was straightforward: I provided specific flags to Cargo, as detailed in [this commit](URL).
+    > `Cargo` is the official package manager and build tool for the Rust programming language. It simplifies the process of managing dependencies, compiling code, and building Rust projects, making development more efficient and consistent.
 
-### 4. Writing JavaScript Code in Rust and Running it in a Web Browser
+### 4. Navigating the Challenges of Interfacing Rust with JavaScript in a WebAssembly Project
 
-Writing JavaScript code in C/C++ using emscripten is straightforward. However, calling JavaScript functions from Rust proved to be challenging. Initially, I planned to use `wasm-bindgen`, a library that facilitates high-level interactions between WebAssembly modules and JavaScript in Rust.
+  * Writing JavaScript code in C/C++ becomes relatively straightforward with `emscripten`. However, I encountered an unexpected challenge when attempting to invoke JavaScript code from Rust.
 
-**The Problem:** VLC's codebase consists mostly of C/C++, compiled into WebAssembly using the emscripten toolchain. The new Rust module needed to link with C/C++ modules, making emscripten necessary. Unfortunately, `wasm-bindgen` lacked compatibility with emscripten, creating a roadblock.
+    > Emscripten is a powerful toolchain for compiling C/C++ code into WebAssembly (Wasm) and JavaScript, making it possible to run high-performance native code in web browsers. It facilitates the conversion of code written in languages like C and C++ into formats that can be executed within web environments, enabling web applications to harness the performance of native code for tasks like gaming, multimedia, and more.
 
-**Solutions:** I explored various solutions:
+    Initially, I had the idea to leverage wasm-bindgen to facilitate the seamless calling of Rust functions and data from JavaScript and vice-versa.
 
-- Ditching `wasm-bindgen` and using emscripten directly: I initially wrote the emscripten-side code in C++ and called these functions from Rust. While functional, it wasn't an ideal solution.
-  - [Commit Link](URL)
+    > Wasm-bindgen is a Rust library and tool that simplifies the interaction between WebAssembly (Wasm) modules and JavaScript. It generates JavaScript glue code to enable seamless communication between Rust and JavaScript, making it easier for developers to integrate Rust code into web applications and leverage the capabilities of both languages when working with Wasm.
 
-- Exploring `stdweb`: I encountered some ABI changes, leading me to explore alternative approaches.
+    #### The issue at hand:
 
-- Using `wasm-bindgen` for Rust, generating a wasm file, and then converting it to a JavaScript file using the `wasm-bindgen` CLI: This approach introduced its challenges, including undefined export errors. To resolve this, I had to modify the HTML file generated by emscripten and use flags to ensure compatibility.
-  - [Commit Link](URL)
+    A significant portion of the VLC codebase is implemented in C/C++, and it gets compiled into WebAssembly using the Emscripten toolchain. I was in the process of adding a new module written in Rust that needed to interface with existing modules written in C/C++, necessitating the use of Emscripten. Unfortunately, there was a roadblock – wasm-bindgen lacked compatibility with Emscripten. Consequently, I couldn't employ wasm-bindgen for this particular scenario.
 
-- Further challenges: I faced additional errors, which required manual adjustments to the code. These issues were addressed in [this commit](URL).
+    #### Initial solution
 
-Despite these attempts, I encountered issues related to calling functions on the main thread, as VLC modules ran on threads and WebWorkers in the web environment.
+    Initially, we tackled this problem by opting to bypass wasm-bindgen and directly utilize emscripten. In the initial approach, I authored the emscripten-side code in C++ and invoked these functions from Rust.
 
-## The Final Solution
+    You can find the code I wrote for this stage in [this commit](https://code.videolan.org/vikram-kangotra/vlc/-/commit/c8070ef16e3dffe648af0f352aeb716bacaf92db)
+    
+    However, the code was predominantly in C++, necessitating further adjustments.
+    
+    Subsequently, I came across stdweb, but encountered some errors due to ABI changes, which prompted me to explore alternative solutions.
+    
+    Another approach involved using wasm-bindgen in Rust to generate the wasm file. Then, I generated a js file from this wasm file using the wasm-bindgen CLI command and linked the resulting js file as a --post-js file in the emscripten output.
+    
+    Despite this alternative approach, it also presented several challenges.
 
-In my quest to overcome these challenges, I decided to directly use emscripten from within Rust and call emscripten functions from Rust. To facilitate this, I needed a mechanism to execute JavaScript code on the main thread.
+    1. ### Dealing with the Undefined Export Error
 
-**The Solution:** I discovered the `emscripten_asm_const_int_sync_on_main_thread()` function, which allowed me to call JavaScript code from the main thread. However, I encountered an undefined symbol error.
+        To resolve the undefined export error, I initially resorted to adding type="module" to the HTML file generated by emscripten. However, I found this manual process somewhat cumbersome and not ideal. An alternative approach involved configuring emscripten to use the EXPORT_ES6 flag. However, while exploring the VLC codebase, I came across the following comment:
+    
+        ```sh
+        # Note that we use '-s MODULARIZE', but no '-s EXPORT_ES6', which would
+        # conflict with pthreads on Firefox.
+        ```
+        This prompted me to reconsider this solution.
+    
+        Subsequently, I discovered another method: instructing wasm-bindgen not to produce ES modules by using the --no-modules command.
+    2. ### Dealing with more errors
 
-To address this, I delved into the emscripten source code and found the solution. I needed to place the string in the "em_asm" section, as that's how emscripten functions. Rust, however, uses a custom section for this purpose. To bridge this gap, I sent patches to emscripten to include data from the custom section, allowing me to execute JavaScript code from Rust.
-  - [Patch Link](URL)
+        ```sh
+        main.js:838 wasm streaming compile failed: TypeError: WebAssembly.instantiate(): Import #0 module="__wbindgen_placeholder__" error: module is not an object or function
+        main.js:801 failed to asynchronously prepare wasm: TypeError: WebAssembly.instantiate(): Import #0 module="__wbindgen_placeholder__" error: module is not an object or function
+        main.js:661 Aborted(TypeError: WebAssembly.instantiate(): Import #0 module="__wbindgen_placeholder__" error: module is not an object or function)
+        main.js:680 Uncaught (in promise) RuntimeError: Aborted(TypeError: WebAssembly.instantiate(): Import #0 module="__wbindgen_placeholder__" error: module is not an object or function)
+            at abort (main.js:680:11)
+            at main.js:807:5
+        ```
 
-Despite these developments, I still faced challenges related to addresses and the interaction between custom sections and data sections. The problem persisted as I needed a way to instruct wasm to read the string from the custom section address stored in ASM_CONSTS, rather than the data section.
+        A temporary solution to test and resolve these issues is available in [this GitHub commit](https://github.com/vikram-kangotra/wasm-web-test/commit/b87fb1f9db82ec981d79b0c47f837c9c05f38e13)
 
-The journey continues as I work towards resolving this issue. You can find the current working code for streaming video from a web camera in [this repository](URL).
+        However, after applying these changes, I encountered the following console output:
 
-## Acknowledgments
-
-I extend my heartfelt gratitude to my mentor and VideoLAN for granting me the opportunity to work on this remarkable project. This summer, I learned invaluable lessons, and I now possess the confidence to navigate open source projects with ease. Without their unwavering guidance, I wouldn't have acquired the knowledge I possess today
+        ```sh
+        main.js:31 Uncaught RuntimeError: unreachable
+        at main.wasm:0x1dae
+        at main.wasm:0x1b42
+        at main.wasm:0x1b38
+        at main.wasm:0x1b4c
+        at main.wasm:0x1410
+        at main.wasm:0x253
+        at main.wasm:0x214
+        at main.wasm:0x231
+        at main.js:719:14
+        at callMain (main.js:1539:15)
+        ```
