@@ -94,7 +94,7 @@ export default function Blog({ post: {source, frontmatter}, previous, next }) {
                         </address>
                     </header>
 
-                    <article className={`font-sans text-white max-w-none md:prose-md lg:prose-lg prose dark:prose-invert ${noirpro.variable}`}>
+                    <article className={`font-sans text-white max-w-none md:prose-md lg:prose-lg prose prose-invert ${noirpro.variable}`}>
                       <MDXRemote {...source} components={{ Image }} />
                     </article>
                     
