@@ -196,7 +196,7 @@ This marked a profound shift in our objectives. Our challenge was now to port VL
         
         In the realm of C/C++, Emscripten offers macros like MAIN_THREAD_EM_ASM, within which JavaScript code runs on the main thread—a perfect fit for my needs. However, Rust lacked such conveniences, prompting me to take matters into my own hands.
         
-        My quest led me to discover the emscripten_asm_const_int_sync_on_main_thread() function for calling JavaScript code from the main thread. Yet, when I attempted to use it, errors surfaced.
+        My quest led me to discover the `emscripten_asm_const_int_sync_on_main_thread()` function for calling JavaScript code from the main thread. Yet, when I attempted to use it, errors surfaced.
         
         ```sh
         error: undefined symbol: emscripten_asm_const_async_on_main_thread (referenced by root reference (e.g. compiled C/C++ code))
