@@ -5,7 +5,7 @@ export default function Navbar() {
     const router = useRouter();
 
     return ( 
-        <nav className="bg-[#000011] sticky top-0">
+        <nav className="bg-[#000] sticky top-0">
           <div className="flex flex-wrap items-center justify-between p-4 mx-auto max-w-screen-xl">
             <Link href="/" className="flex items-center">
                 <span className="self-center text-2xl font-semibold text-transparent md:text-4xl whitespace-nowrap bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">Vikram Kang

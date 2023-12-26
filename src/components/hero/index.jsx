@@ -1,6 +1,4 @@
 import { Syne } from "next/font/google"
-import HeroImage from "./hero-image"
-import { hero_image_1, hero_image_2, hero_image_3, hero_image_4, hero_image_5, hero_image_6} from "../../assets"
 import HeroButton from "./heroButton"
 import Typewriter from "./typeWriters"
 
@@ -52,14 +50,6 @@ Discover the captivating universe of Vikram Kangotra, a passionate programming e
           </div>
         </div>
 
-        <div className="flex flex-row content-center justify-center py-10 overflow-hidden flex-nowrap shrink-0 gap-5">
-            <HeroImage containerClassName='bg-slate-950' imageClassName='rounded-lg' src={hero_image_1} alt="keyboard" />
-            <HeroImage containerClassName='bg-slate-900' imageClassName='rounded-e-full rounded-bl-full' src={hero_image_2} alt="linux" />
-            <HeroImage containerClassName='bg-slate-950' imageClassName='rounded-lg' src={hero_image_3} alt="Miosis" />
-            <HeroImage containerClassName='bg-slate-900' imageClassName='rounded-ss-[8rem] rounded-ee-[8rem]' src={hero_image_4} alt="artistic globe" />
-            <HeroImage containerClassName='bg-slate-950' imageClassName='rounded-lg' src={hero_image_5} alt="Proto Rust" />
-            <HeroImage containerClassName='bg-slate-900' imageClassName='rounded-e-3xl rounded-bl-3xl rounded-ss-[5rem]' src={hero_image_6} alt="collaboration" />
-        </div>
       </header>
   )
 }

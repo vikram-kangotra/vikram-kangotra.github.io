@@ -10,7 +10,7 @@ import { serialize } from "next-mdx-remote/serialize";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import dayjs from "dayjs";
 import {MDXRemote} from "next-mdx-remote";
-import localFont from "@next/font/local";
+import localFont from "next/font/local";
 import Link from "next/link";
 
 const noirpro = localFont({

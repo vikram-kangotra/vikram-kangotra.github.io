@@ -12,7 +12,7 @@ import "../styles/code-line-number.css";
 const options = {
     background: {
         color: {
-            value: "#001",
+            value: "#000",
         },
     },
     fpsLimit: 120,
@@ -39,7 +39,7 @@ const options = {
     },
     particles: {
         color: {
-            value: "#ffffff",
+            value: "#000",
         },
         move: {
             direction: "none",
