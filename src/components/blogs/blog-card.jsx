@@ -11,7 +11,7 @@ export default function BlogCard({blog}) {
     }, []);
 
     return (
-        <Link href={`/blogs/${blog.slug}`} className="flex flex-col items-center border rounded-lg shadow-2xl shadow-blue-500/20 md:flex-row border-quaternary group">
+        <Link href={`/blogs/${blog.slug}`} className="flex flex-col items-center border rounded-lg shadow-2xl shadow-blue-500/20 md:flex-row border-quaternary group bg-black">
             <div className="flex flex-col justify-between p-4 leading-normal">
                 <h5 className="mb-2 text-lg font-semibold tracking-tight text-white group-hover:text-purple-400 md:text-xl transition duration-300">{blog.title}</h5>
                     <p className="text-base italic font-light text-gray-400">
