@@ -18,7 +18,7 @@ export default function Hero() {
 
             <h1 className={`text-4xl font-bold text-center md:text-7xl`}><Typewriter text="Code. Passion. Linux. " delay={100}></Typewriter></h1>
             <p className="relative max-w-3xl my-5 text-sm text-center opacity-90 md:text-lg text-tertiary leading-7">
-Discover t  he captivating universe of Vikram Kangotra, a passionate programming enthusiast on a continuous learning odyssey. Explore intricate code creations driven by Linux and open-source harmony, unveiling a symphony of unity. Immerse yourself in innovative projects, enlightening insights, and the evolving artistry of software development. Join me on this thrilling tech journey, crafting our digital masterpiece together, keystroke by keystroke.
+Discover the captivating universe of Vikram Kangotra, a passionate programming enthusiast on a continuous learning odyssey. Explore intricate code creations driven by Linux and open-source harmony, unveiling a symphony of unity. Immerse yourself in innovative projects, enlightening insights, and the evolving artistry of software development. Join me on this thrilling tech journey, crafting our digital masterpiece together, keystroke by keystroke.
             </p>
             <div className="flex flex-col justify-center md:flex-row gap-3">
               <HeroButton link="projects" bgColor="slate-800" textColor="tertiary">View Projects</HeroButton>
