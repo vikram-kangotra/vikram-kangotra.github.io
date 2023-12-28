@@ -1,7 +1,6 @@
 const Logo = () => {
 
     return (
-               <div className="flex items-center justify-center">
             <span className="text-2xl font-medium text-transparent lg:text-4xl bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">Vikram Kang
                 <svg className="inline w-5 lg:w-6 fill-pink-400"
                     viewBox="0 0 192.000000 192.000000"
@@ -30,7 +29,6 @@ const Logo = () => {
                     </g>
                 </svg>
             tra</span>
-        </div>
     );
 }
 
