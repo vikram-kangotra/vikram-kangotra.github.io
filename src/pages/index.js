@@ -8,8 +8,6 @@ export default function Home({blogs}) {
   return (
     <main>
       <div className="relative">
-        <div className="overflow-hidden absolute bg-pink-300 rounded-full left-[30%] top-[25%] opacity-20 blur-3xl w-72 h-72"></div>
-        <div className="overflow-hidden absolute bg-yellow-300 rounded-full right-[30%] top-[8%] blur-3xl w-72 h-72 opacity-20"></div>
         <Hero />
         <Introduction />
         <Projects />

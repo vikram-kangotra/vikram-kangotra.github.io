@@ -10,12 +10,17 @@ export default function Projects() {
         <div className="flex flex-col items-center justify-start p-10 overflow-hidden">
             <div className="flex flex-col items-start content-start justify-start max-w-4xl overflow-visible gap-5 min-h-max">
                 <p className="text-2xl font-medium text-white opacity-60">Projects</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-2 md:gap-5">
-                    {
-                        projects.map((project, index) => (
-                            <ProjectCard key={index} href={projects[index].href} imageSrc={projects[index].imageSrc} projectName={projects[index].name} />
-                        ))
-                    }
+                <div className="relative">
+
+                    <div className="overflow-hidden absolute bg-blue-300 rounded-full opacity-10 blur-3xl w-full h-full -right-20"></div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-2 md:gap-5">
+                            {
+                                projects.map((project, index) => (
+                                    <ProjectCard key={index} href={projects[index].href} imageSrc={projects[index].imageSrc} projectName={projects[index].name} />
+                                ))
+                            }
+                    </div>
                 </div>
                 <p className="w-full text-base text-right text-gray-500">
                     <Link href="#" className="inline-flex items-center font-medium text-purple-600 hover:underline">
