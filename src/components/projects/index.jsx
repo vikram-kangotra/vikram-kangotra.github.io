@@ -1,9 +1,6 @@
 import projects from "@/constants/projects"
-import { Syne } from "next/font/google"
 import Link from "next/link"
 import ProjectCard from "./project-card"
-
-const syne = Syne({ subsets: ['latin'], weights: ['400', '700'] })
 
 export default function Projects() {
     return (

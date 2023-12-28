@@ -1,7 +1,4 @@
-import { Syne } from "next/font/google"
 import Link from "next/link"
-
-const syne = Syne({ subsets: ['latin'], weights: ['400', '700'] })
 
 export default function Introduction() {
     return (
