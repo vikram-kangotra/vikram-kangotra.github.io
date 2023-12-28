@@ -67,7 +67,7 @@ export default function App({ Component, pageProps }) {
     return (
         <div>
         <Particles init={particlesInit} options={options} />
-        <div className='relative'>
+        <div>
         { !isHomePage && (<Navbar />) }
         <Component {...pageProps} />
         </div>

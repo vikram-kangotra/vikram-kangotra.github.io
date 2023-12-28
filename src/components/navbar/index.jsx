@@ -6,7 +6,7 @@ export default function Navbar() {
     const router = useRouter();
 
     return ( 
-        <nav className="bg-[#000] sticky top-0">
+        <nav className="bg-[#000] sticky top-0 z-50">
           <div className="flex flex-wrap items-center justify-between p-4 mx-auto max-w-screen-xl">
             <Link href="/" className="flex items-center">
                 <Logo />
