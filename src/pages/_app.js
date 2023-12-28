@@ -10,65 +10,49 @@ import "../styles/custom-code-theme.css";
 import "../styles/code-line-number.css";
 
 const options = {
-    background: {
-        color: {
-            value: "#000",
-        },
-    },
-    fpsLimit: 120,
-    interactivity: {
-        events: {
-            onClick: {
-                enable: true,
-                mode: "grab",
-            },
-            onHover: {
-                enable: true,
-                mode: "grab",
-            },
-            resize: true,
-        },
-        modes: {
-            grab: {
-                distance: 200,
-                links: {
-                    opacity: 0.3,
-                },
-            },
-        },
-    },
     particles: {
-        color: {
-            value: "#000",
-        },
-        move: {
-            direction: "none",
-            enable: true,
-            outModes: {
-                default: "bounce",
-            },
-            random: false,
-            speed: 6,
-            straight: false,
-        },
         number: {
+            value: 60,
             density: {
                 enable: true,
                 area: 800,
-            },
-            value: 80,
+            }
         },
-        opacity: {
-            value: 0.1,
+        line_linked: {
+            enable: true,
+            opacity: 0.2
         },
-        shape: {
-            type: "circle",
+        move: {
+            direction: "right",
+            speed: 0.5
         },
         size: {
-            value: { min: 1, max: 5 },
+            value: 1,
+        },
+        shape: {
+            type: "star",
+            stroke: {
+                width: 1,
+                color: "#000000"
+            }
+        },
+        opacity: {
+            anim: {
+                enable: true,
+                speed: 1,
+                opacity_min: 0.05
+            }
+        }
+    },
+    interactivity: {
+        events: {
+            onhover: {
+                enable: true,
+                mode: "grab"
+            },
         },
     },
-    detectRetina: true,
+    retina_detect: true
 };
 
 export default function App({ Component, pageProps }) {
@@ -82,12 +66,12 @@ export default function App({ Component, pageProps }) {
 
     return (
         <div>
-            <Particles init={particlesInit} options={options} />
-            <div className='relative'>
-                { !isHomePage && (<Navbar />) }
-                <Component {...pageProps} />
-            </div>
-            <Footer />
+        <Particles init={particlesInit} options={options} />
+        <div className='relative'>
+        { !isHomePage && (<Navbar />) }
+        <Component {...pageProps} />
+        </div>
+        <Footer />
         </div>
     )
 }
