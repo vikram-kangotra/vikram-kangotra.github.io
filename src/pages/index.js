@@ -7,7 +7,7 @@ import {getAllBlogs} from "@/utils/mdx"
 export default function Home({blogs}) {
   return (
     <main>
-      <div className="relative">
+      <div>
         <Hero />
         <Introduction />
         <Projects />
