@@ -2,7 +2,6 @@ import React, {useEffect, useState} from "react";
 import Head from "next/head";
 import Image from "next/image";
 import rehypeCodeTitles from "rehype-code-titles";
-import rehypeHighlight from "rehype-highlight";
 import rehypePrism from "rehype-prism-plus";
 import rehypeSlug from "rehype-slug";
 import { getBlogFromSlug, getSlug } from "@/utils/mdx";
