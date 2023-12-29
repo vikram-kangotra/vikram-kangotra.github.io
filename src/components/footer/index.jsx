@@ -1,7 +1,15 @@
 import {socialMedia} from "@/constants";
 import Link from "next/link";
+import {useEffect, useState} from "react";
 
 export default function Footer() {
+
+    const [date, setDate] = useState(null);
+
+    useEffect(() => {
+        setDate(new Date().getFullYear())
+    }, [])
+
     return (
         <footer className="relative flex flex-col items-center content-center justify-center p-10 gap-5">
             <div className="flex flex-col items-center content-center max-w-4xl gap-10">
@@ -17,7 +25,7 @@ export default function Footer() {
                     </ul>
                 </div>
                 <div className="overflow-hidden text-sm font-medium text-center opacity-50 md:text-base">
-                    &copy; {new Date().getFullYear()} Site by Vikram Kangotra. All rights reserved.
+                    &copy; {date} Site by Vikram Kangotra. All rights reserved.
                 </div>
             </div>
         </footer>
