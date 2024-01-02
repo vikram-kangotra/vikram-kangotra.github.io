@@ -9,13 +9,13 @@ export default function Projects() {
                 <p className="text-2xl font-medium text-white opacity-60">Projects</p>
                 <div className="relative">
 
-                    <div className="overflow-hidden absolute bg-blue-300 rounded-full opacity-10 blur-3xl w-full h-full -right-20"></div>
+                    <div className="absolute w-full h-full overflow-hidden bg-blue-300 rounded-full opacity-10 blur-3xl -right-20"></div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-2 md:gap-5">
                             {
 
                                 projects.filter((_project, index) => index < 4).map((project, index) => (
-                                    <ProjectCard key={index} href={project.href} imageSrc={project.imageSrc} projectName={project.name} />
+                                    <ProjectCard key={index} project={project} />
                                 ))
                             }
                     </div>
