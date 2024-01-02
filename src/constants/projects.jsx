@@ -1,11 +1,11 @@
-import {chinar, miosis, sudoku_solver, vlc} from "../assets";
+import {chinar, miosis, proto_rs, sudoku_solver} from "../assets";
 
 const projects = [
     {
-        name: "VLC",
+        name: "Proto-rs",
         description: "",
-        href: "https://code.videolan.org/vikram-kangotra/vlc",
-        imageSrc: vlc
+        href: "https://github.com/vikram-kangotra/Proto-rs",
+        imageSrc: proto_rs
     },
     {
         name: "Miosis",
