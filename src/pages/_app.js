@@ -8,6 +8,7 @@ import { loadFull } from 'tsparticles'
 import "../styles/code-theme.css";
 import "../styles/custom-code-theme.css";
 import "../styles/code-line-number.css";
+import {useEffect} from 'react';
 
 const options = {
     particles: {
@@ -64,14 +65,31 @@ export default function App({ Component, pageProps }) {
     const router = useRouter();
     const isHomePage = router.pathname == '/';
 
+    useEffect(() => {
+        const script = document.createElement('script');
+        script.src = "https://www.googletagmanager.com/gtag/js?id=G-1FQ468YY1J";
+        script.async = true;
+        document.head.appendChild(script);
+
+        script.onload = () => {
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){
+                dataLayer.push(arguments)
+            }
+            gtag('js', new Date());
+          
+            gtag('config', 'G-1FQ468YY1J');
+        }
+    }, []);
+
     return (
-        <div>
-        <Particles init={particlesInit} options={options} />
-        <div>
-        { !isHomePage && (<Navbar />) }
-        <Component {...pageProps} />
-        </div>
-        <Footer />
-        </div>
+        <>
+            <Particles init={particlesInit} options={options} />
+            <div>
+            { !isHomePage && (<Navbar />) }
+            <Component {...pageProps} />
+            </div>
+            <Footer />
+        </>
     )
 }
