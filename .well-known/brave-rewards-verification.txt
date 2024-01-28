@@ -1,0 +1,4 @@
+This is a Brave Creators publisher verification file.
+
+Domain: vikram-kangotra.github.io
+Token: 4137d73a17e4aa06a92eccf2eb4023cd798a1ef357e5e0cb4178b96b84077227
