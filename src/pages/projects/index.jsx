@@ -5,7 +5,7 @@ const ProjectPage = () => {
     return (
 
         <div className="flex flex-col items-center p-10 overflow-hidden">
-                <div className="relative">
+                <div className="relative max-w-4xl">
 
                     <div className="absolute w-full h-full overflow-hidden bg-blue-300 rounded-full opacity-10 blur-3xl -right-20"></div>
 

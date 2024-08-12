@@ -1,4 +1,4 @@
-import {chinar, miosis, proto_rs, sudoku_solver} from "../assets";
+import {chinar, lamp, miosis, proto_rs, sudoku_solver, wirebyte} from "../assets";
 
 const projects = [
     {
@@ -8,16 +8,29 @@ const projects = [
         imageSrc: proto_rs
     },
     {
-        name: "Miosis",
-        description: "A repository for my curious mind to understand OS Dev",
-        href: "https://github.com/vikram-kangotra/Miosis",
-        imageSrc: miosis
+        name: "Wirebyte",
+        description: "A Network Protocol Analyzer written in Rust purely for adventurous purposes, offering a comprehensive network analysis tool designed for efficient monitoring and troubleshooting. With Wirebyte users can decode network traffic effortlessly, enabling seamless analysis and identification of potential issues.",
+        href: "https://github.com/vikram-kangotra/Wirebyte",
+        imageSrc: wirebyte
     },
+    {
+        name: "Lamp",
+        description: "Lamp is an attempt to create a PyTorch-like library in Rust for educational purposes. It is not intended to rival the PyTorch library.",
+        href: "https://github.com/vikram-kangotra/lamp",
+        imageSrc: lamp
+    },
+
     {
         name: "The Chinar Engine",
         description: "An ECS based 2D/3D Game Engine for fast game development process.",
         href: "https://github.com/vikram-kangotra/The-Chinar-Engine",
         imageSrc: chinar
+    },
+    {
+        name: "Miosis",
+        description: "A repository for my curious mind to understand OS Dev",
+        href: "https://github.com/vikram-kangotra/Miosis",
+        imageSrc: miosis
     },
     {
         name: "Sudoku Solver",
