@@ -8,7 +8,7 @@ export default function Blogs({blogs}) {
                 <p className="text-2xl font-medium text-white opacity-60">Latest Blogs</p>
                 <div className="grid grid-cols-1 gap-5">
                     {
-                        blogs.reverse().slice(0,3).map((blog, index) => (
+                        blogs.slice(0,3).map((blog, index) => (
                             <BlogCard key={index} blog={blog} />
                         ))
                     }

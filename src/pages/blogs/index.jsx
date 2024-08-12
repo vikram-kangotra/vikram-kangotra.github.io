@@ -1,5 +1,6 @@
 import {getAllBlogs} from "@/utils/mdx"
 import { BlogCard } from "@/components/blogs"
+import dayjs from "dayjs";
 
 export default function BlogPage({blogs}) {
     return (
@@ -25,11 +26,9 @@ export default function BlogPage({blogs}) {
 }
 
 export async function getStaticProps() {
-    const blogs = await getAllBlogs();
+    let blogs = await getAllBlogs();
 
-    /*
-    blogs.map((blog) => blog.data)
-    .sort((a, b) => {
+    blogs.sort((a, b) => {
         a = dayjs(a.publishedAt)
         b = dayjs(b.publishedAt)
 
@@ -37,7 +36,6 @@ export async function getStaticProps() {
         if (a.isBefore(b)) return 1
         return 0
     })
-    */
 
     return {
         props: {

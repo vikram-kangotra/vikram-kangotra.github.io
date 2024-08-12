@@ -3,6 +3,7 @@ import Hero from "@/components/hero";
 import Introduction from "@/components/introduction";
 import Projects from "@/components/projects";
 import {getAllBlogs} from "@/utils/mdx"
+import dayjs from "dayjs";
 
 export default function Home({blogs}) {
   return (
@@ -18,21 +19,20 @@ export default function Home({blogs}) {
 }
 
 export async function getStaticProps() {
-    const blogs = await getAllBlogs();
-    
-    blogs.map((blog) => blog.data)
-    .sort((a, b) => {
-        if (a.data.publishedAt < b.data.publishedAt) {
-            return 1
-        } else if (a.data.publishedAt > b.data.publishedAt) {
-            return -1
-        }
+    let blogs = await getAllBlogs();
+
+    blogs.sort((a, b) => {
+        a = dayjs(a.publishedAt)
+        b = dayjs(b.publishedAt)
+
+        if (a.isAfter(b)) return -1
+        if (a.isBefore(b)) return 1
         return 0
     })
 
     return {
         props: {
-            blogs: blogs.reverse(),
+            blogs: blogs,
         },
     }
 }
