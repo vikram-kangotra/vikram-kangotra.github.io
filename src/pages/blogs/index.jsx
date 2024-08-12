@@ -2,27 +2,39 @@ import {getAllBlogs} from "@/utils/mdx"
 import { BlogCard } from "@/components/blogs"
 import dayjs from "dayjs";
 
-export default function BlogPage({blogs}) {
+export default function BlogPage({groupedBlogs}) {
+
+    const sortedGroupedBlogs = Object.keys(groupedBlogs).sort((a, b) => b - a);
+
     return (
-
-        <div className="flex flex-col items-center justify-start p-10 overflow-hidden">
-            <div className='flex flex-col items-center content-center justify-start py-10 overflow-hidden md:py-20 gap-16 md:gap-28'>
-                
-                <div className="flex flex-col items-start content-start justify-start max-w-4xl overflow-visible gap-5 min-h-max">
-
-                    <div className="grid grid-cols-1 gap-5">
-                        {
-                            blogs.map((blog, index) => {
-                                return (
-                                    <BlogCard blog={blog} key={index}/>
-                                )
-                            })
-                        }
-                    </div>
+        <div className="flex flex-col items-center p-10 overflow-hidden">
+            <div className='flex flex-col items-center max-w-4xl py-10 md:py-20 gap-16 md:gap-28'>
+                <div className="grid grid-cols-1 gap-5">
+                    {sortedGroupedBlogs.map((year) => (
+                        <YearSection key={year} year={year} blogs={groupedBlogs[year]} />
+                    ))}
                 </div>
             </div>
         </div>
     )
+}
+
+function YearSection({ year, blogs }) {
+    return (
+        <div className="relative flex flex-col md:flex-row gap-5">
+            <div className="hidden md:block absolute left-0 top-0 h-full w-px bg-white opacity-60 md:translate-x-[-50%]"></div>
+            
+            <h2 className="relative z-10 text-2xl font-medium text-white opacity-60 md:pl-5">
+                {year}
+            </h2>
+            
+            <div className="flex flex-col flex-1 gap-5">
+                {blogs.map((blog, index) => (
+                    <BlogCard key={index} blog={blog} className="w-full" />
+                ))}
+            </div>
+        </div>
+    );
 }
 
 export async function getStaticProps() {
@@ -37,9 +49,18 @@ export async function getStaticProps() {
         return 0
     })
 
+    const groupedBlogs = blogs.reduce((acc, blog) => {
+        const year = dayjs(blog.publishedAt).year();
+        if (!acc[year]) {
+            acc[year] = [];
+        }
+        acc[year].push(blog);
+        return acc;
+    }, {});
+
     return {
         props: {
-            blogs: blogs,
+            groupedBlogs,
         },
-    }
+    };
 }
