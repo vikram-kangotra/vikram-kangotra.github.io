@@ -22,7 +22,6 @@ export default function BlogPage({groupedBlogs}) {
 function YearSection({ year, blogs }) {
     return (
         <div className="relative flex flex-col md:flex-row gap-5">
-            <div className="hidden md:block absolute left-0 top-0 h-full w-px bg-white opacity-60 md:translate-x-[-50%]"></div>
             
             <h2 className="relative z-10 text-2xl font-medium text-white opacity-60 md:pl-5">
                 {year}
