@@ -80,7 +80,7 @@ export default function Blog({ post: {source, frontmatter}, previous, next }) {
             <div className="flex flex-col p-10 md:items-center">
                 <div className="max-w-4xl">
                     <header className="mb-4 lg:mb-6 not-format">
-                        <h1 className="mb-4 text-3xl font-extrabold leading-tight text-white lg:mb-6 lg:text-4xl ${noirpro.variable}">{frontmatter.title}</h1>
+                        <h1 className="mb-4 text-3xl font-bold leading-tight text-white lg:mb-6 lg:text-4xl ${noirpro.variable}">{frontmatter.title}</h1>
                         <address className="flex items-center mb-6 not-italic">
                             <div className="inline-flex items-center mr-3 text-sm text-white">
                                 <div>
