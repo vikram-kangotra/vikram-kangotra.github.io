@@ -17,7 +17,7 @@ export default function Hero() {
           <div className="flex flex-col items-center justify-center px-5">
 
             <h1 className={`text-4xl font-bold text-center md:text-7xl`}><Typewriter text="Code. Passion. Linux. " delay={100}></Typewriter></h1>
-            <p className="relative max-w-3xl my-5 text-sm text-center opacity-90 md:text-lg text-tertiary leading-7">
+            <p className="relative max-w-3xl my-5 text-base text-center opacity-90 md:text-lg text-tertiary leading-5 md:leading-7">
                 Explore my world as a passionate programmer always eager to learn and code. I’m diving into various projects and sharing my journey through software development and innovation. Follow along as I build and create, one keystroke at a time!
             </p>
             <div className="flex flex-col justify-center md:flex-row gap-3">
