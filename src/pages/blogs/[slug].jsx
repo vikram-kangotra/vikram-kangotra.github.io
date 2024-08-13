@@ -9,18 +9,7 @@ import { serialize } from "next-mdx-remote/serialize";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import dayjs from "dayjs";
 import {MDXRemote} from "next-mdx-remote";
-import localFont from "next/font/local";
 import Link from "next/link";
-
-const noirpro = localFont({
-    src: [
-        {
-            path: '../../assets/noirpro/NoirPro-Regular.otf',
-            weight: '400',
-        },
-    ],
-    variable: '--font-niorpro',
-});
 
 function Previous({link}) {
 
@@ -78,9 +67,9 @@ export default function Blog({ post: {source, frontmatter}, previous, next }) {
                 <title>{frontmatter.title}</title>
             </Head>
             <div className="flex flex-col p-10 md:items-center">
-                <div className="max-w-4xl">
+                <div className="max-w-4xl lg:max-w-5xl">
                     <header className="mb-4 lg:mb-6 not-format">
-                        <h1 className="mb-4 text-3xl font-bold leading-tight text-white lg:mb-6 lg:text-4xl ${noirpro.variable}">{frontmatter.title}</h1>
+                        <h1 className="mb-4 text-3xl font-bold leading-tight text-white lg:mb-6 lg:text-4xl">{frontmatter.title}</h1>
                         <address className="flex items-center mb-6 not-italic">
                             <div className="inline-flex items-center mr-3 text-sm text-white">
                                 <div>
@@ -93,7 +82,7 @@ export default function Blog({ post: {source, frontmatter}, previous, next }) {
                         </address>
                     </header>
 
-                    <article className={`font-sans text-white max-w-none md:prose-md lg:prose-lg prose prose-invert ${noirpro.variable}`}>
+                    <article className={`text-white max-w-none md:prose-md lg:prose-lg prose prose-invert font-medium font-sans`}>
                       <MDXRemote {...source} components={{ Image }} />
                     </article>
                     
