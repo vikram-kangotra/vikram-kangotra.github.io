@@ -28,3 +28,63 @@ Participating in Google Summer of Code (GSoC) 2024 with VideoLan has been an inc
 - **Testing and Iteration**
 
     Rigorous testing was crucial to ensure stability and functionality. The process began with simple tests using small WebAssembly (WASM) files, which allowed us to verify that each feature worked as intended within VLC. As the project progressed, the scope of testing expanded to cover more complex scenarios and edge cases to ensure comprehensive validation of all features.
+
+## Merge Requests
+
+Several key merge requests (MRs) were made to enhance VLC’s functionality and integrate Rust with WebAssembly (Wasm). This section provides an overview of these MRs, including those that have been accepted and those still in progress. MRs requiring further details will be discussed in depth later.
+
+### 1. extensions_manager: Introduce typed callbacks for extensions_manager
+
+- [View MR Details](https://code.videolan.org/videolan/vlc/-/merge_requests/5475)
+
+**Status:** <span style={{color: '#4ade80'}}>Merged</span>
+
+This MR introduced typed callbacks as an alternative to the variadic argument `pf_control`.
+
+**Rationale:**
+
+> The goal of introducing typed callbacks is to have a safer interface to plug into, moving away from the complexities surrounding `va_list`. The current approach with `va_list` is prone to errors due to compiler-specific implementations, limited support in safer languages, and the need for `va_arg` everywhere. Typed callbacks allow programming languages without `va_list` support to still implement these callbacks.
+
+### 2. [GSoC 2024] Add WebAssembly Plugin Support and Integrate with Latest Rust Support Changes 
+- [View MR Details](https://code.videolan.org/videolan/vlc/-/merge_requests/5528)
+
+**Status:** <span style={{color: '#fb923c'}}>Draft</span>
+
+This MR introduces WebAssembly Plugin System support using [Wasmer](https://github.com/wasmerio/wasmer) in Rust. The Rust work is derived from [Loic's rust-for-vlc branch](https://code.videolan.org/loic/vlc/-/tree/rust-for-vlc?ref_type=heads).
+
+**Detailed Changes:**
+1. **WebAssembly Plugin Implementation:**
+   - Added core functionality for WebAssembly plugins using Wasmer.
+   - Integrated WebAssembly plugin loading, execution processes, and interactions.
+2. **Rust Support Integration:**
+   - Merged the latest master branch changes, including Loic's commits for Rust support.
+
+**Motivation:**
+- Extend the capabilities of our system by incorporating WebAssembly plugins.
+- Ensure seamless integration of the new WebAssembly functionality with Rust support enhancements.
+
+### 3. [GSoC 2024] extensions: Add Locking and Access Functions for Managing Extension Array 
+- [View MR Details](https://code.videolan.org/videolan/vlc/-/merge_requests/5777)
+
+**Status:** <span style={{color: '#fb923c'}}>Draft</span>
+
+This MR introduces new functions for synchronization and access control in the extension manager. The updates address:
+
+- **Ownership Flexibility:** When the extension manager is instantiated from C, it directly owns the extensions. If instantiated from Rust or another language, that language retains ownership, which can result in the extension array being null. This flexibility allows Rust code to manage and own the extensions while ensuring compatibility with existing C code.
+  
+- **Synchronization and Access Control:** The new functions provide necessary synchronization and access control mechanisms to manage the extension array consistently, regardless of the instantiating language.
+
+### 4. macosx: Fix potential deadlock in VLCExtensionsManager
+- [View MR Details](https://code.videolan.org/videolan/vlc/-/merge_requests/5787)
+
+**Status:** <span style={{color: '#4ade80'}}>Merged</span>
+
+Ensured mutex is unlocked if the extension index exceeds the array size to prevent deadlock.
+
+### 5. rust: cargo: Fix Build Command Error
+- [View MR Details](https://code.videolan.org/videolan/vlc/-/merge_requests/5815)
+
+**Status:** <span style={{color: '#4ade80'}}>Merged</span>
+
+Fixed a build issue related to the cargo command.
+
