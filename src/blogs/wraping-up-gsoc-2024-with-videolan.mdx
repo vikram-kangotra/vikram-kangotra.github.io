@@ -3,3 +3,28 @@ title: "Wrapping up GSoC 2024 with VideoLan"
 publishedAt: "2024-08-13"
 excerpt: "As my Google Summer of Code 2024 journey comes to an end, I’m excited to share my experiences with VideoLan. This summer, I focused on adding Rust support to VLC and creating a plugin system using Wasmer to enable WebAssembly plugins. It’s been a fantastic ride, filled with learning and collaboration. A huge thanks to my mentor and the VideoLan team for their support. Looking forward to continuing my open-source adventures!"
 ---
+
+<div className='w-full flex justify-center'>
+    <Image src='/assets/gsoc.png' width='250' height='250'/>
+    <Image src='/assets/vlc.png' width='250' height='250'/>
+</div>
+
+Participating in Google Summer of Code (GSoC) 2024 with VideoLan has been an incredibly rewarding experience. This summer, I had the opportunity to work on a project that aimed to bring the power of WebAssembly (Wasm) to VLC by developing a plugin system using Rust and Wasmer. The goal was to enhance VLC’s extensibility by enabling WebAssembly plugins, potentially setting the stage for replacing the existing Lua scripting system in the future. Throughout this journey, I’ve gained valuable insights into Rust, WebAssembly, and the VLC codebase, all while collaborating with an amazing team of developers. I’m thrilled to share my journey and the progress made during this exciting project.
+
+## Project Scope
+
+- **Rust Integration**
+   
+   The initial step was to add Rust support to VLC, ensuring seamless integration within the codebase. This work built upon the foundational Rust work done by [Loic](https://code.videolan.org/videolan/vlc/-/merge_requests/2738), which significantly accelerated progress. Without Loic's initial contributions, it would have taken considerably more time to reach the level of integration achieved. This groundwork was essential for the subsequent development of the Wasm Plugin Manager.
+
+- **Wasm Plugin Manager Development**
+
+    The core focus was on creating a manager capable of loading and handling WebAssembly plugins. The aim was to replicate and eventually extend the Lua scripting functionality, allowing users to develop plugins in any language that compiles to WebAssembly.
+
+- **Interface and Extension Module Implementation**
+
+    To manage Wasm plugins, both an interface module and an extension module were necessary. The interface module provided the necessary hooks for Wasm plugins to interact with VLC. The extension module, on the other hand, was required to handle the specifics of the extension lifecycle and integration. This involved identifying the required functions and capabilities for these modules, using the Lua extension launcher as a reference. The approach was to start with a minimal, testable set of features and expand from there.
+
+- **Testing and Iteration**
+
+    Rigorous testing was crucial to ensure stability and functionality. The process began with simple tests using small WebAssembly (WASM) files, which allowed us to verify that each feature worked as intended within VLC. As the project progressed, the scope of testing expanded to cover more complex scenarios and edge cases to ensure comprehensive validation of all features.

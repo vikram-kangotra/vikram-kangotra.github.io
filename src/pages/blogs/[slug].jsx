@@ -10,6 +10,7 @@ import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import dayjs from "dayjs";
 import {MDXRemote} from "next-mdx-remote";
 import Link from "next/link";
+import CustomLink from "@/components/customlink";
 
 function Previous({link}) {
 
@@ -82,8 +83,8 @@ export default function Blog({ post: {source, frontmatter}, previous, next }) {
                         </address>
                     </header>
 
-                    <article className={`text-white max-w-none md:prose-md lg:prose-lg prose prose-invert font-medium font-sans`}>
-                      <MDXRemote {...source} components={{ Image }} />
+                    <article className={`text-white max-w-none md:prose-md lg:prose-lg prose prose-invert font-normal font-sans`}>
+                      <MDXRemote {...source} components={{ Image, a: CustomLink }} />
                     </article>
                     
                     <div className="flex h-32 my-10 text-pink-500 gap-1">
