@@ -92,3 +92,91 @@ Ensured mutex is unlocked if the extension index exceeds the array size to preve
 
 Fixed a build issue related to the cargo command.
 
+### 6. rust: Add vlcrs-core Crate and Abstractions for vlc_object_t
+- [View MR Details](https://code.videolan.org/videolan/vlc/-/merge_requests/5896)
+
+**Status:** <span style={{color: '#fb923c'}}>Pending</span>
+
+This Merge Request adds the `vlcrs-core` crate, which helps create safe ways to work with VLC's C functions and definitions. This crate makes it easier to use VLC features in Rust without directly dealing with unsafe C code.
+
+It also includes Rust abstractions for `vlc_object_t`, making it simpler and safer to handle VLC objects in Rust.
+
+## Technical Detail
+
+In this section, I'll dive into the technical aspects of the project and how various challenges were addressed.
+
+The work began by branching from the `master` branch, but since the Rust integration hadn't yet been merged into the master, I needed to rebase Loic's Rust work onto my new branch. This was one of the reasons why the Merge Request included both the WebAssembly work and the Rust integration.
+
+At this stage, a key decision revolved around how to generate the FFI bindings to C/C++. We had two options:
+
+1. Use bindgen: This tool automatically generates the Rust FFI bindings.
+2. Manual Binding: Writing the bindings manually to maintain more control over the integration.
+
+After extensive discussions, it was decided that manually written bindings would be more beneficial in the long run. This approach, although more labor-intensive upfront, offered greater flexibility and precision, ensuring that the integration would be robust and adaptable as the project evolved. With this decision made, the work officially kicked off.
+
+### Interface and Extension Modules
+
+The first task was to create the Interface and Extension modules. Interfaces are how you interact with the VLC media player. Creating the Interface module was relatively straightforward at this stage, as there wasn't much code to write. We needed to develop the Rust FFI for the interface and wrap it in a way that ensured safety in Rust. The implementation details can be found [here](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/src/rust/vlcrs-submodules/src/interface.rs?ref_type=heads). With this in place, defining an interface module in Rust became a straightforward task.
+
+```rust
+use vlcrs_core::error::Result;
+use vlcrs_submodules::interface::InterfaceModuleLoader;
+use vlcrs_macros::module;
+use vlcrs_submodules::{interface::{InterfaceCapability, ThisInterfaceThread}, ModuleArgs};
+
+use vlcrs_messages::{Logger, debug};
+
+pub struct Wasm;
+
+impl InterfaceCapability for Wasm {
+    fn open<'a> (
+        _this_interface: ThisInterfaceThread<'a>,
+        logger: &'a mut Logger,
+        _args: &mut ModuleArgs,
+    ) -> Result<()> {
+
+        debug!(logger, "Wasm interface module loaded");
+
+        Ok(())
+    }
+}
+
+module! {
+    type: Wasm (InterfaceModuleLoader),
+    capability: "interface" @ 0,
+    category: INTERFACE_MAIN,
+    description: "Wasm Interpreter",
+    shortname: "Wasm",
+    shortcuts: ["wasmintf"],
+}
+
+```
+
+The first major challenge, however, was adding the Extension capability as a submodule of the interface. Unfortunately, the module! macro lacked support for submodules, which required additional development to accommodate this new structure.
+
+The Module stores its information in the ModuleInfo struct, and since submodules are almost like modules, it made sense to include ModuleInfo within the SubmoduleModuleInfo struct. This approach allowed submodules to be parsed using the same logic as modules. However, nested submodules were not permitted, as confirmed by my mentor, so this needed to be handled separately with a clear error message to guide users. The detailed changes required to implement this can be found in this [commit](https://code.videolan.org/videolan/vlc/-/commit/983961ec9976fcb8d4a07797745fd6c4bd562a95).
+
+With this completed, the next step was to include the FFI bindings for the extension module. The logic for this was almost identical to what was done for the interface module, with one key difference: the extension module included control functions that were variadic. This necessitated the introduction of typed callbacks. The merge request related to this work can be found [here](https://code.videolan.org/videolan/vlc/-/merge_requests/5475). With this change merged, the control functions could now be easily defined in Rust.
+
+The Extension Manager submodule can be added using the following syntax:
+
+```rust
+module! {
+    type: Wasm (InterfaceModuleLoader),
+    capability: "interface" @ 0,
+    category: INTERFACE_MAIN,
+    description: "Wasm Interpreter",
+    shortname: "Wasm",
+    shortcuts: ["wasmintf"],
+    submodules: [
+        {
+            type: WasmExtensionModule (ExtensionModuleLoader),
+            capability: "extension" @ 2,
+            category: UNKNOWN,
+            description: "Wasm Extension",
+            shortcuts: ["wasmextension"],
+        }
+    ]
+}
+```
+Given the current architecture of the VLC codebase, it's only possible to retrieve a single extensions manager via module_need. If additional managers are required, module_match would need to be used to monitor multiple managers. Because of this limitation, we needed to ensure that our module had a higher priority than the Lua module to allow for proper testing. This is why the priority for our module is set to 2.
