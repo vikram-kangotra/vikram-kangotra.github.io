@@ -7,13 +7,11 @@ export default function BlogPage({groupedBlogs}) {
     const sortedGroupedBlogs = Object.keys(groupedBlogs).sort((a, b) => b - a);
 
     return (
-        <div className="flex flex-col items-center p-10 overflow-hidden">
-            <div className='flex flex-col items-center max-w-4xl py-10 md:py-20 gap-16 md:gap-28'>
-                <div className="grid grid-cols-1 gap-5">
-                    {sortedGroupedBlogs.map((year) => (
-                        <YearSection key={year} year={year} blogs={groupedBlogs[year]} />
-                    ))}
-                </div>
+        <div className="flex flex-col items-center p-10">
+            <div className='flex flex-col items-center max-w-4xl gap-8 md:gap-14'>
+                {sortedGroupedBlogs.map((year) => (
+                    <YearSection key={year} year={year} blogs={groupedBlogs[year]} />
+                ))}
             </div>
         </div>
     )
@@ -23,7 +21,7 @@ function YearSection({ year, blogs }) {
     return (
         <div className="relative flex flex-col md:flex-row gap-5">
             
-            <h2 className="relative z-10 text-2xl font-medium text-white opacity-60 md:pl-5">
+            <h2 className="relative text-2xl font-medium text-white opacity-60 md:pl-5">
                 {year}
             </h2>
             
@@ -37,22 +35,15 @@ function YearSection({ year, blogs }) {
 }
 
 export async function getStaticProps() {
-    let blogs = await getAllBlogs();
+    const blogs = await getAllBlogs();
 
-    blogs.sort((a, b) => {
-        a = dayjs(a.publishedAt)
-        b = dayjs(b.publishedAt)
+    const sortedBlogs = blogs.sort((a, b) => 
+        dayjs(b.publishedAt).diff(dayjs(a.publishedAt))
+    );
 
-        if (a.isAfter(b)) return -1
-        if (a.isBefore(b)) return 1
-        return 0
-    })
-
-    const groupedBlogs = blogs.reduce((acc, blog) => {
+    const groupedBlogs = sortedBlogs.reduce((acc, blog) => {
         const year = dayjs(blog.publishedAt).year();
-        if (!acc[year]) {
-            acc[year] = [];
-        }
+        if (!acc[year]) acc[year] = [];
         acc[year].push(blog);
         return acc;
     }, {});
@@ -63,3 +54,4 @@ export async function getStaticProps() {
         },
     };
 }
+
