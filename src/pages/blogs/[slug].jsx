@@ -60,7 +60,7 @@ export default function Blog({ post: {source, frontmatter}, previous, next }) {
 
     useEffect(() => {
         setDate(dayjs(frontmatter.publishedAt).format('MMMM D, YYYY'));
-    }, []);
+    }, [frontmatter.publishedAt]);
 
     return (
         <>
