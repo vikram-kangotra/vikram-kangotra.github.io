@@ -6,7 +6,6 @@ import rehypePrism from "rehype-prism-plus";
 import rehypeSlug from "rehype-slug";
 import { getBlogFromSlug, getSlug } from "@/utils/mdx";
 import { serialize } from "next-mdx-remote/serialize";
-import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import dayjs from "dayjs";
 import {MDXRemote} from "next-mdx-remote";
 import Link from "next/link";
@@ -115,15 +114,6 @@ export async function getStaticProps({params}) {
         mdxOptions: {
             rehypePlugins: [
                 rehypeSlug,
-                [
-                    rehypeAutolinkHeadings,
-                    {
-                        properties: { className: ["anchor"] },
-                    },
-                    {
-                        behavior: "wrap",
-                    },
-                ],
                 rehypePrism,
                 rehypeCodeTitles,
             ],

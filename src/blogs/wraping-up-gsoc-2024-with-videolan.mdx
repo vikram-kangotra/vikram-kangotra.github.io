@@ -114,7 +114,7 @@ At this stage, a key decision revolved around how to generate the FFI bindings t
 
 After extensive discussions, it was decided that manually written bindings would be more beneficial in the long run. This approach, although more labor-intensive upfront, offered greater flexibility and precision, ensuring that the integration would be robust and adaptable as the project evolved. With this decision made, the work officially kicked off.
 
-### Interface and Extension Modules
+### Interface and Extension Submodule
 
 The first task was to create the Interface and Extension modules. Interfaces are how you interact with the VLC media player. Creating the Interface module was relatively straightforward at this stage, as there wasn't much code to write. We needed to develop the Rust FFI for the interface and wrap it in a way that ensured safety in Rust. The implementation details can be found [here](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/src/rust/vlcrs-submodules/src/interface.rs?ref_type=heads). With this in place, defining an interface module in Rust became a straightforward task.
 
@@ -179,4 +179,75 @@ module! {
     ]
 }
 ```
+
 Given the current architecture of the VLC codebase, it's only possible to retrieve a single extensions manager via module_need. If additional managers are required, module_match would need to be used to monitor multiple managers. Because of this limitation, we needed to ensure that our module had a higher priority than the Lua module to allow for proper testing. This is why the priority for our module is set to 2.
+
+### Extension
+
+The Extension struct encapsulates all the relevant information about an extension loaded into the VLC media player. It serves as a Rust wrapper around the extension_t from the C codebase, bringing with it several fields that are essential for managing and interacting with the extension.
+
+**Fields**
+1. **sys**: Refers to the internal object that handles the specific operations and state of this extension.
+2. **logger**: A pointer to the logger object, facilitating logging within the extension.
+3. **name**: The extension's name.
+4. **title**: The title of the extension, typically displayed in user interfaces.
+5. **author**: The author of the extension.
+6. **version**: The version number of the extension.
+7. **url**: The URL associated with the extension, possibly linking to documentation/website.
+8. **description**: A detailed description of what the extension does.
+9. **shortdescription**: A brief summary of the extension’s purpose.
+10. **icondata and icon_size**: These fields store the icon for the extension and its size, used for visual representation.
+
+#### Ownership and Lifetime Management
+In an ideal scenario, Rust would have full control over the lifetime of the Extension struct and its associated sys field. However, the current implementation of the extensions manager within the VLC codebase presents challenges in achieving this. The existing architecture limits Rust’s ability to fully own and manage the lifecycle of the extension_t.
+
+There has been draft proposal aimed at addressing this issue and making the extension system more future-proof. After several discussions, a [more refined approach](https://code.videolan.org/videolan/vlc/-/merge_requests/5777#note_447196) has been identified, which will be implemented in the near future to better align with Rust's ownership principles. This work is ongoing and will pave the way for a more robust and maintainable extension management system in VLC.
+
+For more detailed information of Extension, you can explore the current implementation [here](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/src/rust/vlcrs-core/src/extension/mod.rs?ref_type=heads)
+
+### Extension Manager Module
+
+With the foundational work completed, the development of the Wasm Extension Manager could begin. The WasmExtensionManager struct is central to this module and encapsulates several key fields, including ThisExtensionsManager, which provides the [ability to add extensions](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/src/rust/vlcrs-submodules/src/extension.rs?ref_type=heads#L32), logger, a `wasmer::Store` (which will be discussed later), variables and a playlist.
+
+```rust
+struct WasmExtensionManager<'a> {
+    extension_manager: ThisExtensionsManager,
+    logger: &'a mut Logger,
+    store: Arc<Mutex<Store>>,
+    variables: Variables,
+    playlist: Playlist,
+}
+```
+
+The first step in setting up the Extension Manager involves scanning a specified location for Wasm extensions. This is accomplished using the  [vlcwasm_scripts_batch_execute](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/src/rust/vlcrs-submodules/src/extension.rs?ref_type=heads#L32) function, which lists Wasm scripts from the extension path and executes a callback function provided as an argument.  The [scan_callback](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/extension/mod.rs?ref_type=heads#L250) function processes each script path, reads the Wasm extension description, sets up the extension, and appends it to the list of available extensions. It also assigns the sys field, which is of type WasmExtension.
+
+#### WasmExtension Struct
+
+The `WasmExtension` struct represents an individual Wasm extension and contains several fields crucial for its operation:
+
+```rust
+struct WasmExtension {
+    extension: Extension,
+
+    store: Arc<Mutex<Store>>,
+    instance: Instance,
+
+    thread_handle: Option<thread::JoinHandle<Result<()>>>,
+
+    tx_command: mpsc::Sender<Command>,
+    rx_command: mpsc::Receiver<Command>,
+
+    state: Mutex<WasmExtensionState>,
+    thread_running: bool,
+}
+```
+
+Field Breakdown
+
+1. **Extension**: This field holds the Extension object, which contains detailed information about the extension.
+2. **Store**: Represents all global state that can be manipulated by WebAssembly programs.
+3. **Instance**: A WebAssembly Instance is a stateful, executable instance of a WebAssembly Module. An instance contains all the exported WebAssembly functions, memories, tables, and globals, allowing interaction with the WebAssembly code. This is one of the most critical components when working with Wasm files.
+4. **thread_handle**: Stores the thread handle returned by `thread::spawn`. This is used to ensure that the thread has completed its work. Currently, the mechanism for dropping `WasmExtension` is not yet implemented due to pending work related to the extension's lifetime.
+5. **tx_command and rx_command**: These channels facilitate message passing between the main thread and the extension thread.
+6. **WasmExtensionState**: Describes the current state of the extension (e.g., Activated, Deactivated, Exiting).
+7. **thread_running**: Indicates whether the thread has already been spawned. If the thread is already running, re-activation code is executed instead of spawning a new thread.
