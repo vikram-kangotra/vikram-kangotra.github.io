@@ -82,7 +82,7 @@ export default function Blog({ post: {source, frontmatter}, previous, next }) {
                         </address>
                     </header>
 
-                    <article className={`text-white max-w-none md:prose-md lg:prose-lg prose text-lg prose-invert font-normal font-sans`}>
+                    <article className={`tracking-wide text-[#dfeeff] max-w-none md:prose-md lg:prose-lg prose text-lg prose-invert font-normal font-sans`}>
                       <MDXRemote {...source} components={{ Image, a: CustomLink }} />
                     </article>
                     
