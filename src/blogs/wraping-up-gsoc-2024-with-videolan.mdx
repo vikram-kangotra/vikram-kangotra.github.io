@@ -251,3 +251,44 @@ Field Breakdown
 5. **tx_command and rx_command**: These channels facilitate message passing between the main thread and the extension thread.
 6. **WasmExtensionState**: Describes the current state of the extension (e.g., Activated, Deactivated, Exiting).
 7. **thread_running**: Indicates whether the thread has already been spawned. If the thread is already running, re-activation code is executed instead of spawning a new thread.
+
+### Reading Extension Description from Wasm File
+
+In the Wasm extension system, the extension description provides essential metadata about the extension. This metadata includes details like the title, version, author, and descriptions. Here's a simple example of how an extension description can be defined in Rust:
+
+```rust
+fn descriptor() -> extension::Description {
+    extension::Description {
+        title: "test".to_string(),
+        version: "0.0.1".to_string(),
+        author: "VideoLAN".to_string(),
+        shortdesc: "Test example".to_string(),
+        description: "Test description".to_string(),
+    }
+}
+```
+
+#### Binding Generation with `wai-bindgen-rust`
+
+To facilitate communication between the Wasm guest and the host, we use [wai-bindgen-rust](https://crates.io/crates/wai-bindgen-rust). This crate generates the necessary bindings, allowing the host to interact with the guest's functions.
+
+Internally, the code above is called by a function named `__wai_bindgen_extension_descriptor`. This function is defined as follows:
+
+```rust
+#[export_name = "descriptor"]
+unsafe extern "C" fn __wai_bindgen_extension_descriptor() -> i32 {
+    // code
+}
+```
+
+#### Memory Management between Host and Guest
+
+One of the challenges of working with Wasm is that the guest (Wasm) and the host (extension manager module) do not share the same memory space. As a result, the address returned by `__wai_bindgen_extension_descriptor` is in the Wasm memory space, which the host cannot directly access.
+
+To overcome this, we use `wasmer::Memory`, which provides a `wasmer::MemoryView` for reading and writing data between the host and guest memory spaces.
+
+#### Reading the Extension Description
+
+The functions for interacting with Wasm memory have been defined [here](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/lib.rs?ref_type=heads#L25). These functions enable us to read the extension description from the Wasm memory by accessing the specific memory location returned by `__wai_bindgen_extension_descriptor`.
+
+Using these functions, the extension manager module can retrieve and utilize the extension description as demonstrated [here](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/extension/mod.rs?ref_type=heads#L122). This allows the extension manager to understand and manage each Wasm extension's metadata effectively.
