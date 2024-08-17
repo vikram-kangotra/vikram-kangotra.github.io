@@ -292,3 +292,38 @@ To overcome this, we use `wasmer::Memory`, which provides a `wasmer::MemoryView`
 The functions for interacting with Wasm memory have been defined [here](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/lib.rs?ref_type=heads#L25). These functions enable us to read the extension description from the Wasm memory by accessing the specific memory location returned by `__wai_bindgen_extension_descriptor`.
 
 Using these functions, the extension manager module can retrieve and utilize the extension description as demonstrated [here](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/extension/mod.rs?ref_type=heads#L122). This allows the extension manager to understand and manage each Wasm extension's metadata effectively.
+
+### Extension Manager Control
+
+With the setup of the Extension Manager module complete, the next step involves implementing the control functions necessary for managing extensions. These functions allow for the activation, deactivation, and general control of the extensions. The key control functions are:
+
+1. **activate**: Activates a specific extension when invoked by the manager.
+2. **deactivate**: Deactivates the extension.
+3. **is_activated**: Checks if the extension is currently activated.
+4. **has_menu**: Determines whether the extension provides a menu.
+5. **get_menu**: Retrieves the extension's menu, if available.
+6. **trigger_only**: Indicates whether the extension can only be triggered without activation.
+7. **trigger_menu**: Triggers a specific entry within the extension's menu.
+8. **set_input**: Sets the input item for the extension.
+9. **playing_changed**: Handles changes to the playing state.
+10. **meta_changed**: Handles metadata changes.
+
+#### Activating an Extension
+
+The `activate` function plays a central role in the lifecycle management of extensions. It takes an extension as an argument and performs the following steps:
+
+- **Check Activation Status**: First, the function checks if the extension is already activated. If it is, no further action is taken.
+- **Send Activation Command**: If the extension is not yet activated, a `Command::Activate` is sent through the communication channel.
+- **Set State**: The extension's state is updated to `WasmExtensionState::Activating`.
+- **Thread Management**: The function then checks if the thread responsible for running the extension is active. If the thread is not running, a new thread is spawned using `thread::spawn`, passing the `run_extension_thread` function to it. The handle of this thread is stored in the `WasmExtension` structure, and the `thread_running` flag is set to true.
+
+#### Running the Extension Thread
+
+The `run_extension_thread` function, defined [here](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/extension/extension_thread.rs?ref_type=heads),  is responsible for managing the execution of the extension within a loop. Within this loop, the function listens for commands from the channel and acts accordingly:
+
+- **Activate Command**: When a `Command::Activate` is received, the Wasm extension's activation function is executed, and the state is updated to reflect the activation.
+- **Deactivate Command**: Similarly, when a `Command::Deactivate` is received, the deactivation function is executed, and the extension's state is updated accordingly.
+
+#### Executing Wasm Functions
+
+To execute a function within the Wasm environment, the `execute_function` method of the `WasmExtension` structure is used, as seen [here](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/extension/mod.rs?ref_type=heads#L172). This method retrieves the target function from the `instance.exports` and then invokes it. The output from the Wasm function is encapsulated in a `Box<[Value]>`, representing the return values of the function.
