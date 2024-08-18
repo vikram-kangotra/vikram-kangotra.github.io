@@ -25,6 +25,8 @@ Participating in Google Summer of Code (GSoC) 2024 with VideoLan has been an inc
 
     The core focus was on creating a manager capable of loading and handling WebAssembly plugins. The aim was to replicate and eventually extend the Lua scripting functionality, allowing users to develop plugins in any language that compiles to WebAssembly.
 
+    > WebAssembly (Wasm) defines a portable binary-code format and a corresponding text format for executable programs as well as software interfaces for facilitating interactions between such programs and their host environment.
+
 - **Interface and Extension Module Implementation**
 
     To manage Wasm plugins, both an interface module and an extension module were necessary. The interface module provided the necessary hooks for Wasm plugins to interact with VLC. The extension module, on the other hand, was required to handle the specifics of the extension lifecycle and integration. This involved identifying the required functions and capabilities for these modules, using the Lua extension launcher as a reference. The approach was to start with a minimal, testable set of features and expand from there.
