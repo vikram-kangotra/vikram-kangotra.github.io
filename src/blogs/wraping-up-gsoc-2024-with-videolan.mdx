@@ -112,7 +112,9 @@ At this stage, a key decision revolved around how to generate the FFI bindings t
 1. Use bindgen: This tool automatically generates the Rust FFI bindings.
 2. Manual Binding: Writing the bindings manually to maintain more control over the integration.
 
-After extensive discussions, it was decided that manually written bindings would be more beneficial in the long run. This approach, although more labor-intensive upfront, offered greater flexibility and precision, ensuring that the integration would be robust and adaptable as the project evolved. With this decision made, the work officially kicked off.
+After extensive discussions, it was decided that manually written bindings would be more beneficial in the long run. This approach, although more labor-intensive upfront, offered greater flexibility and precision, ensuring that the integration would be robust and adaptable as the project progresses.
+
+However, writing everything from scratch was not necessary. We leveraged `bindgen` to generate initial code and then refined it manually as needed. This hybrid approach streamlined the development process, making it easier to create and maintain the FFI bindings. For this purpose, we utilized the [vlcrs-sys-generator](https://code.videolan.org/videolan/vlc/-/tree/master/src/rust/vlcrs-sys-generator?ref_type=heads), which facilitated the generation of the required code pieces, allowing us to focus on fine-tuning and integrating the bindings effectively.
 
 ### Interface and Extension Submodule
 
@@ -327,3 +329,113 @@ The `run_extension_thread` function, defined [here](https://code.videolan.org/vi
 #### Executing Wasm Functions
 
 To execute a function within the Wasm environment, the `execute_function` method of the `WasmExtension` structure is used, as seen [here](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/extension/mod.rs?ref_type=heads#L172). This method retrieves the target function from the `instance.exports` and then invokes it. The output from the Wasm function is encapsulated in a `Box<[Value]>`, representing the return values of the function.
+
+### Exposing VLC APIs to WebAssembly
+
+To enable WebAssembly (Wasm) modules to interact with VLC’s core functionality, specific libraries are exposed to the Wasm environment. This is achieved using the `register_functions_with_namespace` macro, which simplifies the process of registering and managing these APIs. Below is a detailed explanation of the macro, its usage, and the supported libraries.
+
+#### `register_functions_with_namespace` Macro
+
+The `register_functions_with_namespace` macro streamlines the process of exposing multiple functions to Wasm by automating the creation of `Exports` objects, registering functions, and adding namespaces. Here’s a breakdown of how it operates:
+
+```rust
+macro_rules! register_functions_with_namespace {
+    ($namespace:literal, $store:expr, $env:expr, $import_object:expr, { $( $name:literal => $func:expr ),* $(,)? }) => {{
+        use wasmer::{Exports, Function};
+
+        // Create a new Exports object
+        let mut exports = Exports::new();
+
+        // Register the functions
+        $(
+            exports.insert($name, Function::new_typed_with_env($store, $env, $func));
+        )*
+
+        // Register the namespace with the Imports object
+        $import_object.register_namespace($namespace, exports);
+    }};
+}
+```
+
+##### Macro Description
+
+- **Purpose**: Creates a new `Exports` object, registers multiple functions, and registers the namespace with the `Imports` object.
+- **Parameters**:
+    - `$namespace:literal`: The name of the namespace to register.
+    - `$store:expr`: The Store used for creating the functions.
+    - `$env:expr`: The environment (FunctionEnv) passed to the functions.
+    - `$import_object:expr`: The Imports object where the namespace will be registered.
+    - `{ $( $name:literal => $func:expr ),* $(,)? }`: List of function names (as string literals) and their corresponding implementations.
+
+#### Example Usage:
+
+```rust
+register_functions_with_namespace!(
+    "vlc_msg",
+    &store,
+    &env,
+    &mut import_object,
+    {
+        "msg_dbg" => vlcwasm_msg_dbg,
+        "msg_warn" => vlcwasm_msg_warn,
+        "msg_err" => vlcwasm_msg_err,
+        "msg_info" => vlcwasm_msg_info,
+    }
+);
+```
+
+In this example, the `vlc_msg` namespace is created, and functions for various logging levels are registered.
+
+### How States Are Saved
+
+State management in Wasm involves using the `Env` struct, which holds the environment for functions. This struct is encapsulated within `wasmer::FunctionEnv`, providing an opaque reference to the function environment. The `Env` struct looks like this:
+
+```rust
+pub struct Env {
+    pub instance: Option<Instance>,
+    pub extension: Extension,
+    pub variables: Variables,
+    pub playlist: Playlist,
+}
+```
+
+Functions receive a `wasmer::FunctionEnvMut` handle, allowing temporary access to and modification of the environment. Here’s an example function demonstrating this:
+
+```rust
+fn get_msg_and_logger<'a>(env: &'a mut FunctionEnvMut<Env>, ptr: u32, len: i32) -> (String, &'a mut Logger) {
+    let (env_data, store) = env.data_and_store_mut();
+    let instance = env_data.instance.as_ref().expect("Should have instance");
+    let msg = vlcwasm_read_string(&store, &instance, ptr, len as usize).expect("Failed to read string from memory");
+    let logger = env_data.extension.get_logger();
+    (msg, logger)
+}
+
+fn vlcwasm_msg_dbg(mut env: FunctionEnvMut<Env>, ptr: u32, len: i32) {
+    let (msg, logger) = get_msg_and_logger(&mut env, ptr, len);
+    debug!(logger, "{}", msg);
+}
+
+```
+
+In this example, `get_msg_and_logger` retrieves a message and logger from the environment, while `vlcwasm_msg_dbg` uses this information to log a debug message.
+
+### Supported Libraries
+
+Currently, the following libraries are exposed to the Wasm environment, each serving a specific purpose:
+
+1. **Messages**: Provides logging functionality to the Wasm guest. This library includes functions for various logging levels such as debug, warning, error, and information. [View Implementation](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/libs/messages.rs?ref_type=heads)
+2. **Variables**: Manages module parameters and callbacks registered with the object. [View Implementation](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/libs/variables.rs?ref_type=heads)
+3. **Configuration**: Provides access to configuration settings and directory paths like user, system, home, cache, and data. It also allows adding and retrieving configuration values. [View Implementation](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/libs/configuration.rs?ref_type=heads)
+4. **Playlist**: Exposes player and playlist functionalities to the Wasm guest. This library includes APIs for interacting with and manipulating the playlist and player. [View Implementation](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/libs/playlist.rs?ref_type=heads)
+
+### Adding New Libraries
+
+Adding additional libraries to expose VLC APIs can be done by following a similar pattern to the ones outlined above. Each new library should define the appropriate functions and register them using the `register_functions_with_namespace` macro. For each library, ensure that the corresponding system (sys) files are also added. These files can be found at [/src/rust/vlcrs-core/src](https://code.videolan.org/vikram-kangotra/vlc/-/tree/wasm-plugin-system/src/rust/vlcrs-core/src?ref_type=heads)
+
+## Conclusion
+
+As I conclude my Google Summer of Code (GSoC) 2024 journey with VideoLAN, I am filled with both gratitude and excitement. This summer has been an incredible adventure, allowing me to contribute to VLC by integrating Rust support and developing a plugin system using WebAssembly (Wasm) with Wasmer.
+
+I couldn’t have done this without the incredible guidance from [Alexandre Janniaux](https://code.videolan.org/alexandre-janniaux) and the amazing support from the VideoLAN team. Their help has made this project not just a success but a truly enriching experience.
+
+Looking ahead, I’m eager to see how this project evolves and excited to receive feedback from the community. Thank you to everyone who supported me throughout this journey. I look forward to continuing to contribute to VLC and exploring new possibilities in open-source development.
