@@ -234,6 +234,8 @@ struct WasmExtension {
     store: Arc<Mutex<Store>>,
     instance: Instance,
 
+    capabilities: Capabilities,
+
     thread_handle: Option<thread::JoinHandle<Result<()>>>,
 
     tx_command: mpsc::Sender<Command>,
@@ -249,24 +251,35 @@ Field Breakdown
 1. **Extension**: This field holds the Extension object, which contains detailed information about the extension.
 2. **Store**: Represents all global state that can be manipulated by WebAssembly programs.
 3. **Instance**: A WebAssembly Instance is a stateful, executable instance of a WebAssembly Module. An instance contains all the exported WebAssembly functions, memories, tables, and globals, allowing interaction with the WebAssembly code. This is one of the most critical components when working with Wasm files.
-4. **thread_handle**: Stores the thread handle returned by `thread::spawn`. This is used to ensure that the thread has completed its work. Currently, the mechanism for dropping `WasmExtension` is not yet implemented due to pending work related to the extension's lifetime.
-5. **tx_command and rx_command**: These channels facilitate message passing between the main thread and the extension thread.
-6. **WasmExtensionState**: Describes the current state of the extension (e.g., Activated, Deactivated, Exiting).
-7. **thread_running**: Indicates whether the thread has already been spawned. If the thread is already running, re-activation code is executed instead of spawning a new thread.
+4. **capabilities**: This field defines various capabilities of the extension, such as `HAS_MENU`, `TRIGGER_ONLY`, and others. These capabilities are represented using bitflags, which are defined as follows:
+    ```rust
+    bitflags! {
+    #[derive(Default, Debug)]
+    struct Capabilities: u32 {
+        const HAS_MENU = 1 << 0;
+        const TRIGGER_ONLY = 1 << 1;
+        const INPUT_LISTENER = 1 << 2;
+        const META_LISTENER = 1 << 3;
+        const PLAYING_LISTENER = 1 << 4;
+    }}
+    ```
+5. **thread_handle**: Stores the thread handle returned by `thread::spawn`. This is used to ensure that the thread has completed its work. Currently, the mechanism for dropping `WasmExtension` is not yet implemented due to pending work related to the extension's lifetime.
+6. **tx_command and rx_command**: These channels facilitate message passing between the main thread and the extension thread.
+7. **WasmExtensionState**: Describes the current state of the extension (e.g., Activated, Deactivated, Exiting).
+8. **thread_running**: Indicates whether the thread has already been spawned. If the thread is already running, re-activation code is executed instead of spawning a new thread.
 
 ### Reading Extension Description from Wasm File
 
 In the Wasm extension system, the extension description provides essential metadata about the extension. This metadata includes details like the title, version, author, and descriptions. Here's a simple example of how an extension description can be defined in Rust:
 
 ```rust
-fn descriptor() -> extension::Description {
-    extension::Description {
-        title: "test".to_string(),
-        version: "0.0.1".to_string(),
-        author: "VideoLAN".to_string(),
-        shortdesc: "Test example".to_string(),
-        description: "Test description".to_string(),
-    }
+extension::Description {
+    title: "test".to_string(),
+    version: "0.0.1".to_string(),
+    author: "VideoLAN".to_string(),
+    shortdesc: "Test example".to_string(),
+    description: "Test description".to_string(),
+    capabilities: vec!["menu".to_string(), "input-listener".to_string()],
 }
 ```
 
