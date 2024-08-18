@@ -14,6 +14,12 @@ const projects = [
         imageSrc: wirebyte
     },
     {
+        name: "Sudoku Solver",
+        description: "Sudoku Solver is a GTk4+libadwaita application that solves sudokus using the Wave Function Collapse Algorithm.",
+        href: "https://gitlab.com/cyberphantom52/sudoku-solver",
+        imageSrc: sudoku_solver
+    },
+    {
         name: "Lamp",
         description: "Lamp is an attempt to create a PyTorch-like library in Rust for educational purposes. It is not intended to rival the PyTorch library.",
         href: "https://github.com/vikram-kangotra/lamp",
@@ -32,12 +38,6 @@ const projects = [
         href: "https://github.com/vikram-kangotra/Miosis",
         imageSrc: miosis
     },
-    {
-        name: "Sudoku Solver",
-        description: "Sudoku Solver is a GTk4+libadwaita application that solves sudokus using the Wave Function Collapse Algorithm.",
-        href: "https://gitlab.com/cyberphantom52/sudoku-solver",
-        imageSrc: sudoku_solver
-    }
 ]
 
 export default projects;
