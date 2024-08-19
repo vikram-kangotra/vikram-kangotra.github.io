@@ -447,6 +447,10 @@ Currently, the following libraries are exposed to the Wasm environment, each ser
 
 Adding additional libraries to expose VLC APIs can be done by following a similar pattern to the ones outlined above. Each new library should define the appropriate functions and register them using the `register_functions_with_namespace` macro. For each library, ensure that the corresponding system (sys) files are also added. These files can be found at [/src/rust/vlcrs-core/src](https://code.videolan.org/vikram-kangotra/vlc/-/tree/wasm-plugin-system/src/rust/vlcrs-core/src?ref_type=heads)
 
+### Testing WebAssembly Plugin
+
+The code for generating WebAssembly output that serves as a plugin for VLC can be found [here](https://github.com/vikram-kangotra/wasm_extension/blob/main/rust/src/lib.rs).  This plugin is intended for testing and demonstrates the full functionality of the WebAssembly integration.
+
 ## Conclusion
 
 As I conclude my Google Summer of Code (GSoC) 2024 journey with VideoLAN, I am filled with both gratitude and excitement. This summer has been an incredible adventure, allowing me to contribute to VLC by integrating Rust support and developing a plugin system using WebAssembly (Wasm) with Wasmer.
