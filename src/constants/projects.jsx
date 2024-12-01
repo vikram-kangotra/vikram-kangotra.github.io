@@ -1,4 +1,4 @@
-import {chinar, lamp, miosis, proto_rs, sudoku_solver, wirebyte} from "../assets";
+import {chinar, lamp, zenos, proto_rs, sudoku_solver, wirebyte} from "../assets";
 
 const projects = [
     {
@@ -14,10 +14,10 @@ const projects = [
         imageSrc: wirebyte
     },
     {
-        name: "Sudoku Solver",
-        description: "Sudoku Solver is a GTk4+libadwaita application that solves sudokus using the Wave Function Collapse Algorithm.",
-        href: "https://gitlab.com/cyberphantom52/sudoku-solver",
-        imageSrc: sudoku_solver
+        name: "Zenos",
+        description: "ZenOS is an Operating System with native WebAssembly support.",
+        href: "https://github.com/vikram-kangotra/ZenOS",
+        imageSrc: zenos
     },
     {
         name: "Lamp",
@@ -25,18 +25,17 @@ const projects = [
         href: "https://github.com/vikram-kangotra/lamp",
         imageSrc: lamp
     },
-
+    {
+        name: "Sudoku Solver",
+        description: "Sudoku Solver is a GTk4+libadwaita application that solves sudokus using the Wave Function Collapse Algorithm.",
+        href: "https://gitlab.com/cyberphantom52/sudoku-solver",
+        imageSrc: sudoku_solver
+    },
     {
         name: "The Chinar Engine",
         description: "An ECS based 2D/3D Game Engine for fast game development process.",
         href: "https://github.com/vikram-kangotra/The-Chinar-Engine",
         imageSrc: chinar
-    },
-    {
-        name: "Miosis",
-        description: "A repository for my curious mind to understand OS Dev",
-        href: "https://github.com/vikram-kangotra/Miosis",
-        imageSrc: miosis
     },
 ]
 
