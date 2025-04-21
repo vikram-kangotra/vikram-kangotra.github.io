@@ -21,7 +21,7 @@ function YearSection({ year, blogs }) {
     return (
         <div className="relative flex flex-col md:flex-row gap-5">
             
-            <h2 className="relative text-2xl font-medium text-white opacity-60 md:pl-5">
+            <h2 className="relative text-2xl font-medium text-primary dark:text-dark-primary opacity-60 md:pl-5">
                 {year}
             </h2>
             

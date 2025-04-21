@@ -6,23 +6,24 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@code-hike/mdx": "^0.10.0-next.1",
     "@tailwindcss/typography": "^0.5.9",
-    "autoprefixer": "10.4.14",
+    "autoprefixer": "^10.4.14",
     "dayjs": "^1.11.9",
-    "eslint": "8.45.0",
-    "eslint-config-next": "13.4.12",
-    "fs": "^0.0.1-security",
+    "eslint": "^8.45.0",
+    "eslint-config-next": "^13.4.12",
+    "framer-motion": "^12.7.4",
     "glob": "^10.3.3",
     "gray-matter": "^4.0.3",
-    "next": "^15.0.2",
+    "next": "^13.4.12",
     "next-mdx-remote": "^4.4.1",
-    "postcss": "8.4.27",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
+    "postcss": "^8.4.27",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-icons": "^4.10.1",
     "reading-time": "^1.5.0",
     "rehype-autolink-headings": "^6.1.1",
@@ -31,7 +32,11 @@
     "rehype-prism-plus": "^1.6.3",
     "rehype-slug": "^5.1.0",
     "sharp": "^0.32.4",
-    "tailwindcss": "3.3.3",
+    "tailwindcss": "^3.3.3",
     "typography": "^0.16.24"
+  },
+  "devDependencies": {
+    "prettier": "^3.0.0",
+    "prettier-plugin-tailwindcss": "^0.4.1"
   }
 }

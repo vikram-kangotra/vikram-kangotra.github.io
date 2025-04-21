@@ -10,51 +10,72 @@ import dayjs from "dayjs";
 import {MDXRemote} from "next-mdx-remote";
 import Link from "next/link";
 import CustomLink from "@/components/customlink";
+import BlogSidebar from "../../components/blogs/blog-sidebar";
 
 function Previous({link}) {
-
     if (link === null) {
         return <></>;
     }
 
     return (
-        <Link href={link} className="flex justify-center w-full h-20 border rounded-lg md:flex-col md:h-32 group md:text-2xl border-violet-400 border-opacity-60 md:border-opacity-0 hover:border-opacity-60 transition duration-500">
-            <div className="flex items-center justify-center">
-                <span className="md:opacity-0 group-hover:visible group-hover:opacity-80 transition duration-300 delay-200">&lt;</span>
-                <span className="md:opacity-0 group-hover:visible group-hover:opacity-90 transition duration-300 delay-100">&lt;</span>
-                <span className="md:opacity-0 group-hover:visible group-hover:opacity-100 transition duration-300">&lt;&nbsp;</span>
-                <div className="font-bold">Previous</div>
-            </div>
-            <div className="justify-center hidden text-base md:flex">
-                {link}
+        <Link 
+            href={link} 
+            className="group relative flex-1 h-32 rounded-xl overflow-hidden bg-quaternary dark:bg-dark-quaternary hover:shadow-lg transition-all duration-300"
+        >
+            <div className="absolute inset-0 bg-gradient-to-r from-accent/10 to-purple-500/10 dark:from-dark-accent/10 dark:to-purple-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="relative flex flex-col items-center justify-center h-full p-6">
+                <div className="flex items-center gap-2 text-accent dark:text-dark-accent font-medium mb-2">
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">←</span>
+                    <span>Previous</span>
+                </div>
+                <div className="text-sm text-secondary dark:text-dark-secondary text-center line-clamp-2">
+                    {link.split('/').pop().replace(/-/g, ' ')}
+                </div>
             </div>
         </Link>
-    )
+    );
 }
 
 function Next({link}) {
-
     if (link === null) {
         return <></>;
     }
 
     return (
-        <Link href={link} className="flex justify-center w-full h-20 border rounded-lg md:flex-col md:h-32 group md:text-2xl border-violet-400 border-opacity-60 md:border-opacity-0 hover:border-opacity-60 transition duration-500">
-            <div className="flex items-center justify-center">
-                <div className="font-bold">Next</div>
-                <span className="md:opacity-0 group-hover:visible group-hover:opacity-100 transition duration-300 ">&nbsp;&gt;</span>
-                <span className="md:opacity-0 group-hover:visible group-hover:opacity-90 transition duration-300 delay-100">&gt;</span>
-                <span className="md:opacity-0 group-hover:visible group-hover:opacity-80 transition duration-300 delay-200">&gt;</span>
-            </div>
-            <div className="justify-center hidden text-base md:flex">
-                {link}
+        <Link 
+            href={link} 
+            className="group relative flex-1 h-32 rounded-xl overflow-hidden bg-quaternary dark:bg-dark-quaternary hover:shadow-lg transition-all duration-300"
+        >
+            <div className="absolute inset-0 bg-gradient-to-l from-accent/10 to-purple-500/10 dark:from-dark-accent/10 dark:to-purple-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="relative flex flex-col items-center justify-center h-full p-6">
+                <div className="flex items-center gap-2 text-accent dark:text-dark-accent font-medium mb-2">
+                    <span>Next</span>
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">→</span>
+                </div>
+                <div className="text-sm text-secondary dark:text-dark-secondary text-center line-clamp-2">
+                    {link.split('/').pop().replace(/-/g, ' ')}
+                </div>
             </div>
         </Link>
-    )
+    );
 }
 
-export default function Blog({ post: {source, frontmatter}, previous, next }) {
+// Add custom code block component
+const CodeBlock = ({ className, children }) => {
+    const language = className?.replace('language-', '') || 'text';
+    return (
+        <div className="relative">
+            <div className="absolute top-0 right-0 px-3 py-1 text-xs font-medium text-secondary dark:text-dark-secondary bg-quaternary dark:bg-dark-quaternary rounded-bl-lg rounded-tr-lg">
+                {language}
+            </div>
+            <pre className={className}>
+                {children}
+            </pre>
+        </div>
+    );
+};
 
+const Blog = ({ post: {source, frontmatter}, previous, next, allBlogs }) => {
     const [date, setDate] = useState(null);
 
     useEffect(() => {
@@ -62,39 +83,48 @@ export default function Blog({ post: {source, frontmatter}, previous, next }) {
     }, [frontmatter.publishedAt]);
 
     return (
-        <>
+        <div className="min-h-screen bg-tertiary dark:bg-dark-tertiary">
             <Head>
                 <title>{frontmatter.title}</title>
             </Head>
-            <div className="flex flex-col p-10 md:items-center">
-                <div className="max-w-4xl lg:max-w-5xl">
-                    <header className="mb-4 lg:mb-6 not-format">
-                        <h1 className="mb-4 text-3xl font-bold leading-tight text-white lg:mb-6 lg:text-4xl">{frontmatter.title}</h1>
-                        <address className="flex items-center mb-6 not-italic">
-                            <div className="inline-flex items-center mr-3 text-sm text-white">
-                                <div>
-                                    <p className="text-base font-light text-gray-400">
-                                      {date} &mdash;{' '}
-                                      {frontmatter.readingTime}
-                                    </p>
-                                </div>
-                            </div>
-                        </address>
-                    </header>
-
-                    <article className={`tracking-wide text-[#dfeeff] max-w-none md:prose-md lg:prose-lg prose text-lg prose-invert font-normal font-sans`}>
-                      <MDXRemote {...source} components={{ Image, a: CustomLink }} />
-                    </article>
+            <div className="container mx-auto px-4 py-8">
+                <div className="flex gap-8">
+                    {/* Sidebar - Fixed width */}
+                    <div className="hidden lg:block w-80 flex-shrink-0">
+                        <BlogSidebar blogs={allBlogs} currentSlug={frontmatter.slug} />
+                    </div>
                     
-                    <div className="flex h-32 my-10 text-pink-500 gap-1">
-                        <Previous link={previous}/>
-                        <Next link={next}/>
+                    {/* Main Content - Flexible width */}
+                    <div className="flex-1 min-w-0">
+                        <article className="prose prose-lg dark:prose-invert max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-h1:text-4xl prose-h2:text-3xl prose-h3:text-2xl prose-h4:text-xl prose-p:leading-relaxed prose-p:text-secondary dark:prose-p:text-dark-secondary prose-a:text-accent dark:prose-a:text-dark-accent prose-a:no-underline hover:prose-a:underline prose-strong:text-primary dark:prose-strong:text-dark-primary prose-blockquote:border-l-4 prose-blockquote:border-accent dark:prose-blockquote:border-dark-accent prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-secondary dark:prose-blockquote:text-dark-secondary prose-code:bg-quaternary dark:prose-code:bg-dark-quaternary prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-quaternary dark:prose-pre:bg-dark-quaternary prose-pre:rounded-lg prose-pre:p-4 prose-pre:overflow-x-auto prose-pre:relative prose-img:rounded-lg prose-img:shadow-md prose-img:mx-auto prose-ul:list-disc prose-ol:list-decimal prose-li:marker:text-accent dark:prose-li:marker:text-dark-accent">
+                            <h1 className="text-4xl font-bold text-primary dark:text-dark-primary mb-4">
+                                {frontmatter.title}
+                            </h1>
+                            <div className="text-secondary dark:text-dark-secondary mb-12 text-lg">
+                                {date} &mdash; {frontmatter.readingTime}
+                            </div>
+                            <MDXRemote 
+                                {...source} 
+                                components={{ 
+                                    Image, 
+                                    a: CustomLink,
+                                    pre: CodeBlock
+                                }} 
+                            />
+                        </article>
+                        
+                        <div className="flex gap-6 my-12">
+                            <Previous link={previous}/>
+                            <Next link={next}/>
+                        </div>
                     </div>
                 </div>
             </div>
-        </>
-    )
-}
+        </div>
+    );
+};
+
+export default Blog;
 
 export async function getStaticPaths() {
     const paths = (await getSlug()).map((slug) => ({ params: { slug } }))
@@ -104,7 +134,6 @@ export async function getStaticPaths() {
         fallback: false,
     }
 }
-
 
 export async function getStaticProps({params}) {
     const { slug } = params;
@@ -120,20 +149,56 @@ export async function getStaticProps({params}) {
         }
     });
 
-    const paths = await getSlug();
-    const index = paths.findIndex((p) => p == slug);
+    // Get all blogs data first
+    let allBlogs = [];
+    try {
+        const paths = await getSlug();
+        allBlogs = await Promise.all(
+            paths.map(async (blogSlug) => {
+                const { frontmatter: blogFrontmatter } = await getBlogFromSlug(blogSlug);
+                return {
+                    slug: blogSlug,
+                    title: blogFrontmatter.title,
+                    publishedAt: blogFrontmatter.publishedAt,
+                };
+            })
+        );
 
-    const next = index == 0 ? null : paths[index - 1];
-    const previous = index == paths.length - 1 ? null : paths[index + 1];
+        // Sort blogs by date (newest first)
+        allBlogs.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
 
-    return {
-        props: {
-            post: {
-                source: mdxSource,
-                frontmatter,
-            },
-            previous,
-            next,
+        // Find the current blog's index in the sorted array
+        const currentIndex = allBlogs.findIndex(blog => blog.slug === slug);
+
+        // Since we're sorting newest first, the logic needs to be reversed:
+        // Next is the newer post (index - 1)
+        const next = currentIndex > 0 ? allBlogs[currentIndex - 1].slug : null;
+        // Previous is the older post (index + 1)
+        const previous = currentIndex < allBlogs.length - 1 ? allBlogs[currentIndex + 1].slug : null;
+
+        return {
+            props: {
+                post: {
+                    source: mdxSource,
+                    frontmatter,
+                },
+                previous,
+                next,
+                allBlogs,
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching blog data:', error);
+        return {
+            props: {
+                post: {
+                    source: mdxSource,
+                    frontmatter,
+                },
+                previous: null,
+                next: null,
+                allBlogs: [],
+            }
         }
     }
 }

@@ -2,6 +2,7 @@ import Footer from '@/components/footer'
 import Navbar from '@/components/navbar';
 import '@/styles/globals.css'
 import {useRouter} from 'next/router';
+import { ThemeProvider } from '@/context/ThemeContext';
 
 import "@/styles/code-theme.css";
 import "@/styles/custom-code-theme.css";
@@ -9,7 +10,6 @@ import "@/styles/code-line-number.css";
 import {useEffect} from 'react';
 
 export default function App({ Component, pageProps }) {
-
     const router = useRouter();
     const isHomePage = router.pathname == '/';
 
@@ -25,18 +25,17 @@ export default function App({ Component, pageProps }) {
                 dataLayer.push(arguments)
             }
             gtag('js', new Date());
-          
             gtag('config', 'G-1FQ468YY1J');
         }
     }, []);
 
     return (
-        <>
-            <div>
-            { !isHomePage && (<Navbar />) }
-            <Component {...pageProps} />
+        <ThemeProvider>
+            <div className="min-h-screen">
+                { !isHomePage && (<Navbar />) }
+                <Component {...pageProps} />
+                <Footer />
             </div>
-            <Footer />
-        </>
+        </ThemeProvider>
     )
 }

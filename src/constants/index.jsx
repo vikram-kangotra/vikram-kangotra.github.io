@@ -1,4 +1,4 @@
-import { FaGithub, FaGitlab, FaLinkedin, FaMailBulk, FaTwitter } from 'react-icons/fa';
+import { FaGithub, FaGitlab, FaLinkedin, FaTwitter } from 'react-icons/fa';
 import { AiFillMail } from 'react-icons/ai';
 
 export const socialMedia = [

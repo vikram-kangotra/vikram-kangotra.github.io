@@ -7,7 +7,7 @@ import dayjs from "dayjs";
 
 export default function Home({blogs}) {
   return (
-    <main>
+    <main className="bg-white dark:bg-dark-tertiary">
       <div>
         <Hero />
         <Introduction />
