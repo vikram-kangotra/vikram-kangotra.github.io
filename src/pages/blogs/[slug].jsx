@@ -1,204 +1,345 @@
-import React, {useEffect, useState} from "react";
-import Head from "next/head";
-import Image from "next/image";
-import rehypeCodeTitles from "rehype-code-titles";
-import rehypePrism from "rehype-prism-plus";
-import rehypeSlug from "rehype-slug";
-import { getBlogFromSlug, getSlug } from "@/utils/mdx";
-import { serialize } from "next-mdx-remote/serialize";
-import dayjs from "dayjs";
-import {MDXRemote} from "next-mdx-remote";
-import Link from "next/link";
-import CustomLink from "@/components/customlink";
-import BlogSidebar from "../../components/blogs/blog-sidebar";
-
-function Previous({link}) {
-    if (link === null) {
-        return <></>;
-    }
-
-    return (
-        <Link 
-            href={link} 
-            className="group relative flex-1 h-32 rounded-xl overflow-hidden bg-quaternary dark:bg-dark-quaternary hover:shadow-lg transition-all duration-300"
-        >
-            <div className="absolute inset-0 bg-gradient-to-r from-accent/10 to-purple-500/10 dark:from-dark-accent/10 dark:to-purple-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            <div className="relative flex flex-col items-center justify-center h-full p-6">
-                <div className="flex items-center gap-2 text-accent dark:text-dark-accent font-medium mb-2">
-                    <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">←</span>
-                    <span>Previous</span>
-                </div>
-                <div className="text-sm text-secondary dark:text-dark-secondary text-center line-clamp-2">
-                    {link.split('/').pop().replace(/-/g, ' ')}
-                </div>
-            </div>
-        </Link>
-    );
+import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import dayjs from 'dayjs';
+import rehypeCodeTitles from 'rehype-code-titles';
+import rehypePrism from 'rehype-prism-plus';
+import rehypeSlug from 'rehype-slug';
+import { getBlogFromSlug, getSlug } from '@/utils/mdx';
+import { serialize } from 'next-mdx-remote/serialize';
+import { MDXRemote } from 'next-mdx-remote';
+import CustomLink from '@/components/customlink';
+import { SEO, Eyebrow, Arrow } from '@/components/ui';
+import { SaveButton } from '@/context/ReadingContext';
+import { topicsFor } from '@/constants/topics';
+function ArticleImage({ alt, ...props }) {
+  const imageProps = { ...props };
+  delete imageProps.layout;
+  return (
+    <Image
+      {...imageProps}
+      alt={alt || 'Illustration accompanying the article'}
+      sizes="(max-width: 760px) 90vw, 720px"
+    />
+  );
 }
-
-function Next({link}) {
-    if (link === null) {
-        return <></>;
+function CodeBlock(props) {
+  const code = useRef(null);
+  const timer = useRef(null);
+  const [label, setLabel] = useState('Copy');
+  useEffect(() => () => clearTimeout(timer.current), []);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(code.current.innerText);
+      setLabel('Copied!');
+    } catch {
+      window.getSelection()?.selectAllChildren(code.current);
+      setLabel('Code selected');
     }
-
-    return (
-        <Link 
-            href={link} 
-            className="group relative flex-1 h-32 rounded-xl overflow-hidden bg-quaternary dark:bg-dark-quaternary hover:shadow-lg transition-all duration-300"
-        >
-            <div className="absolute inset-0 bg-gradient-to-l from-accent/10 to-purple-500/10 dark:from-dark-accent/10 dark:to-purple-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            <div className="relative flex flex-col items-center justify-center h-full p-6">
-                <div className="flex items-center gap-2 text-accent dark:text-dark-accent font-medium mb-2">
-                    <span>Next</span>
-                    <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">→</span>
-                </div>
-                <div className="text-sm text-secondary dark:text-dark-secondary text-center line-clamp-2">
-                    {link.split('/').pop().replace(/-/g, ' ')}
-                </div>
-            </div>
-        </Link>
-    );
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setLabel('Copy'), 2200);
+  }
+  return (
+    <div className="reader-code">
+      <button className="copy-code" onClick={copy} aria-label="Copy code block">
+        <span role="status">{label}</span>
+      </button>
+      <pre ref={code} tabIndex={0} {...props} />
+    </div>
+  );
 }
-
-// Add custom code block component
-const CodeBlock = ({ className, children }) => {
-    const language = className?.replace('language-', '') || 'text';
-    return (
-        <div className="relative">
-            <div className="absolute top-0 right-0 px-3 py-1 text-xs font-medium text-secondary dark:text-dark-secondary bg-quaternary dark:bg-dark-quaternary rounded-bl-lg rounded-tr-lg">
-                {language}
-            </div>
-            <pre className={className}>
-                {children}
-            </pre>
-        </div>
+export default function Blog(props) {
+  return <Reader key={props.post.frontmatter.slug} {...props} />;
+}
+function Reader({ post: { source, frontmatter }, previous, next, allBlogs }) {
+  const article = useRef(null);
+  const [toc, setToc] = useState([]);
+  const [active, setActive] = useState('');
+  const [progress, setProgress] = useState(0);
+  const [focus, setFocus] = useState(false);
+  const [size, setSize] = useState('normal');
+  const [shareLabel, setShareLabel] = useState('Copy link');
+  const shareTimer = useRef(null);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('vk-reading-size');
+      if (['normal', 'large', 'larger'].includes(stored)) setSize(stored);
+    } catch {
+      /* Defaults remain usable without storage. */
+    }
+    return () => clearTimeout(shareTimer.current);
+  }, []);
+  useEffect(() => {
+    const headings = Array.from(article.current.querySelectorAll('h2[id],h3[id]'));
+    setToc(
+      headings.map((h) => ({ id: h.id, text: h.textContent, level: h.tagName === 'H2' ? 2 : 3 }))
     );
-};
-
-const Blog = ({ post: {source, frontmatter}, previous, next, allBlogs }) => {
-    const [date, setDate] = useState(null);
-
-    useEffect(() => {
-        setDate(dayjs(frontmatter.publishedAt).format('MMMM D, YYYY'));
-    }, [frontmatter.publishedAt]);
-
-    return (
-        <div className="min-h-screen bg-tertiary dark:bg-dark-tertiary">
-            <Head>
-                <title>{frontmatter.title}</title>
-            </Head>
-            <div className="container mx-auto px-4 py-8">
-                <div className="flex gap-8">
-                    {/* Sidebar - Fixed width */}
-                    <div className="hidden lg:block w-80 flex-shrink-0">
-                        <BlogSidebar blogs={allBlogs} currentSlug={frontmatter.slug} />
-                    </div>
-                    
-                    {/* Main Content - Flexible width */}
-                    <div className="flex-1 min-w-0">
-                        <article className="prose prose-lg dark:prose-invert max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-h1:text-4xl prose-h2:text-3xl prose-h3:text-2xl prose-h4:text-xl prose-p:leading-relaxed prose-p:text-secondary dark:prose-p:text-dark-secondary prose-a:text-accent dark:prose-a:text-dark-accent prose-a:no-underline hover:prose-a:underline prose-strong:text-primary dark:prose-strong:text-dark-primary prose-blockquote:border-l-4 prose-blockquote:border-accent dark:prose-blockquote:border-dark-accent prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-secondary dark:prose-blockquote:text-dark-secondary prose-code:bg-quaternary dark:prose-code:bg-dark-quaternary prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-quaternary dark:prose-pre:bg-dark-quaternary prose-pre:rounded-lg prose-pre:p-4 prose-pre:overflow-x-auto prose-pre:relative prose-img:rounded-lg prose-img:shadow-md prose-img:mx-auto prose-ul:list-disc prose-ol:list-decimal prose-li:marker:text-accent dark:prose-li:marker:text-dark-accent">
-                            <h1 className="text-4xl font-bold text-primary dark:text-dark-primary mb-4">
-                                {frontmatter.title}
-                            </h1>
-                            <div className="text-secondary dark:text-dark-secondary mb-12 text-lg">
-                                {date} &mdash; {frontmatter.readingTime}
-                            </div>
-                            <MDXRemote 
-                                {...source} 
-                                components={{ 
-                                    Image, 
-                                    a: CustomLink,
-                                    pre: CodeBlock
-                                }} 
-                            />
-                        </article>
-                        
-                        <div className="flex gap-6 my-12">
-                            <Previous link={previous}/>
-                            <Next link={next}/>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    let frame = null;
+    const update = () => {
+      frame = null;
+      const rect = article.current.getBoundingClientRect();
+      const available = Math.max(1, rect.height - window.innerHeight + 150);
+      setProgress(Math.round(Math.max(0, Math.min(100, ((150 - rect.top) / available) * 100))));
+      let current = headings[0]?.id || '';
+      headings.forEach((h) => {
+        if (h.getBoundingClientRect().top <= 190) current = h.id;
+      });
+      setActive(current);
+    };
+    const schedule = () => {
+      if (frame === null) frame = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    const observer = new ResizeObserver(schedule);
+    observer.observe(article.current);
+    return () => {
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
+      observer.disconnect();
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
+  }, []);
+  function changeSize(value) {
+    setSize(value);
+    try {
+      localStorage.setItem('vk-reading-size', value);
+    } catch {
+      /* Keep the selection for this visit. */
+    }
+  }
+  async function share() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setShareLabel('Link copied');
+    } catch {
+      setShareLabel('Copy the URL from your address bar');
+    }
+    clearTimeout(shareTimer.current);
+    shareTimer.current = setTimeout(() => setShareLabel('Copy link'), 3000);
+  }
+  const links = (
+    <ol>
+      {toc.map((item) => (
+        <li key={item.id} className={item.level === 3 ? 'toc-sub' : ''}>
+          <a
+            href={`#${item.id}`}
+            aria-current={active === item.id ? 'location' : undefined}
+            onClick={(event) => {
+              event.currentTarget.closest('details')?.removeAttribute('open');
+            }}
+          >
+            {item.text}
+          </a>
+        </li>
+      ))}
+    </ol>
+  );
+  return (
+    <div className={`shell article-page reader-page ${focus ? 'focus-reading' : ''}`}>
+      <div
+        className="reading-progress"
+        style={{ transform: `scaleX(${progress / 100})` }}
+        aria-hidden="true"
+      />
+      <SEO
+        title={`${frontmatter.title} — Vikram Kangotra`}
+        description={frontmatter.excerpt}
+        path={`/blogs/${frontmatter.slug}`}
+      />
+      <Link className="back-link" href="/blogs">
+        ← Back to the notebook
+      </Link>
+      <header className="article-header">
+        <div className="article-topic-links">
+          {topicsFor(frontmatter.slug).map((topic) => (
+            <Link href={{ pathname: '/blogs', query: { topic } }} key={topic}>
+              {topic}
+            </Link>
+          ))}
         </div>
-    );
-};
-
-export default Blog;
-
+        <h1>{frontmatter.title}</h1>
+        <div className="article-meta">
+          <span>By Vikram Kangotra</span>
+          <span aria-hidden="true">·</span>
+          <time dateTime={frontmatter.publishedAt}>
+            {dayjs(frontmatter.publishedAt).format('MMMM D, YYYY')}
+          </time>
+          <span aria-hidden="true">·</span>
+          <span>{frontmatter.readingTime}</span>
+        </div>
+      </header>
+      <div className="reader-toolbar" aria-label="Reading controls">
+        <div className="font-controls" role="group" aria-label="Reading text size">
+          {[
+            ['normal', 'A', 'Standard text'],
+            ['large', 'A', 'Large text'],
+            ['larger', 'A', 'Extra large text'],
+          ].map(([value, label, title], index) => (
+            <button
+              key={value}
+              className={`font-size-${index}`}
+              aria-label={title}
+              aria-pressed={size === value}
+              onClick={() => changeSize(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <button className="focus-toggle" aria-pressed={focus} onClick={() => setFocus(!focus)}>
+          <span aria-hidden="true">{focus ? '↔' : '⌖'}</span>
+          {focus ? 'Exit focus' : 'Focus mode'}
+        </button>
+        <div className="reader-actions">
+          <SaveButton slug={frontmatter.slug} title={frontmatter.title} withLabel />
+          <button className="share-button" aria-label="Copy article link" onClick={share}>
+            <span role="status">{shareLabel}</span>
+            <Arrow diagonal />
+          </button>
+        </div>
+      </div>
+      {toc.length > 0 && (
+        <details className="mobile-toc">
+          <summary>
+            In this article <span>{progress}% read</span>
+          </summary>
+          {links}
+        </details>
+      )}
+      <div className="article-layout">
+        <article ref={article} className={`article-body prose reading-size-${size}`}>
+          <MDXRemote
+            {...source}
+            components={{ Image: ArticleImage, a: CustomLink, pre: CodeBlock }}
+          />
+        </article>
+        <aside className="article-aside">
+          <div className="toc-heading">
+            <Eyebrow>{toc.length ? 'IN THIS ARTICLE' : 'A SHORT READ'}</Eyebrow>
+            <span>{progress}%</span>
+          </div>
+          {toc.length > 0 ? (
+            <nav className="desktop-toc" aria-label="Table of contents">
+              {links}
+            </nav>
+          ) : (
+            <p>A small detour from the notebook. Settle in.</p>
+          )}
+          <div className="aside-stories">
+            <Eyebrow>ANOTHER RABBIT HOLE</Eyebrow>
+            {allBlogs
+              .filter((b) => b.slug !== frontmatter.slug)
+              .slice(0, 2)
+              .map((blog) => (
+                <Link href={`/blogs/${blog.slug}`} key={blog.slug}>
+                  {blog.title}
+                  <Arrow />
+                </Link>
+              ))}
+          </div>
+        </aside>
+      </div>
+      <section className="reader-end">
+        <Eyebrow>THANKS FOR READING</Eyebrow>
+        <h2>Have a thought on this?</h2>
+        <p>I’d love to hear what you’re building—or what you’d do differently.</p>
+        <a
+          className="text-link"
+          href={`mailto:vikramkangotra8055@gmail.com?subject=${encodeURIComponent(frontmatter.title)}`}
+        >
+          Start a conversation <Arrow diagonal />
+        </a>
+      </section>
+      <nav className="article-pagination" aria-label="More stories">
+        {[
+          { slug: previous, label: 'OLDER STORY' },
+          { slug: next, label: 'NEWER STORY' },
+        ]
+          .filter((item) => item.slug)
+          .map((item) => (
+            <Link key={item.slug} href={`/blogs/${item.slug}`}>
+              <Eyebrow>{item.label}</Eyebrow>
+              <h2>{allBlogs.find((b) => b.slug === item.slug)?.title}</h2>
+              <Arrow />
+            </Link>
+          ))}
+      </nav>
+    </div>
+  );
+}
 export async function getStaticPaths() {
-    const paths = (await getSlug()).map((slug) => ({ params: { slug } }))
+  const paths = (await getSlug()).map((slug) => ({ params: { slug } }));
+
+  return {
+    paths,
+    fallback: false,
+  };
+}
+
+export async function getStaticProps({ params }) {
+  const { slug } = params;
+  const { content, frontmatter } = await getBlogFromSlug(slug);
+
+  const mdxSource = await serialize(content, {
+    mdxOptions: {
+      rehypePlugins: [rehypeSlug, rehypePrism, rehypeCodeTitles],
+    },
+  });
+
+  // Get all blogs data first
+  let allBlogs = [];
+  try {
+    const paths = await getSlug();
+    allBlogs = await Promise.all(
+      paths.map(async (blogSlug) => {
+        const { frontmatter: blogFrontmatter } = await getBlogFromSlug(blogSlug);
+        return {
+          slug: blogSlug,
+          title: blogFrontmatter.title,
+          publishedAt: blogFrontmatter.publishedAt,
+          excerpt: blogFrontmatter.excerpt,
+          readingTime: blogFrontmatter.readingTime,
+        };
+      })
+    );
+
+    // Sort blogs by date (newest first)
+    allBlogs.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+
+    // Find the current blog's index in the sorted array
+    const currentIndex = allBlogs.findIndex((blog) => blog.slug === slug);
+
+    // Since we're sorting newest first, the logic needs to be reversed:
+    // Next is the newer post (index - 1)
+    const next = currentIndex > 0 ? allBlogs[currentIndex - 1].slug : null;
+    // Previous is the older post (index + 1)
+    const previous = currentIndex < allBlogs.length - 1 ? allBlogs[currentIndex + 1].slug : null;
 
     return {
-        paths,
-        fallback: false,
-    }
-}
-
-export async function getStaticProps({params}) {
-    const { slug } = params;
-    const { content, frontmatter } = await getBlogFromSlug(slug);
-
-    const mdxSource = await serialize(content, {
-        mdxOptions: {
-            rehypePlugins: [
-                rehypeSlug,
-                rehypePrism,
-                rehypeCodeTitles,
-            ],
-        }
-    });
-
-    // Get all blogs data first
-    let allBlogs = [];
-    try {
-        const paths = await getSlug();
-        allBlogs = await Promise.all(
-            paths.map(async (blogSlug) => {
-                const { frontmatter: blogFrontmatter } = await getBlogFromSlug(blogSlug);
-                return {
-                    slug: blogSlug,
-                    title: blogFrontmatter.title,
-                    publishedAt: blogFrontmatter.publishedAt,
-                };
-            })
-        );
-
-        // Sort blogs by date (newest first)
-        allBlogs.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
-
-        // Find the current blog's index in the sorted array
-        const currentIndex = allBlogs.findIndex(blog => blog.slug === slug);
-
-        // Since we're sorting newest first, the logic needs to be reversed:
-        // Next is the newer post (index - 1)
-        const next = currentIndex > 0 ? allBlogs[currentIndex - 1].slug : null;
-        // Previous is the older post (index + 1)
-        const previous = currentIndex < allBlogs.length - 1 ? allBlogs[currentIndex + 1].slug : null;
-
-        return {
-            props: {
-                post: {
-                    source: mdxSource,
-                    frontmatter,
-                },
-                previous,
-                next,
-                allBlogs,
-            }
-        }
-    } catch (error) {
-        console.error('Error fetching blog data:', error);
-        return {
-            props: {
-                post: {
-                    source: mdxSource,
-                    frontmatter,
-                },
-                previous: null,
-                next: null,
-                allBlogs: [],
-            }
-        }
-    }
+      props: {
+        post: {
+          source: mdxSource,
+          frontmatter,
+        },
+        previous,
+        next,
+        allBlogs,
+      },
+    };
+  } catch (error) {
+    console.error('Error fetching blog data:', error);
+    return {
+      props: {
+        post: {
+          source: mdxSource,
+          frontmatter,
+        },
+        previous: null,
+        next: null,
+        allBlogs: [],
+      },
+    };
+  }
 }

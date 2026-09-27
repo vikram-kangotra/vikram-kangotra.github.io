@@ -1,33 +1,37 @@
-import {socialMedia} from "@/constants";
-import Link from "next/link";
-import {useEffect, useState} from "react";
-
+import Link from 'next/link';
+import { Arrow } from '@/components/ui';
 export default function Footer() {
-
-    const [date, setDate] = useState(null);
-
-    useEffect(() => {
-        setDate(new Date().getFullYear())
-    }, [])
-
-    return (
-        <footer className="relative flex flex-col items-center content-center justify-center p-10 gap-5 bg-white dark:bg-dark-tertiary">
-            <div className="flex flex-col items-center content-center max-w-4xl gap-10">
-                <div className="flex items-center justify-center">
-                    <ul className="flex flex-wrap items-center text-sm text-gray-500 dark:text-dark-secondary sm:mb-0">
-                    {socialMedia?.map((media, index) => (
-                        <li key={index} className="mr-4 md:mr-6">
-                        <Link href={media.link} aria-label={media.name} className="hover:text-gray-900 dark:hover:text-dark-primary">
-                        <media.icon size={24}/>
-                        </Link>
-                        </li>
-                    ))}
-                    </ul>
-                </div>
-                <div className="overflow-hidden text-sm font-medium text-center text-gray-500 dark:text-dark-secondary md:text-base">
-                    &copy; {date} Site by Vikram Kangotra. All rights reserved.
-                </div>
-            </div>
-        </footer>
-    )
+  return (
+    <footer className="shell footer">
+      <div className="footer-top">
+        <div>
+          <p className="eyebrow">GOOD THINGS START WITH A CONVERSATION</p>
+          <h2>Have something in mind?</h2>
+          <a className="contact-link" href="mailto:vikramkangotra8055@gmail.com">
+            Let’s build something. <Arrow diagonal />
+          </a>
+        </div>
+        <div className="footer-social">
+          <a href="https://github.com/vikram-kangotra" target="_blank" rel="noopener noreferrer">
+            GitHub <Arrow diagonal />
+          </a>
+          <a
+            href="https://www.linkedin.com/in/vikram-kangotra-991352241/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            LinkedIn <Arrow diagonal />
+          </a>
+          <a href="mailto:vikramkangotra8055@gmail.com">
+            Email <Arrow diagonal />
+          </a>
+        </div>
+      </div>
+      <div className="footer-bottom">
+        <Link href="/">© {new Date().getFullYear()} Vikram Kangotra</Link>
+        <span>Built with curiosity. Shared with the world.</span>
+        <a href="#main-content">Back to top ↑</a>
+      </div>
+    </footer>
+  );
 }

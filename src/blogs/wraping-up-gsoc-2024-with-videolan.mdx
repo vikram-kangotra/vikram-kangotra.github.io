@@ -43,7 +43,7 @@ Several key merge requests (MRs) were made to enhance VLC’s functionality and 
 
 - [View MR Details](https://code.videolan.org/videolan/vlc/-/merge_requests/5475)
 
-**Status:** <span style={{color: '#4ade80'}}>Merged</span>
+**Status:** <span className="status-merged">Merged</span>
 
 This MR introduced typed callbacks as an alternative to the variadic argument `pf_control`.
 
@@ -54,7 +54,7 @@ This MR introduced typed callbacks as an alternative to the variadic argument `p
 ### 2. [GSoC 2024] Add WebAssembly Plugin Support and Integrate with Latest Rust Support Changes 
 - [View MR Details](https://code.videolan.org/videolan/vlc/-/merge_requests/5528)
 
-**Status:** <span style={{color: '#fb923c'}}>Draft</span>
+**Status:** <span className="status-pending">Draft</span>
 
 This MR introduces WebAssembly Plugin System support using [Wasmer](https://github.com/wasmerio/wasmer) in Rust. The Rust work is derived from [Loic's rust-for-vlc branch](https://code.videolan.org/loic/vlc/-/tree/rust-for-vlc?ref_type=heads).
 
@@ -72,7 +72,7 @@ This MR introduces WebAssembly Plugin System support using [Wasmer](https://gith
 ### 3. [GSoC 2024] extensions: Add Locking and Access Functions for Managing Extension Array 
 - [View MR Details](https://code.videolan.org/videolan/vlc/-/merge_requests/5777)
 
-**Status:** <span style={{color: '#fb923c'}}>Draft</span>
+**Status:** <span className="status-pending">Draft</span>
 
 This MR introduces new functions for synchronization and access control in the extension manager. The updates address:
 
@@ -83,21 +83,21 @@ This MR introduces new functions for synchronization and access control in the e
 ### 4. macosx: Fix potential deadlock in VLCExtensionsManager
 - [View MR Details](https://code.videolan.org/videolan/vlc/-/merge_requests/5787)
 
-**Status:** <span style={{color: '#4ade80'}}>Merged</span>
+**Status:** <span className="status-merged">Merged</span>
 
 Ensured mutex is unlocked if the extension index exceeds the array size to prevent deadlock.
 
 ### 5. rust: cargo: Fix Build Command Error
 - [View MR Details](https://code.videolan.org/videolan/vlc/-/merge_requests/5815)
 
-**Status:** <span style={{color: '#4ade80'}}>Merged</span>
+**Status:** <span className="status-merged">Merged</span>
 
 Fixed a build issue related to the cargo command.
 
 ### 6. rust: Add vlcrs-core Crate and Abstractions for vlc_object_t
 - [View MR Details](https://code.videolan.org/videolan/vlc/-/merge_requests/5896)
 
-**Status:** <span style={{color: '#fb923c'}}>Pending</span>
+**Status:** <span className="status-pending">Pending</span>
 
 This Merge Request adds the `vlcrs-core` crate, which helps create safe ways to work with VLC's C functions and definitions. This crate makes it easier to use VLC features in Rust without directly dealing with unsafe C code.
 

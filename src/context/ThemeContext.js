@@ -1,42 +1,39 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-
 const ThemeContext = createContext();
-
 export function ThemeProvider({ children }) {
-    const [theme, setTheme] = useState('light');
-
-    useEffect(() => {
-        // Check for saved theme preference
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme) {
-            setTheme(savedTheme);
-            document.documentElement.classList.toggle('dark', savedTheme === 'dark');
-        } else {
-            // Check system preference
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            setTheme(prefersDark ? 'dark' : 'light');
-            document.documentElement.classList.toggle('dark', prefersDark);
-        }
-    }, []);
-
-    const toggleTheme = () => {
-        const newTheme = theme === 'light' ? 'dark' : 'light';
-        setTheme(newTheme);
-        localStorage.setItem('theme', newTheme);
-        document.documentElement.classList.toggle('dark', newTheme === 'dark');
+  const [theme, setTheme] = useState('light');
+  useEffect(() => {
+    setTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const sync = () => {
+      let saved;
+      try {
+        saved = localStorage.getItem('theme');
+      } catch {
+        /* Storage may be unavailable in private browsing. */
+      }
+      const value =
+        saved === 'dark' || saved === 'light' ? saved : media.matches ? 'dark' : 'light';
+      setTheme(value);
+      document.documentElement.classList.toggle('dark', value === 'dark');
     };
-
-    return (
-        <ThemeContext.Provider value={{ theme, toggleTheme }}>
-            {children}
-        </ThemeContext.Provider>
-    );
-}
-
-export function useTheme() {
-    const context = useContext(ThemeContext);
-    if (context === undefined) {
-        throw new Error('useTheme must be used within a ThemeProvider');
+    media.addEventListener('change', sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      media.removeEventListener('change', sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, []);
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    document.documentElement.classList.toggle('dark', next === 'dark');
+    try {
+      localStorage.setItem('theme', next);
+    } catch {
+      /* Storage may be unavailable in private browsing. */
     }
-    return context;
-} 
+  };
+  return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;
+}
+export const useTheme = () => useContext(ThemeContext);

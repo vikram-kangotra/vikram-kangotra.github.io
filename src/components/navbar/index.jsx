@@ -1,151 +1,91 @@
-import Link from "next/link";
-import { useRouter } from "next/router";
-import Logo from "../logo";
-import { useState, useEffect } from "react";
-import ThemeToggle from '@/components/ThemeToggle';
-import { motion, AnimatePresence } from "framer-motion";
-
-export default function Navbar() {
-    const router = useRouter();
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-    const toggleMenu = () => {
-        setIsMenuOpen(!isMenuOpen);
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
+import QuickSearch from '@/components/blogs/QuickSearch';
+import { useTheme } from '@/context/ThemeContext';
+export default function Navbar({ blogs }) {
+  const { pathname, events } = useRouter();
+  const [open, setOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
+  useEffect(() => {
+    const close = () => setOpen(false);
+    events.on('routeChangeStart', close);
+    return () => events.off('routeChangeStart', close);
+  }, [events]);
+  useEffect(() => {
+    const escape = (e) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        document.getElementById('menu-toggle')?.focus();
+      }
     };
-
-    // Close menu when route changes
-    useEffect(() => {
-        const handleRouteChange = () => {
-            setIsMenuOpen(false);
-        };
-
-        router.events.on('routeChangeStart', handleRouteChange);
-        return () => {
-            router.events.off('routeChangeStart', handleRouteChange);
-        };
-    }, [router]);
-
-    return ( 
-        <nav className="sticky top-0 z-50 bg-white/80 dark:bg-dark-tertiary/80 backdrop-blur-md shadow-md">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between h-16">
-                    <div className="flex items-center">
-                        <Link href="/" className="flex items-center">
-                            <Logo />
-                        </Link>
-                    </div>
-
-                    {/* Desktop Navigation */}
-                    <div className="hidden md:flex md:items-center md:space-x-8">
-                        <button 
-                            className="px-5 py-2 rounded-full border border-gray-200 dark:border-gray-700 hover:border-accent dark:hover:border-dark-accent text-gray-700 dark:text-dark-primary hover:text-accent dark:hover:text-dark-accent flex items-center gap-2 transition-all duration-300 hover:shadow-md"
-                            onClick={() => router.back() }
-                        > 
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M21 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.953l7.108-4.062A1.125 1.125 0 0121 8.688v8.123zM11.25 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.953L9.567 7.71a1.125 1.125 0 011.683.977v8.123z" />
-                            </svg>
-                            <span>Back</span>
-                        </button>
-                        <Link href="/" className="text-gray-700 dark:text-dark-primary hover:text-purple-500 dark:hover:text-purple-400 transition-colors duration-200">
-                            Home
-                        </Link>
-                        <Link href="/blogs" className="text-gray-700 dark:text-dark-primary hover:text-purple-500 dark:hover:text-purple-400 transition-colors duration-200">
-                            Blogs
-                        </Link>
-                        <Link href="/projects" className="text-gray-700 dark:text-dark-primary hover:text-purple-500 dark:hover:text-purple-400 transition-colors duration-200">
-                            Projects
-                        </Link>
-                        <ThemeToggle />
-                    </div>
-
-                    {/* Mobile Navigation */}
-                    <div className="flex items-center space-x-4 md:hidden">
-                        <ThemeToggle />
-                        <button 
-                            onClick={toggleMenu}
-                            className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 dark:text-dark-primary hover:text-purple-500 dark:hover:text-purple-400 focus:outline-none transition-colors duration-200"
-                            aria-label="Toggle menu"
-                            aria-expanded={isMenuOpen}
-                        >
-                            <motion.div
-                                animate={isMenuOpen ? "open" : "closed"}
-                                variants={{
-                                    closed: { rotate: 0 },
-                                    open: { rotate: 180 }
-                                }}
-                                transition={{ duration: 0.2 }}
-                            >
-                                <svg 
-                                    className="w-6 h-6" 
-                                    fill="none" 
-                                    viewBox="0 0 24 24" 
-                                    stroke="currentColor"
-                                >
-                                    {isMenuOpen ? (
-                                        <path 
-                                            strokeLinecap="round" 
-                                            strokeLinejoin="round" 
-                                            strokeWidth={2} 
-                                            d="M6 18L18 6M6 6l12 12" 
-                                        />
-                                    ) : (
-                                        <path 
-                                            strokeLinecap="round" 
-                                            strokeLinejoin="round" 
-                                            strokeWidth={2} 
-                                            d="M4 6h16M4 12h16M4 18h16" 
-                                        />
-                                    )}
-                                </svg>
-                            </motion.div>
-                        </button>
-                    </div>
-                </div>
-
-                {/* Mobile Menu */}
-                <AnimatePresence>
-                    {isMenuOpen && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="md:hidden"
-                        >
-                            <div className="px-4 py-3 space-y-3 bg-white/80 dark:bg-dark-tertiary/80 backdrop-blur-md rounded-lg shadow-lg">
-                                <button 
-                                    className="w-full px-4 py-2 text-left flex items-center space-x-2 text-gray-700 dark:text-dark-primary hover:text-accent dark:hover:text-dark-accent rounded-lg transition-colors duration-200"
-                                    onClick={() => router.back()}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.953l7.108-4.062A1.125 1.125 0 0121 8.688v8.123zM11.25 16.811c0 .864-.933 1.405-1.683.977l-7.108-4.062a1.125 1.125 0 010-1.953L9.567 7.71a1.125 1.125 0 011.683.977v8.123z" />
-                                    </svg>
-                                    <span>Back</span>
-                                </button>
-                                <Link 
-                                    href="/" 
-                                    className="block px-4 py-2 text-gray-700 dark:text-dark-primary hover:bg-purple-500 dark:hover:bg-purple-600 rounded-lg transition-colors duration-200"
-                                >
-                                    Home
-                                </Link>
-                                <Link 
-                                    href="/blogs" 
-                                    className="block px-4 py-2 text-gray-700 dark:text-dark-primary hover:bg-purple-500 dark:hover:bg-purple-600 rounded-lg transition-colors duration-200"
-                                >
-                                    Blogs
-                                </Link>
-                                <Link 
-                                    href="/projects" 
-                                    className="block px-4 py-2 text-gray-700 dark:text-dark-primary hover:bg-purple-500 dark:hover:bg-purple-600 rounded-lg transition-colors duration-200"
-                                >
-                                    Projects
-                                </Link>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
-        </nav>
-    );
+    if (open) document.addEventListener('keydown', escape);
+    return () => document.removeEventListener('keydown', escape);
+  }, [open]);
+  return (
+    <header className="site-header">
+      <nav className="shell nav" aria-label="Main navigation">
+        <Link href="/" className="wordmark" aria-label="Vikram Kangotra, home">
+          <span className="monogram">
+            vk<span>.</span>
+          </span>
+          <span className="wordmark-name">Vikram Kangotra</span>
+        </Link>
+        <div className={`nav-links ${open ? 'is-open' : ''}`} id="navigation">
+          <Link
+            href="/projects"
+            aria-current={pathname.startsWith('/projects') ? 'page' : undefined}
+          >
+            Projects
+          </Link>
+          <Link href="/blogs" aria-current={pathname.startsWith('/blogs') ? 'page' : undefined}>
+            Writing
+          </Link>
+          <Link href="/#about" onClick={() => setOpen(false)}>
+            About
+          </Link>
+          <a href="mailto:vikramkangotra8055@gmail.com" className="nav-contact">
+            Contact <span aria-hidden="true">↗</span>
+          </a>
+        </div>
+        <div className="nav-actions">
+          <QuickSearch blogs={blogs} />
+          <button
+            className="theme-toggle"
+            onClick={toggleTheme}
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+          >
+            <svg
+              width="19"
+              height="19"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              aria-hidden="true"
+            >
+              {theme === 'dark' ? (
+                <>
+                  <circle cx="12" cy="12" r="4" />
+                  <path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" />
+                </>
+              ) : (
+                <path d="M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14Z" />
+              )}
+            </svg>
+          </button>
+          <button
+            id="menu-toggle"
+            className="menu-toggle"
+            aria-expanded={open}
+            aria-controls="navigation"
+            onClick={() => setOpen(!open)}
+          >
+            {open ? 'Close' : 'Menu'} <span aria-hidden="true">{open ? '−' : '+'}</span>
+          </button>
+        </div>
+      </nav>
+    </header>
+  );
 }
-
