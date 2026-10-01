@@ -1,17 +1,34 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+/* global Map, Set */
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 const ReadingContext = createContext();
 const KEY = 'vk-reading-list';
+function readList(raw) {
+  const value = JSON.parse(raw || '[]');
+  return Array.isArray(value) ? [...new Set(value.filter((item) => typeof item === 'string'))] : [];
+}
+function applyPending(saved, pending) {
+  const next = new Set(saved);
+  pending.forEach((active, slug) => (active ? next.add(slug) : next.delete(slug)));
+  return [...next];
+}
 export function ReadingProvider({ children }) {
   const [saved, setSaved] = useState([]);
   const [ready, setReady] = useState(false);
   const [notice, setNotice] = useState('');
+  const [storageAvailable, setStorageAvailable] = useState(true);
+  const current = useRef([]);
+  const pending = useRef(new Map());
+  const noticeSource = useRef(null);
   useEffect(() => {
-    function load() {
+    function load(event) {
+      if (event && event.key !== null && event.key !== KEY) return;
       try {
-        const value = JSON.parse(localStorage.getItem(KEY) || '[]');
-        setSaved(Array.isArray(value) ? value.filter((v) => typeof v === 'string') : []);
+        if (event?.storageArea && event.storageArea !== localStorage) return;
+        const value = readList(localStorage.getItem(KEY));
+        current.current = applyPending(value, pending.current);
+        setSaved(current.current);
       } catch {
-        setSaved([]);
+        setStorageAvailable(false);
       }
       setReady(true);
     }
@@ -20,22 +37,50 @@ export function ReadingProvider({ children }) {
     return () => window.removeEventListener('storage', load);
   }, []);
   function toggleSaved(slug) {
-    const next = saved.includes(slug) ? saved.filter((s) => s !== slug) : [...saved, slug];
+    noticeSource.current = document.activeElement;
+    let latest = current.current;
+    try {
+      latest = applyPending(readList(localStorage.getItem(KEY)), pending.current);
+    } catch {
+      /* Preserve this visit's list if reading storage fails. */
+    }
+    const active = !latest.includes(slug);
+    pending.current.set(slug, active);
+    const next = applyPending(latest, pending.current);
+    current.current = next;
     setSaved(next);
     try {
       localStorage.setItem(KEY, JSON.stringify(next));
-      setNotice(
-        next.includes(slug) ? 'Added to your reading list.' : 'Removed from your reading list.'
-      );
+      pending.current.clear();
+      setStorageAvailable(true);
+      setNotice(active ? 'Added to your reading list.' : 'Removed from your reading list.');
     } catch {
-      setNotice('Saved for this visit. Browser storage is unavailable.');
+      setStorageAvailable(false);
+      setNotice(
+        `${active ? 'Added to' : 'Removed from'} your reading list for this visit. Browser storage is unavailable; this change will not survive closing the page.`
+      );
     }
   }
   return (
-    <ReadingContext.Provider value={{ saved, ready, toggleSaved }}>
+    <ReadingContext.Provider value={{ saved, ready, toggleSaved, storageAvailable }}>
       {children}
-      <div className="sr-only" role="status">
-        {notice}
+      <div
+        className={!storageAvailable && notice ? 'reading-list-notice' : 'sr-only'}
+        role="status"
+      >
+        <span>{notice}</span>
+        {!storageAvailable && notice && (
+          <button
+            type="button"
+            onClick={() => {
+              setNotice('');
+              if (noticeSource.current?.isConnected) noticeSource.current.focus();
+              else document.getElementById('main-content')?.focus();
+            }}
+          >
+            Dismiss
+          </button>
+        )}
       </div>
     </ReadingContext.Provider>
   );
@@ -65,7 +110,11 @@ export function SaveButton({ slug, title, withLabel = false }) {
       className={`save-button ${active ? 'is-saved' : ''}`}
       disabled={!ready}
       aria-pressed={active}
-      aria-label={`${active ? 'Remove' : 'Save'} ${title}${active ? ' from reading list' : ' to reading list'}`}
+      aria-label={
+        withLabel
+          ? `${active ? 'Saved' : 'Save for later'}: ${title}`
+          : `${active ? 'Remove' : 'Save'} ${title}${active ? ' from reading list' : ' to reading list'}`
+      }
       title={active ? 'Remove from reading list' : 'Save for later'}
       onClick={() => toggleSaved(slug)}
     >

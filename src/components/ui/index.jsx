@@ -16,9 +16,11 @@ export function Arrow({ diagonal = false, ...props }) {
   );
 }
 export function SEO({
-  title = 'Vikram Kangotra — Software engineer & open-source builder',
+  title = 'Vikram Kangotra: Software engineer & open-source builder',
   description = 'I build compilers, explore operating systems, and contribute to open source. Projects and field notes on Rust, WebAssembly, Linux, and the things underneath.',
   path = '/',
+  type = 'website',
+  publishedAt,
 }) {
   return (
     <Head>
@@ -27,8 +29,12 @@ export function SEO({
       <link rel="canonical" href={`https://vikram-kangotra.github.io${path}`} />
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
-      <meta property="og:type" content="website" />
+      <meta property="og:type" content={type} />
       <meta property="og:url" content={`https://vikram-kangotra.github.io${path}`} />
+      {type === 'article' && publishedAt && (
+        <meta property="article:published_time" content={publishedAt} />
+      )}
+      {type === 'article' && <meta name="author" content="Vikram Kangotra" />}
       <meta name="twitter:card" content="summary" />
     </Head>
   );

@@ -107,7 +107,7 @@ const definitions = {
         uint32_t out = 0; bool ok = translate(0xabcde789u, 3, 0xfffff000u | flags, &out);
         if (!ok || out != 0xfffff789u) ++failures;
     }
-    COURSE_ASSERT_EQ(failures, 0);`, 'Present PTE flags—including its PAT bit—do not change the frame base; PDE.PS is a separate test.'),
+    COURSE_ASSERT_EQ(failures, 0);`, 'Present PTE flags, including the PAT bit, do not change the frame base; PDE.PS is a separate test.'),
     ],
     scope: 'Executes your translation model as x86 C and checks address/flag arithmetic. It does not enable CPU paging or establish writable/user permission policy.',
   },

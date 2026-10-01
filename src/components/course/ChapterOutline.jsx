@@ -5,7 +5,7 @@ import { isCheckpointSkipped } from '@/course/lessonAccess';
 import styles from './chapter-outline.module.css';
 
 function lessonTitle(title) {
-  return title.replace(/^\s*\d+(?:\.\d+)*\s*[.)\-–—:]\s*/, '');
+  return title.replace(/^\s*\d+(?:\.\d+)*\s*[.)\-–\u2014:]\s*/, '');
 }
 
 export default function ChapterOutline({ chapter, lessonIndex, readLessons = [], guide, state = {}, gate, onSelectLesson }) {

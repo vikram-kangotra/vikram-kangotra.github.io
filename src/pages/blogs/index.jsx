@@ -5,7 +5,7 @@ export default function Writing({ blogs }) {
   return (
     <div className="shell writing-home">
       <SEO
-        title="Writing — Vikram Kangotra"
+        title="Writing: Vikram Kangotra"
         description="Explore notes on Rust, WebAssembly, open source, and the journey of learning by building."
         path="/blogs"
       />

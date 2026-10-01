@@ -18,13 +18,13 @@ export default function CheckpointBrief({ brief, compact = false, upcoming = fal
       <h4>1. Where to work</h4><p>{brief.startingPoint}</p><ul className={styles.files}>{brief.files.map(path => <li key={path}>{onOpenFile ? <button type="button" disabled={disabled} onClick={() => onOpenFile(path)} title={`Open or create ${path}`}><code>{path}</code><span>Open file →</span></button> : <code>{path}</code>}</li>)}</ul>
       <h4>2. What to implement</h4><ol className={styles.tasks}>{brief.tasks.map((task, index) => <li key={index}><Inline text={task} /></li>)}</ol>
       <h4>3. Given → expected</h4><p>{brief.supplied}</p>
-      {brief.suppliedInterfaces && <State rows={brief.suppliedInterfaces} label="Supplied API — already implemented by the test harness" />}
+      {brief.suppliedInterfaces && <State rows={brief.suppliedInterfaces} label="Supplied API: already implemented by the test harness" />}
       {brief.example && <div className={styles.example}><div><strong>Given</strong><p>{brief.example.input}</p></div><div><strong>Expected behavior</strong><p>{brief.example.result}</p></div></div>}
       <State rows={brief.inputRows} label="Sample state before your instructions begin" />
       {brief.output && <div className={styles.output}><h5>{brief.draft ? 'Target output for the later complete build' : 'Expected VGA output for the sample'}</h5><pre>{brief.output}</pre></div>}
       <State rows={brief.expectedRows} label="Machine state after your code finishes (sample)" />
       {brief.scaffold && <details className={styles.details}><summary>What the assembly lab already supplies</summary><p>{brief.scaffold}</p></details>}
-      {interfaceCode && <details className={styles.details} open={!compact}><summary>Function interface — start here</summary><CodeBlock code={interfaceCode} /></details>}
+      {interfaceCode && <details className={styles.details} open={!compact}><summary>Function interface: start here</summary><CodeBlock code={interfaceCode} /></details>}
       {brief.contract && <details className={styles.details}><summary>Exact requirements used by the tests</summary><p>{brief.contract}</p></details>}
       <h4>4. How to finish</h4><ol className={styles.tasks}>{brief.finish.map((item, index) => <li key={index}>{item}</li>)}</ol>
       {brief.scope && <details className={styles.details}><summary>What you have checked, and what comes later</summary><p>{brief.scope}</p></details>}

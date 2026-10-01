@@ -12,9 +12,28 @@ import CustomLink from '@/components/customlink';
 import { SEO, Eyebrow, Arrow } from '@/components/ui';
 import { SaveButton } from '@/context/ReadingContext';
 import { topicsFor } from '@/constants/topics';
+import { articleImages } from '@/constants/siteImages';
 function ArticleImage({ alt, ...props }) {
   const imageProps = { ...props };
   delete imageProps.layout;
+  const responsive = articleImages[props.src];
+  if (responsive) {
+    return (
+      // Static export uses pre-generated image sizes instead of an image server.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        {...imageProps}
+        src={responsive.src}
+        srcSet={responsive.srcSet}
+        width={imageProps.width || responsive.width}
+        height={imageProps.height || responsive.height}
+        sizes={`${Number(imageProps.width) || 300}px`}
+        alt={alt || responsive.alt}
+        loading="lazy"
+        decoding="async"
+      />
+    );
+  }
   return (
     <Image
       {...imageProps}
@@ -41,7 +60,7 @@ function CodeBlock(props) {
   }
   return (
     <div className="reader-code">
-      <button className="copy-code" onClick={copy} aria-label="Copy code block">
+      <button className="copy-code" onClick={copy} title="Copy code block">
         <span role="status">{label}</span>
       </button>
       <pre ref={code} tabIndex={0} {...props} />
@@ -51,9 +70,9 @@ function CodeBlock(props) {
 export default function Blog(props) {
   return <Reader key={props.post.frontmatter.slug} {...props} />;
 }
-function Reader({ post: { source, frontmatter }, previous, next, allBlogs }) {
+function Reader({ post: { source, frontmatter }, previous, next, allBlogs, initialToc = [] }) {
   const article = useRef(null);
-  const [toc, setToc] = useState([]);
+  const toc = initialToc;
   const [active, setActive] = useState('');
   const [progress, setProgress] = useState(0);
   const [focus, setFocus] = useState(false);
@@ -71,9 +90,6 @@ function Reader({ post: { source, frontmatter }, previous, next, allBlogs }) {
   }, []);
   useEffect(() => {
     const headings = Array.from(article.current.querySelectorAll('h2[id],h3[id]'));
-    setToc(
-      headings.map((h) => ({ id: h.id, text: h.textContent, level: h.tagName === 'H2' ? 2 : 3 }))
-    );
     let frame = null;
     const update = () => {
       frame = null;
@@ -127,7 +143,20 @@ function Reader({ post: { source, frontmatter }, previous, next, allBlogs }) {
             href={`#${item.id}`}
             aria-current={active === item.id ? 'location' : undefined}
             onClick={(event) => {
+              if (
+                event.button !== 0 ||
+                event.metaKey ||
+                event.ctrlKey ||
+                event.shiftKey ||
+                event.altKey
+              )
+                return;
               event.currentTarget.closest('details')?.removeAttribute('open');
+              const heading = document.getElementById(item.id);
+              if (heading) {
+                heading.tabIndex = -1;
+                requestAnimationFrame(() => heading.focus({ preventScroll: true }));
+              }
             }}
           >
             {item.text}
@@ -144,9 +173,11 @@ function Reader({ post: { source, frontmatter }, previous, next, allBlogs }) {
         aria-hidden="true"
       />
       <SEO
-        title={`${frontmatter.title} — Vikram Kangotra`}
+        title={`${frontmatter.title}: Vikram Kangotra`}
         description={frontmatter.excerpt}
         path={`/blogs/${frontmatter.slug}`}
+        type="article"
+        publishedAt={frontmatter.publishedAt}
       />
       <Link className="back-link" href="/blogs">
         ← Back to the notebook
@@ -180,7 +211,7 @@ function Reader({ post: { source, frontmatter }, previous, next, allBlogs }) {
             <button
               key={value}
               className={`font-size-${index}`}
-              aria-label={title}
+              aria-label={`${label}: ${title}`}
               aria-pressed={size === value}
               onClick={() => changeSize(value)}
             >
@@ -194,7 +225,7 @@ function Reader({ post: { source, frontmatter }, previous, next, allBlogs }) {
         </button>
         <div className="reader-actions">
           <SaveButton slug={frontmatter.slug} title={frontmatter.title} withLabel />
-          <button className="share-button" aria-label="Copy article link" onClick={share}>
+          <button className="share-button" title="Copy article link" onClick={share}>
             <span role="status">{shareLabel}</span>
             <Arrow diagonal />
           </button>
@@ -244,7 +275,7 @@ function Reader({ post: { source, frontmatter }, previous, next, allBlogs }) {
       <section className="reader-end">
         <Eyebrow>THANKS FOR READING</Eyebrow>
         <h2>Have a thought on this?</h2>
-        <p>I’d love to hear what you’re building—or what you’d do differently.</p>
+        <p>I’d love to hear what you’re building or what you’d do differently.</p>
         <a
           className="text-link"
           href={`mailto:vikramkangotra8055@gmail.com?subject=${encodeURIComponent(frontmatter.title)}`}
@@ -281,10 +312,32 @@ export async function getStaticPaths() {
 export async function getStaticProps({ params }) {
   const { slug } = params;
   const { content, frontmatter } = await getBlogFromSlug(slug);
+  const initialToc = [];
+  function collectHeadings() {
+    return (tree) => {
+      const text = (node) =>
+        node.type === 'text' ? node.value : (node.children || []).map(text).join('');
+      function visit(node) {
+        if (
+          node.type === 'element' &&
+          (node.tagName === 'h2' || node.tagName === 'h3') &&
+          node.properties?.id
+        ) {
+          initialToc.push({
+            id: String(node.properties.id),
+            text: text(node),
+            level: node.tagName === 'h2' ? 2 : 3,
+          });
+        }
+        (node.children || []).forEach(visit);
+      }
+      visit(tree);
+    };
+  }
 
   const mdxSource = await serialize(content, {
     mdxOptions: {
-      rehypePlugins: [rehypeSlug, rehypePrism, rehypeCodeTitles],
+      rehypePlugins: [rehypeSlug, collectHeadings, rehypePrism, rehypeCodeTitles],
     },
   });
 
@@ -326,6 +379,7 @@ export async function getStaticProps({ params }) {
         previous,
         next,
         allBlogs,
+        initialToc,
       },
     };
   } catch (error) {
@@ -339,6 +393,7 @@ export async function getStaticProps({ params }) {
         previous: null,
         next: null,
         allBlogs: [],
+        initialToc,
       },
     };
   }

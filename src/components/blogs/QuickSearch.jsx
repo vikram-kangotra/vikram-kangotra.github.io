@@ -8,13 +8,12 @@ export default function QuickSearch({ blogs = [] }) {
   const input = useRef(null);
   const router = useRouter();
   const [query, setQuery] = useState('');
-  const results = blogs
-    .filter((blog) =>
-      `${blog.title} ${blog.excerpt || ''} ${topicsFor(blog.slug).join(' ')}`
-        .toLowerCase()
-        .includes(query.trim().toLowerCase())
-    )
-    .slice(0, 6);
+  const matches = blogs.filter((blog) =>
+    `${blog.title} ${blog.excerpt || ''} ${topicsFor(blog.slug).join(' ')}`
+      .toLowerCase()
+      .includes(query.trim().toLowerCase())
+  );
+  const results = matches.slice(0, 6);
   function close() {
     dialog.current?.close();
   }
@@ -65,7 +64,9 @@ export default function QuickSearch({ blogs = [] }) {
         ref={trigger}
         className="quick-search-trigger"
         onClick={open}
-        aria-label="Search the site"
+        aria-labelledby="quick-search-label quick-search-shortcut"
+        aria-keyshortcuts="Meta+K Control+K"
+        title="Search articles"
         aria-haspopup="dialog"
       >
         <svg
@@ -80,8 +81,8 @@ export default function QuickSearch({ blogs = [] }) {
           <circle cx="10" cy="10" r="6" />
           <path d="m15 15 5 5" />
         </svg>
-        <span>Search</span>
-        <kbd>⌘ K</kbd>
+        <span id="quick-search-label">Search</span>
+        <kbd id="quick-search-shortcut">⌘ K</kbd>
       </button>
       <dialog
         ref={dialog}
@@ -104,8 +105,8 @@ export default function QuickSearch({ blogs = [] }) {
       >
         <div className="quick-search-top">
           <h2 id="quick-search-title">Find your next read</h2>
-          <button className="dialog-close" onClick={close} aria-label="Close search">
-            Esc
+          <button className="dialog-close" onClick={close} title="Close search (Esc)">
+            Close
           </button>
         </div>
         <label htmlFor="quick-search-input" className="sr-only">
@@ -121,6 +122,13 @@ export default function QuickSearch({ blogs = [] }) {
         />
         <div className="quick-results">
           <p className="eyebrow">{query ? 'SEARCH RESULTS' : 'FROM THE NOTEBOOK'}</p>
+          <p className="sr-only" role="status">
+            {matches.length} {matches.length === 1 ? 'article' : 'articles'}
+            {query.trim() ? ` matching ${query.trim()}` : ''}.
+            {matches.length > results.length
+              ? ` Showing the first ${results.length}; browse all writing for every result.`
+              : ''}
+          </p>
           {results.map((blog) => (
             <Link
               className="quick-result"
@@ -139,7 +147,11 @@ export default function QuickSearch({ blogs = [] }) {
                 : 'Explore the writing archive to find a story.'}
             </p>
           )}
-          <Link href="/blogs" className="quick-result quick-all" onClick={close}>
+          <Link
+            href={query.trim() ? { pathname: '/blogs', query: { q: query.trim() } } : '/blogs'}
+            className="quick-result quick-all"
+            onClick={close}
+          >
             Browse all writing <span>→</span>
           </Link>
         </div>

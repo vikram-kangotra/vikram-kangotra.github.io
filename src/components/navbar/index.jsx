@@ -25,7 +25,7 @@ export default function Navbar({ blogs }) {
   return (
     <header className="site-header">
       <nav className="shell nav" aria-label="Main navigation">
-        <Link href="/" className="wordmark" aria-label="Vikram Kangotra, home">
+        <Link href="/" className="wordmark" title="Vikram Kangotra, home">
           <span className="monogram">
             vk<span>.</span>
           </span>
@@ -41,7 +41,10 @@ export default function Navbar({ blogs }) {
           <Link href="/blogs" aria-current={pathname.startsWith('/blogs') ? 'page' : undefined}>
             Writing
           </Link>
-          <Link href="/learn/os" aria-current={pathname.startsWith('/learn/os') ? 'page' : undefined}>
+          <Link
+            href="/learn/os"
+            aria-current={pathname.startsWith('/learn/os') ? 'page' : undefined}
+          >
             OS course
           </Link>
           <Link href="/#about" onClick={() => setOpen(false)}>

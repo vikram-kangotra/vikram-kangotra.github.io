@@ -20,7 +20,7 @@ export default function Playground() {
   }, [router.isReady, router.query.workspace]);
 
   return <CourseShell immersive context="Open playground">
-    <SEO title="x86 Playground — OS from Scratch" description="Write assembly and C, manage your project files, run a real x86 machine, and download your compiled binary. An independent workspace for experimenting." path="/learn/os/playground" />
+    <SEO title="x86 Playground: OS from Scratch" description="Write assembly and C, manage your project files, run a real x86 machine, and download your compiled binary. An independent workspace for experimenting." path="/learn/os/playground" />
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.heading}><span className={styles.icon}><FiCode aria-hidden="true" /></span><div><h1>x86 playground</h1><p>{workspace?.id !== 'main' && workspace ? `Independent copy · ${workspace.title}` : 'Your files. Your machine. Room to experiment.'}</p></div></div>

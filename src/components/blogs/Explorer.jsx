@@ -17,7 +17,7 @@ const topicOptions = [
 ];
 export default function Explorer({ blogs }) {
   const router = useRouter();
-  const { saved, ready } = useReading();
+  const { saved, ready, storageAvailable } = useReading();
   const [query, setQuery] = useState('');
   const [topic, setTopic] = useState('All topics');
   const [view, setView] = useState('all');
@@ -31,24 +31,38 @@ export default function Explorer({ blogs }) {
         router.query.q || '',
         router.query.topic || 'All topics',
         router.query.view || 'all',
+        router.query.sort || 'newest',
+        router.query.layout || 'list',
       ]);
       if (syncTarget.current && syncTarget.current !== incoming) return;
       syncTarget.current = null;
       setQuery(typeof router.query.q === 'string' ? router.query.q : '');
       setTopic(topicOptions.includes(router.query.topic) ? router.query.topic : 'All topics');
       setView(router.query.view === 'saved' ? 'saved' : 'all');
+      setSort(['oldest', 'shortest'].includes(router.query.sort) ? router.query.sort : 'newest');
+      setLayout(router.query.layout === 'grid' ? 'grid' : 'list');
     }
-  }, [router.isReady, router.query.q, router.query.topic, router.query.view]);
+  }, [
+    router.isReady,
+    router.query.q,
+    router.query.topic,
+    router.query.view,
+    router.query.sort,
+    router.query.layout,
+  ]);
   function update(values) {
     const params = { ...router.query };
-    Object.entries({ q: query, topic, view, ...values }).forEach(([key, value]) => {
-      if (value && value !== 'all' && value !== 'All topics') params[key] = value;
+    const defaults = { q: '', topic: 'All topics', view: 'all', sort: 'newest', layout: 'list' };
+    Object.entries({ q: query, topic, view, sort, layout, ...values }).forEach(([key, value]) => {
+      if (value && value !== defaults[key]) params[key] = value;
       else delete params[key];
     });
     syncTarget.current = JSON.stringify([
       params.q || '',
       params.topic || 'All topics',
       params.view || 'all',
+      params.sort || 'newest',
+      params.layout || 'list',
     ]);
     router.replace({ pathname: router.pathname, query: params }, undefined, {
       shallow: true,
@@ -80,6 +94,7 @@ export default function Explorer({ blogs }) {
   }
   return (
     <section className="explorer" id="stories" aria-label="Explore articles">
+      <h2 className="sr-only">Browse articles</h2>
       <div className="explorer-tabs">
         <div className="collection-tabs" aria-label="Article collection">
           <button
@@ -108,7 +123,10 @@ export default function Explorer({ blogs }) {
           <button
             aria-pressed={layout === 'list'}
             aria-label="List layout"
-            onClick={() => setLayout('list')}
+            onClick={() => {
+              setLayout('list');
+              update({ layout: 'list' });
+            }}
           >
             <svg
               width="18"
@@ -125,7 +143,10 @@ export default function Explorer({ blogs }) {
           <button
             aria-pressed={layout === 'grid'}
             aria-label="Grid layout"
-            onClick={() => setLayout('grid')}
+            onClick={() => {
+              setLayout('grid');
+              update({ layout: 'grid' });
+            }}
           >
             <svg
               width="18"
@@ -184,7 +205,13 @@ export default function Explorer({ blogs }) {
         </div>
         <label className="sort-control">
           <span className="sr-only">Sort articles</span>
-          <select value={sort} onChange={(e) => setSort(e.target.value)}>
+          <select
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value);
+              update({ sort: e.target.value });
+            }}
+          >
             <option value="newest">Newest first</option>
             <option value="oldest">Oldest first</option>
             <option value="shortest">Shortest read</option>
@@ -211,7 +238,13 @@ export default function Explorer({ blogs }) {
             ? 'Loading your reading list…'
             : `${filtered.length} ${filtered.length === 1 ? 'story' : 'stories'}${topic !== 'All topics' ? ` about ${topic}` : ''}`}
         </span>
-        <span>{view === 'saved' ? 'Saved on this browser' : 'A notebook, not a news feed.'}</span>
+        <span>
+          {view === 'saved'
+            ? storageAvailable
+              ? 'Saved on this browser'
+              : 'Changes kept for this visit'
+            : 'A notebook, not a news feed.'}
+        </span>
       </div>
       <div className={`story-collection ${layout === 'grid' ? 'story-grid' : ''}`}>
         {filtered.map((blog, index) => (
@@ -263,7 +296,9 @@ export default function Explorer({ blogs }) {
           </h3>
           <p>
             {view === 'saved' && !query && topic === 'All topics'
-              ? 'Bookmark a story to keep it here for later. Your list stays in this browser.'
+              ? storageAvailable
+                ? 'Bookmark a story to keep it here for later. Your list stays in this browser.'
+                : 'Bookmark a story to keep it here during this visit. Browser storage is unavailable.'
               : 'Try a different topic or search term.'}
           </p>
           <button className="button button-primary" onClick={reset}>

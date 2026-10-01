@@ -1,7 +1,7 @@
 // Shared, executable scaffolding for the assembly foundation.
 // Every lesson body runs on the real v86 CPU; helpers only provide visible output.
 export function bootProgram(body, data = '', initialization = '') {
-  return `; x86 assembly foundation — NASM, 386-or-newer CPU, real mode
+  return `; x86 assembly foundation: NASM, 386-or-newer CPU, real mode
 ; Edit the lesson routine. The scaffold makes its results visible on VGA.
 ; At lesson entry: CS=DS=ES=SS=0, SP=0x7bfe, DF=0.
 ; Helpers preserve general registers and flags; putc reads AL,

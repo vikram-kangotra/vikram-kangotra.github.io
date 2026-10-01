@@ -192,7 +192,7 @@ This marked a profound shift in our objectives. Our challenge was now to port VL
         
         Initially, it appeared promising, but a significant hurdle remained. I needed to execute functions on the main thread, which proved tricky since modules ran on threads and consequently on WebWorkers within the web environment, making direct execution impossible.
         
-        In the realm of C/C++, Emscripten offers macros like MAIN_THREAD_EM_ASM, within which JavaScript code runs on the main thread—a perfect fit for my needs. However, Rust lacked such conveniences, prompting me to take matters into my own hands.
+        In the realm of C/C++, Emscripten offers macros like MAIN_THREAD_EM_ASM, within which JavaScript code runs on the main thread. This was a perfect fit for my needs. However, Rust lacked such conveniences, prompting me to take matters into my own hands.
         
         My quest led me to discover the `emscripten_asm_const_int_sync_on_main_thread()` function for calling JavaScript code from the main thread. Yet, when I attempted to use it, errors surfaced.
         
@@ -218,7 +218,7 @@ This marked a profound shift in our objectives. Our challenge was now to port VL
           }))
         ```
 
-        There it was, concealed within the extensive codebase. The key issue lay in the requirement for the string I passed to reside within the "em_asm" section—an essential aspect of Emscripten's functionality.
+        There it was, concealed within the extensive codebase. The key issue lay in the requirement for the string I passed to reside within the "em_asm" section, an essential aspect of Emscripten's functionality.
         
         The solution was to instruct Rust to write to the "em_asm" section, which could be achieved using the #[link_section = "em_asm"] attribute. Sounds straightforward, right?
         
@@ -247,7 +247,7 @@ This marked a profound shift in our objectives. Our challenge was now to port VL
 
         The address passed to the Emscripten function pertains to the data string in the data section, while the dictionary I create in Emscripten's Python code contains the address from the custom section before being excluded from the final output. My goal is to obtain the address from the data section instead.
         
-        I am still grappling with this problem, and it remains unsolved until I find a viable solution. You can find the final working code for capturing video streams from a web camera [here](https://github.com/vikram-kangotra/vlc-web-camera-prototype)
+        I am still grappling with this problem, and it remains unsolved until I find a viable solution. You can find the final working code for capturing video streams from a web camera in the [VLC web camera prototype](https://github.com/vikram-kangotra/vlc-web-camera-prototype)
 
 ### Concluding Thoughts: Navigating Open Source and WebAssembly Challenges
 My journey during Google Summer of Code 2023 has been transformative. From rewriting C modules to venturing into the world of WebAssembly, I've encountered challenges and seized opportunities that have enriched my understanding of open source development.
@@ -266,4 +266,3 @@ Open source is a dynamic realm where adaptability and creativity thrive. Each ch
 To my fellow open source enthusiasts, keep coding, keep collaborating, and keep innovating. Our contributions today pave the way for the technologies of tomorrow.
 
 Thank you for joining me on this journey. Until next time, happy coding!
-

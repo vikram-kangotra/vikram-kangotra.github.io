@@ -1,4 +1,4 @@
-import { chinar, lamp, zenos, proto_rs, sudoku_solver, wirebyte } from '../assets';
+import { projectImages } from './siteImages';
 const projects = [
   {
     name: 'Proto-rs',
@@ -11,7 +11,7 @@ const projects = [
     detail:
       'Proto-rs translates its own source language into LLVM Intermediate Representation, which can then be processed by the LLVM toolchain. An exploration of language implementation and the boundary between high-level ideas and machine execution.',
     href: 'https://github.com/vikram-kangotra/Proto-rs',
-    imageSrc: proto_rs,
+    imageSrc: projectImages['proto-rs'],
     visual: 'compiler',
   },
   {
@@ -25,7 +25,7 @@ const projects = [
     detail:
       'A network protocol analyzer written in Rust for adventurous purposes. Wirebyte explores packet decoding, traffic inspection, and the tools that make network monitoring and troubleshooting possible.',
     href: 'https://github.com/vikram-kangotra/Wirebyte',
-    imageSrc: wirebyte,
+    imageSrc: projectImages.wirebyte,
     visual: 'network',
   },
   {
@@ -39,7 +39,7 @@ const projects = [
     detail:
       'ZenOS explores operating system design with WebAssembly as a native part of the system. A project driven by curiosity about runtimes and the foundations that applications depend on.',
     href: 'https://github.com/vikram-kangotra/ZenOS',
-    imageSrc: zenos,
+    imageSrc: projectImages.zenos,
     visual: 'os',
   },
   {
@@ -53,7 +53,7 @@ const projects = [
     detail:
       'Lamp is an attempt to build a PyTorch-like library in Rust for educational purposes. The goal is to learn how these libraries work by implementing the ideas, rather than competing with production frameworks.',
     href: 'https://github.com/vikram-kangotra/lamp',
-    imageSrc: lamp,
+    imageSrc: projectImages.lamp,
     visual: 'library',
   },
   {
@@ -67,7 +67,7 @@ const projects = [
     detail:
       'A GTK4 and libadwaita application that solves Sudoku using Wave Function Collapse. The project brings algorithm exploration together with a native Linux graphical interface.',
     href: 'https://gitlab.com/cyberphantom52/sudoku-solver',
-    imageSrc: sudoku_solver,
+    imageSrc: projectImages['sudoku-solver'],
     visual: 'sudoku',
   },
   {
@@ -80,8 +80,12 @@ const projects = [
     detail:
       'The Chinar Engine explores an entity-component-system architecture for 2D and 3D game development, with a focus on the building blocks of a game engine.',
     href: 'https://github.com/vikram-kangotra/The-Chinar-Engine',
-    imageSrc: chinar,
+    imageSrc: projectImages.chinar,
     visual: 'engine',
   },
 ];
-export default projects;
+export default projects.map(({ imageSrc, ...project }) => ({
+  ...project,
+  imageSrc: { src: imageSrc.src, width: imageSrc.width, height: imageSrc.height },
+  imageSrcSet: imageSrc.srcSet,
+}));

@@ -49,8 +49,8 @@ export function checkpointStateRows(state = {}) {
   for (const memory of state.memory || []) rows.push({ label: `Bytes at ${memory.address}`, value: bytes(memory.bytes) });
   if (typeof state.protectedMode === 'boolean') {
     rows.push({ label: 'C entry and return', value: 'Call kernel_main and let it return. The assembly entry stub owns the final halt loop.' });
-    rows.push({ label: 'CR0.PE / CR0.PG', value: `${Number(state.protectedMode)} / ${Number(state.pagingEnabled)} — protected mode, paging disabled` });
-    rows.push({ label: 'IF / DF', value: `${Number(state.interruptsEnabled)} / ${Number(state.directionFlag)} — interrupts disabled, forward string direction` });
+    rows.push({ label: 'CR0.PE / CR0.PG', value: `${Number(state.protectedMode)} / ${Number(state.pagingEnabled)}: protected mode, paging disabled` });
+    rows.push({ label: 'IF / DF', value: `${Number(state.interruptsEnabled)} / ${Number(state.directionFlag)}: interrupts disabled, forward string direction` });
     for (const [name, value] of Object.entries(state.segments || {})) rows.push({ label: name.toUpperCase(), value: hex(value) });
     if (state.stack) rows.push({ label: 'C entry stack', value: `Valid stack in the reserved ${hex(state.stack.min)} to ${hex(state.stack.max)} region; preserve the return address and calling convention.` });
     if (state.serial) rows.push({ label: 'COM1 serial output', value: state.serial });

@@ -665,7 +665,7 @@ export const foundations = [
         "paragraphs": [
           "Suppose the emulator is configured with 32 MiB of RAM. It is tempting to allocate every address below that number. A PC's physical address space, however, is a map of different uses: ordinary RAM, firmware data, reserved regions, and device windows. The number of installed bytes does not describe all those boundaries. Firmware supplies a memory map so the loader can pass the kernel a description of ranges rather than one misleading top address.",
           "In the BIOS path we collect this information using E820 before leaving real mode. We need a buffer at a known location with a known capacity, and we must keep it intact until the kernel has copied or reserved it. Even a range firmware calls usable can contain our own loader, kernel, stack, page tables, or map buffer by the time C starts. Firmware describes the platform; our reservation list accounts for what this boot has placed inside it. The free-frame list will be built from both.",
-          "Represent ranges as [base, end), including base and excluding end. Then length is simply end minus base, and two adjacent ranges can share an endpoint without overlapping. Compute end only after checking that base + length cannot overflow. Keep firmware values in 64-bit integers even while the kernel uses only addresses below 4 GiB: truncating a high physical address could turn it into an apparently available low one. Start your notes with three columns—firmware type, current contents, allocation decision—and use them to explain each range before marking it free."
+          "Represent ranges as [base, end), including base and excluding end. Then length is simply end minus base, and two adjacent ranges can share an endpoint without overlapping. Compute end only after checking that base + length cannot overflow. Keep firmware values in 64-bit integers even while the kernel uses only addresses below 4 GiB: truncating a high physical address could turn it into an apparently available low one. Start your notes with three columns (firmware type, current contents, allocation decision) and use them to explain each range before marking it free."
         ],
         "teaching": {
           "goal": "Distinguish installed RAM, usable firmware ranges, and memory that the running kernel can actually allocate.",
@@ -688,7 +688,7 @@ export const foundations = [
         ],
         "code": {
           "language": "asm",
-          "filename": "e820.asm — real-mode implementation unit",
+          "filename": "e820.asm: real-mode implementation unit",
           "source": "bits 16\n; Integrate in stage 2 before protected mode. DS = ES = 0.\n; Result: CF clear, e820_count valid; CF set means do not use this map.\n; Records: 128 slots x 24 bytes at physical 0x5000.\ncollect_e820:\n    mov word [e820_count], 0\n    xor ebx, ebx\n    mov di, 0x5000\n.next:\n    cmp word [e820_count], 128\n    jae .failed\n    mov dword [es:di+20], 1\n    mov eax, 0xe820\n    mov edx, 0x534d4150\n    mov ecx, 24\n    push ds\n    push es\n    push di\n    int 0x15\n    pop di\n    pop es\n    pop ds\n    jc .failed\n    cmp eax, 0x534d4150\n    jne .failed\n    cmp ecx, 20\n    jb .failed\n    cmp ecx, 24\n    ja .failed\n    cmp ecx, 24\n    je .record\n    mov dword [es:di+20], 1  ; 20-byte form has no attributes\n.record:\n    inc word [e820_count]\n    add di, 24\n    test ebx, ebx\n    jnz .next\n    clc\n    ret\n.failed:\n    stc\n    ret\ne820_count: dw 0\n"
         },
         "teaching": {
@@ -1054,7 +1054,7 @@ export const foundations = [
         ],
         "code": {
           "language": "c",
-          "filename": "pmm.c — serialized uniprocessor implementation",
+          "filename": "pmm.c: serialized uniprocessor implementation",
           "source": "#include <stdint.h>\n#include <stdbool.h>\n#define FRAME_BYTES 4096u\n#define FRAME_COUNT 8192u\n#define BITMAP_BYTES ((FRAME_COUNT + 7u) / 8u)\nstatic uint8_t eligible[BITMAP_BYTES], busy[BITMAP_BYTES];\nstatic bool bit(const uint8_t *map, uint32_t i) {\n    return (map[i / 8] & (uint8_t)(1u << (i % 8))) != 0;\n}\nstatic void set(uint8_t *map, uint32_t i, bool value) {\n    uint8_t mask = (uint8_t)(1u << (i % 8));\n    if (value) map[i / 8] |= mask;\n    else map[i / 8] &= (uint8_t)~mask;\n}\nvoid pmm_boot_begin(void) {\n    for (uint32_t i = 0; i < BITMAP_BYTES; ++i) {\n        eligible[i] = 0;\n        busy[i] = 0xff;\n    }\n}\nbool pmm_boot_usable(uint32_t first, uint32_t end) {\n    if (first > end || end > FRAME_COUNT) return false;\n    for (uint32_t i = first; i < end; ++i) {\n        set(eligible, i, true); set(busy, i, false);\n    }\n    return true;\n}\nbool pmm_boot_reserve(uint32_t first, uint32_t end) {\n    if (first > end || end > FRAME_COUNT) return false;\n    for (uint32_t i = first; i < end; ++i) {\n        set(eligible, i, false); set(busy, i, true);\n    }\n    return true;\n}\nbool pmm_alloc(uint32_t *physical) {\n    if (!physical) return false;\n    for (uint32_t i = 0; i < FRAME_COUNT; ++i) {\n        if (bit(eligible, i) && !bit(busy, i)) {\n            set(busy, i, true);\n            *physical = i * FRAME_BYTES;\n            return true;\n        }\n    }\n    return false;\n}\nbool pmm_free(uint32_t physical) {\n    if (physical % FRAME_BYTES != 0) return false;\n    uint32_t i = physical / FRAME_BYTES;\n    if (i >= FRAME_COUNT || !bit(eligible, i) || !bit(busy, i))\n        return false;\n    set(busy, i, false);\n    return true;\n}\n"
         },
         "teaching": {
@@ -1388,7 +1388,7 @@ export const foundations = [
         ],
         "code": {
           "language": "c",
-          "filename": "heap.c — i686 fixed-arena implementation",
+          "filename": "heap.c: i686 fixed-arena implementation",
           "source": "#include <stdint.h>\n#include <stddef.h>\n#include <stdbool.h>\n#define ARENA_BYTES (16u * 1024u)\n#define ALIGNMENT 16u\nstruct block {\n    size_t size;\n    struct block *next;\n    uint32_t tag;\n    uint32_t free;\n};\n_Static_assert(sizeof(struct block) == 16, \"compile for i686\");\nstatic _Alignas(16) unsigned char arena[ARENA_BYTES];\nstatic struct block *first;\n\nvoid heap_init(void) {\n    first = (struct block *)(void *)arena;\n    *first = (struct block) {\n        .size = ARENA_BYTES - sizeof(*first),\n        .next = NULL, .tag = 0x48454150u, .free = 1\n    };\n}\nvoid *kmalloc(size_t requested) {\n    if (!first || requested == 0 || requested > SIZE_MAX - 15u)\n        return NULL;\n    size_t n = (requested + 15u) & ~(size_t)15u;\n    for (struct block *b = first; b; b = b->next) {\n        if (!b->free || b->size < n) continue;\n        size_t rest = b->size - n;\n        if (rest >= sizeof(*b) + ALIGNMENT) {\n            struct block *split = (struct block *)\n                ((unsigned char *)(b + 1) + n);\n            *split = (struct block) {\n                .size = rest - sizeof(*b), .next = b->next,\n                .tag = 0x48454150u, .free = 1\n            };\n            b->next = split;\n            b->size = n;\n        }\n        b->free = 0;\n        return b + 1;\n    }\n    return NULL;\n}\nbool kfree(void *pointer) {\n    if (!pointer) return true;\n    struct block *found = NULL;\n    for (struct block *b = first; b; b = b->next)\n        if ((void *)(b + 1) == pointer) { found = b; break; }\n    if (!found || found->free || found->tag != 0x48454150u)\n        return false;\n    found->free = 1;\n    for (struct block *b = first; b && b->next;) {\n        struct block *next = b->next;\n        if (b->free && next->free) {\n            b->size += sizeof(*b) + next->size;\n            b->next = next->next;\n        } else b = next;\n    }\n    return true;\n}\n"
         },
         "teaching": {
@@ -1574,7 +1574,7 @@ export const foundations = [
         ],
         "code": {
           "language": "asm",
-          "filename": "switch.asm — cooperative i386 kernel threads",
+          "filename": "switch.asm: cooperative i386 kernel threads",
           "source": "bits 32\nsection .text\nglobal switch_context, thread_trampoline\nextern thread_bootstrap\n; void switch_context(uint32_t **old_sp, uint32_t *new_sp);\nswitch_context:\n    push ebp\n    push ebx\n    push esi\n    push edi\n    mov eax, [esp + 20]      ; old_sp\n    mov [eax], esp\n    mov esp, [esp + 24]      ; new_sp, evaluated before ESP changes\n    pop edi\n    pop esi\n    pop ebx\n    pop ebp\n    ret\n\n; New thread stack top is 16-byte aligned after the synthetic RET.\nthread_trampoline:\n    call thread_bootstrap   ; Must not return: entry() then thread_exit().\n    cli\n.halt:\n    hlt\n    jmp .halt\nsection .note.GNU-stack noalloc noexec nowrite progbits\n"
         },
         "teaching": {

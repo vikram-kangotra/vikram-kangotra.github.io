@@ -46,7 +46,7 @@ export default function Course({ roadmap, lessonCount }) {
   const percentage = Math.round(done / roadmap.length * 100);
 
   return <CourseShell context="Learning path">
-    <SEO title={`${courseTitle} — Vikram Kangotra`} description="A hands-on systems engineering course. Read beside a real x86 machine, write assembly, and build a C kernel from the first instruction to userspace." path="/learn/os" />
+    <SEO title={`${courseTitle}: Vikram Kangotra`} description="A hands-on systems engineering course. Read beside a real x86 machine, write assembly, and build a C kernel from the first instruction to userspace." path="/learn/os" />
     <div className={styles.dashboard}>
       <header className={styles.introduction}>
         <div className={styles.eyebrow}><span className={styles.courseMark}><FiCpu aria-hidden="true" /></span> SYSTEMS ENGINEERING <span className={styles.selfPaced}>Self-paced course</span></div>

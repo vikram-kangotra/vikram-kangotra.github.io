@@ -273,7 +273,7 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
   const matchingChapters = roadmap.filter((item) => `${item.id} ${item.title} ${item.subtitle} ${item.phase} ${item.slug}`.toLowerCase().includes(chapterQuery.trim().toLowerCase()));
 
   return <>
-    <SEO title={`${chapter.title} — Building an OS from Scratch`} description={chapter.subtitle} path={`/learn/os/${chapter.slug}`} />
+    <SEO title={`${chapter.title}: Building an OS from Scratch`} description={chapter.subtitle} path={`/learn/os/${chapter.slug}`} />
     <nav className={styles.chapterBar} aria-label="Chapter navigation">
       <button ref={curriculumTrigger} className={styles.curriculumButton} onClick={showCurriculum} aria-label="Curriculum" aria-haspopup="dialog"><FiList /><span>Curriculum</span><FiChevronDown /></button>
       <div className={styles.chapterIdentity}><span className={styles.chapterIndex}>{chapterNumber} / {roadmap.length}</span><h1>{chapter.title}</h1></div>
@@ -292,7 +292,7 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
           <div id="reader-panel-lesson" role="tabpanel" aria-labelledby="reader-tab-lesson" hidden={readerTab !== 'lesson' || blockedLesson} tabIndex={0}>
             <article id={`lesson-${section.id}`} className={styles.lesson}>
               <div className={styles.lessonMeta}><span>{chapter.phase}</span><span>Lesson {lessonIndex + 1} of {chapter.sections.length}</span>{readLessons.includes(lessonIndex) && <span className={styles.readBadge}><FiCheck /> Read</span>}</div>
-              <h2 ref={lessonHeading} tabIndex={-1}>{section.title.replace(/^\s*\d+(?:\.\d+)*\s*[.)\-–—:]\s*/, '')}</h2>
+              <h2 ref={lessonHeading} tabIndex={-1}>{section.title.replace(/^\s*\d+(?:\.\d+)*\s*[.)\-–\u2014:]\s*/, '')}</h2>
               <LessonIntroduction teaching={section.teaching} />
               <div className={styles.prose}>{section.paragraphs.slice(0, diagramAfter).map((text, i) => <p key={i}><Inline text={text} /></p>)}</div>
               {section.aid && <LessonVisual aid={section.aid} />}
@@ -312,7 +312,7 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
             <h3>What you’ll build and understand</h3><ul className={styles.outcomes}>{chapter.outcomes.map((item) => <li key={item}><FiCheck /><span>{item}</span></li>)}</ul>
             <details className={styles.prerequisites}><summary>Before you begin</summary><ul>{chapter.prerequisites.map((item) => <li key={item}>{item}</li>)}</ul></details>
             <h3>Your route through this chapter</h3><ol className={styles.lessonList}>{chapter.sections.map((item, i) => <li key={item.id}><button onClick={() => goLesson(i)} data-lesson-index={i} data-locked={lessonLocked(i)} aria-disabled={lessonLocked(i) || undefined} aria-describedby={lessonLocked(i) || lessonSkipped(i) ? `outline-status-${item.id}` : undefined} title={lockReason(i) || undefined} aria-current={lessonIndex === i ? 'step' : undefined}><span className={readLessons.includes(i) ? styles.lessonDone : ''}>{readLessons.includes(i) ? <FiCheck /> : String(i + 1).padStart(2, '0')}</span><span>{item.title}</span>{lessonLocked(i) ? <><small>Finish lesson {gate.lessonIndex + 1}</small><FiLock aria-hidden="true" /></> : <>{lessonSkipped(i) ? <small>Skipped</small> : lessonIndex === i && <small>Current</small>}<FiChevronRight /></>}</button>{(lessonLocked(i) || lessonSkipped(i)) && <span id={`outline-status-${item.id}`} hidden>{lessonLocked(i) ? `Locked. ${lockReason(i)}` : 'Checkpoint skipped, not passed.'}</span>}</li>)}</ol>
-            <div className={styles.resources}><h3>Continue with the sources</h3>{chapter.sources.filter(source => !source.url.startsWith('/course/') || (state.read && chapterAttempted)).map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer">{source.title}<FiExternalLink /></a>)}{state.read && chapterAttempted && <a href="/course/module-1-source.tar.gz" download><span><FiDownload /> Module 1 reference project — compare after your build</span><FiArrowRight /></a>}</div>
+            <div className={styles.resources}><h3>Continue with the sources</h3>{chapter.sources.filter(source => !source.url.startsWith('/course/') || (state.read && chapterAttempted)).map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer">{source.title}<FiExternalLink /></a>)}{state.read && chapterAttempted && <a href="/course/module-1-source.tar.gz" download><span><FiDownload /> Module 1 reference project: compare after your build</span><FiArrowRight /></a>}</div>
           </div>
           <div id="reader-panel-review" role="tabpanel" aria-labelledby="reader-tab-review" hidden={readerTab !== 'review'} tabIndex={0} className={styles.checkpoint}>
             <span className={styles.eyebrow}>CHAPTER PROGRESS</span><h2 id="checkpoint-heading" tabIndex={-1}>{completed ? 'Chapter completed.' : 'Your next steps.'}</h2><p className={styles.lead}>Follow your progress through the lessons and guided practice. Your work stays saved on this device.</p>

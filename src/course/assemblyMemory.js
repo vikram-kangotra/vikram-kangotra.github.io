@@ -164,7 +164,7 @@ export const assemblyMemory = [
           "takeaway": "Data declarations construct bytes during assembly; loads and stores use those bytes during execution.",
           "diagramAfter": 2
         },
-        code: { language: 'asm', filename: 'data-layout.asm — declarations', source: 'first:  db 0x34, 0x12\nsecond: dw 0x5678\nlast:   db 0xaa\n; Increasing addresses contain: 34 12 78 56 AA\n; second - first = 2; last - first = 4\n' }
+        code: { language: 'asm', filename: 'data-layout.asm: declarations', source: 'first:  db 0x34, 0x12\nsecond: dw 0x5678\nlast:   db 0xaa\n; Increasing addresses contain: 34 12 78 56 AA\n; second - first = 2; last - first = 4\n' }
       },
       {
         id: 'little-endian',
@@ -203,7 +203,7 @@ export const assemblyMemory = [
           "takeaway": "A bare label supplies an address value; a bracketed operand accesses memory there.",
           "diagramAfter": 2
         },
-        code: { language: 'asm', filename: 'load-forms.asm — lesson body', source: 'mov ax, sample       ; numeric address / offset\nmov ax, [sample]     ; two bytes from memory\nmov al, [sample]     ; one byte; AH is unchanged\nmov al, [sample + 1] ; the following byte\n; Data declaration: sample: dw 0x1234\n' }
+        code: { language: 'asm', filename: 'load-forms.asm: lesson body', source: 'mov ax, sample       ; numeric address / offset\nmov ax, [sample]     ; two bytes from memory\nmov al, [sample]     ; one byte; AH is unchanged\nmov al, [sample + 1] ; the following byte\n; Data declaration: sample: dw 0x1234\n' }
       },
       {
         id: 'load-store',
@@ -223,7 +223,7 @@ export const assemblyMemory = [
           "takeaway": "Loads and stores copy values at a moment in time.",
           "diagramAfter": 2
         },
-        code: { language: 'asm', filename: 'copy-word.asm — lesson body', source: 'mov ax, [source]\nmov [destination], ax\nmov ax, 0xffff\n; source: dw 0x1234\n; destination: dw 0\n; Both memory words are still 0x1234.\n' }
+        code: { language: 'asm', filename: 'copy-word.asm: lesson body', source: 'mov ax, [source]\nmov [destination], ax\nmov ax, 0xffff\n; source: dw 0x1234\n; destination: dw 0\n; Both memory words are still 0x1234.\n' }
       },
       {
         id: 'operand-width',
@@ -243,7 +243,7 @@ export const assemblyMemory = [
           "takeaway": "A memory access is a starting address plus a width, not just one location.",
           "diagramAfter": 2
         },
-        code: { language: 'asm', filename: 'width.asm — independent experiments', source: 'mov byte [value], 0xaa ; 34 12 becomes AA 12\n; On a fresh run instead try:\n; mov word [value], 0xaa ; 34 12 becomes AA 00\n; Data: value: dw 0x1234\n' }
+        code: { language: 'asm', filename: 'width.asm: independent experiments', source: 'mov byte [value], 0xaa ; 34 12 becomes AA 12\n; On a fresh run instead try:\n; mov word [value], 0xaa ; 34 12 becomes AA 00\n; Data: value: dw 0x1234\n' }
       },
       {
         id: 'partial-register',
@@ -412,7 +412,7 @@ export const assemblyMemory = [
           "takeaway": "A valid mathematical address expression still needs a supported machine encoding.",
           "diagramAfter": 2
         },
-        code: { language: 'asm', filename: 'effective-addresses.asm — forms', source: '; Encodable with a 16-bit address size:\nmov ax, [bx]\nmov ax, [si + 2]\nmov ax, [bx + di + 6]\nmov ax, [bp + si + 4]\n; Not encodable as 16-bit addresses:\n; mov ax, [ax]\n; mov ax, [bx + bp]\n; mov ax, [si * 2]\n' }
+        code: { language: 'asm', filename: 'effective-addresses.asm: forms', source: '; Encodable with a 16-bit address size:\nmov ax, [bx]\nmov ax, [si + 2]\nmov ax, [bx + di + 6]\nmov ax, [bp + si + 4]\n; Not encodable as 16-bit addresses:\n; mov ax, [ax]\n; mov ax, [bx + bp]\n; mov ax, [si * 2]\n' }
       },
       {
         id: 'default-segment',
@@ -451,7 +451,7 @@ export const assemblyMemory = [
           "takeaway": "A segment override selects a base for one access; it does not initialize that base.",
           "diagramAfter": 2
         },
-        code: { language: 'asm', filename: 'segment-choice.asm — conceptual trace', source: '; Given DS=1000h, SS=2000h, BP=0030h, SI=2:\nmov ax, [bp + si]    ; SS:0032 -> physical 20032h\nmov ax, [ds:bp + si] ; DS:0032 -> physical 10032h\n; Each instruction reads two consecutive bytes.\n' }
+        code: { language: 'asm', filename: 'segment-choice.asm: conceptual trace', source: '; Given DS=1000h, SS=2000h, BP=0030h, SI=2:\nmov ax, [bp + si]    ; SS:0032 -> physical 20032h\nmov ax, [ds:bp + si] ; DS:0032 -> physical 10032h\n; Each instruction reads two consecutive bytes.\n' }
       },
       {
         id: 'origin-contract',
@@ -490,7 +490,7 @@ export const assemblyMemory = [
           "takeaway": "LEA computes an offset; an ordinary memory MOV accesses the bytes at an address.",
           "diagramAfter": 2
         },
-        code: { language: 'asm', filename: 'lea-versus-load.asm — lesson body', source: 'mov bx, values\nxor di, di\nlea si, [bx + di + 2] ; address of the second word\nmov ax, [si]         ; contents of the second word\ncall print_hex16\n; Data: values: dw 0x1111, 0x2222, 0x3333\n' }
+        code: { language: 'asm', filename: 'lea-versus-load.asm: lesson body', source: 'mov bx, values\nxor di, di\nlea si, [bx + di + 2] ; address of the second word\nmov ax, [si]         ; contents of the second word\ncall print_hex16\n; Data: values: dw 0x1111, 0x2222, 0x3333\n' }
       },
       {
         id: 'array-stride',
@@ -621,7 +621,7 @@ export const assemblyMemory = [
           "takeaway": "CMP keeps the operands and replaces flags with those of their subtraction.",
           "diagramAfter": 2
         },
-        code: { language: 'asm', filename: 'compare.asm — trace', source: 'mov ax, 5\ncmp ax, 3   ; conceptual 5 - 3 = 2; AX stays 5\nje .equal   ; not taken, because ZF=0\n; ...\n.equal:\n' }
+        code: { language: 'asm', filename: 'compare.asm: trace', source: 'mov ax, 5\ncmp ax, 3   ; conceptual 5 - 3 = 2; AX stays 5\nje .equal   ; not taken, because ZF=0\n; ...\n.equal:\n' }
       },
       {
         id: 'equality',
@@ -660,7 +660,7 @@ export const assemblyMemory = [
           "takeaway": "Choose below/above conditions when the operands represent unsigned magnitudes.",
           "diagramAfter": 2
         },
-        code: { language: 'asm', filename: 'unsigned-bound.asm — pattern', source: '; AX is an unsigned index; CX is an element count.\ncmp ax, cx\njae .out_of_bounds  ; reject index >= count\n; access is still subject to valid address arithmetic\njmp .done\n.out_of_bounds:\n; report / reject\n.done:\n' }
+        code: { language: 'asm', filename: 'unsigned-bound.asm: pattern', source: '; AX is an unsigned index; CX is an element count.\ncmp ax, cx\njae .out_of_bounds  ; reject index >= count\n; access is still subject to valid address arithmetic\njmp .done\n.out_of_bounds:\n; report / reject\n.done:\n' }
       },
       {
         id: 'signed',
@@ -699,7 +699,7 @@ export const assemblyMemory = [
           "takeaway": "A branch reads current flags, not the nearest comparison you intended it to mean.",
           "diagramAfter": 2
         },
-        code: { language: 'asm', filename: 'clobbered-condition.asm — counterexample', source: 'mov ax, 5\nmov bx, 1\ncmp ax, 5  ; ZF=1: AX equals 5\ndec bx     ; ZF=1 here by coincidence; try BX=2 instead\nje .equal  ; now reads DEC\'s ZF, not CMP\'s\n.equal:\n; Repair by moving the comparison immediately before JE.\n' }
+        code: { language: 'asm', filename: 'clobbered-condition.asm: counterexample', source: 'mov ax, 5\nmov bx, 1\ncmp ax, 5  ; ZF=1: AX equals 5\ndec bx     ; ZF=1 here by coincidence; try BX=2 instead\nje .equal  ; now reads DEC\'s ZF, not CMP\'s\n.equal:\n; Repair by moving the comparison immediately before JE.\n' }
       },
       {
         id: 'test',
@@ -719,7 +719,7 @@ export const assemblyMemory = [
           "takeaway": "TEST with a mask answers whether any selected bits survive the AND.",
           "diagramAfter": 2
         },
-        code: { language: 'asm', filename: 'bit-predicate.asm — pattern', source: 'test al, 1\njnz .odd          ; any bit in mask 01h is set\n; even path\njmp .done\n.odd:\n; odd path\n.done:\n' }
+        code: { language: 'asm', filename: 'bit-predicate.asm: pattern', source: 'test al, 1\njnz .odd          ; any bit in mask 01h is set\n; even path\njmp .done\n.odd:\n; odd path\n.done:\n' }
       },
       {
         id: 'if-else',
@@ -739,7 +739,7 @@ export const assemblyMemory = [
           "takeaway": "Control-flow layout must make the alternatives mutually exclusive.",
           "diagramAfter": 2
         },
-        code: { language: 'asm', filename: 'if-else.asm — lesson body', source: 'cmp ax, 10\njge .other\nmov al, \'L\'\njmp .report\n.other:\nmov al, \'H\'\n.report:\ncall putc\n' }
+        code: { language: 'asm', filename: 'if-else.asm: lesson body', source: 'cmp ax, 10\njge .other\nmov al, \'L\'\njmp .report\n.other:\nmov al, \'H\'\n.report:\ncall putc\n' }
       },
       {
         id: 'branch-repair',
@@ -852,7 +852,7 @@ export const assemblyMemory = [
           "takeaway": "A top-tested loop checks that work exists before touching the next item.",
           "diagramAfter": 2
         },
-        code: { language: 'asm', filename: 'while-sum.asm — lesson body', source: 'mov si, values\nmov cx, 4\nxor ax, ax\n.test:\n    cmp cx, 0\n    je .done\n    add ax, [si]\n    add si, 2\n    dec cx\n    jmp .test\n.done:\n    call print_hex16\n; Data: values: dw 1, 2, 3, 4\n' }
+        code: { language: 'asm', filename: 'while-sum.asm: lesson body', source: 'mov si, values\nmov cx, 4\nxor ax, ax\n.test:\n    cmp cx, 0\n    je .done\n    add ax, [si]\n    add si, 2\n    dec cx\n    jmp .test\n.done:\n    call print_hex16\n; Data: values: dw 1, 2, 3, 4\n' }
       },
       {
         id: 'do-while',
@@ -872,7 +872,7 @@ export const assemblyMemory = [
           "takeaway": "A bottom test needs a justified first iteration or a separate entry guard.",
           "diagramAfter": 2
         },
-        code: { language: 'asm', filename: 'guarded-bottom-loop.asm — pattern', source: 'jcxz .done\n.again:\n    ; process one valid item\n    add si, 2\n    dec cx\n    jnz .again\n.done:\n' }
+        code: { language: 'asm', filename: 'guarded-bottom-loop.asm: pattern', source: 'jcxz .done\n.again:\n    ; process one valid item\n    add si, 2\n    dec cx\n    jnz .again\n.done:\n' }
       },
       {
         id: 'loop-instruction',
@@ -892,7 +892,7 @@ export const assemblyMemory = [
           "takeaway": "LOOP controls a count; it does not provide the initial zero check.",
           "diagramAfter": 2
         },
-        code: { language: 'asm', filename: 'loop-counter.asm — pattern', source: 'mov cx, 3\njcxz .done\n.again:\n    ; body executes exactly three times\n    loop .again\n.done:\n; Without the entry guard, an initial CX=0 is not zero iterations.\n' }
+        code: { language: 'asm', filename: 'loop-counter.asm: pattern', source: 'mov cx, 3\njcxz .done\n.again:\n    ; body executes exactly three times\n    loop .again\n.done:\n; Without the entry guard, an initial CX=0 is not zero iterations.\n' }
       },
       {
         id: 'for-index',
@@ -990,7 +990,7 @@ export const assemblyMemory = [
           "takeaway": "The accumulator’s width is part of what it means to return a sum.",
           "diagramAfter": 2
         },
-        code: { language: 'asm', filename: 'wide-accumulator.asm — body fragment', source: '; Initialize DX=0 and AX=0 before the loop.\nadd ax, [si]\nadc dx, 0      ; consume ADD\'s carry immediately\nadd si, 2      ; this also changes flags\ndec cx\njnz .again     ; reads DEC\'s zero flag\n' }
+        code: { language: 'asm', filename: 'wide-accumulator.asm: body fragment', source: '; Initialize DX=0 and AX=0 before the loop.\nadd ax, [si]\nadc dx, 0      ; consume ADD\'s carry immediately\nadd si, 2      ; this also changes flags\ndec cx\njnz .again     ; reads DEC\'s zero flag\n' }
       },
       {
         id: 'counted-or-terminated',

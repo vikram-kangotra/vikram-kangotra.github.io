@@ -120,7 +120,7 @@ However, writing everything from scratch was not necessary. We leveraged `bindge
 
 ### Interface and Extension Submodule
 
-The first task was to create the Interface and Extension modules. Interfaces are how you interact with the VLC media player. Creating the Interface module was relatively straightforward at this stage, as there wasn't much code to write. We needed to develop the Rust FFI for the interface and wrap it in a way that ensured safety in Rust. The implementation details can be found [here](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/src/rust/vlcrs-submodules/src/interface.rs?ref_type=heads). With this in place, defining an interface module in Rust became a straightforward task.
+The first task was to create the Interface and Extension modules. Interfaces are how you interact with the VLC media player. Creating the Interface module was relatively straightforward at this stage, as there wasn't much code to write. We needed to develop the Rust FFI for the interface and wrap it in a way that ensured safety in Rust. The implementation details can be found in [the Rust interface implementation](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/src/rust/vlcrs-submodules/src/interface.rs?ref_type=heads). With this in place, defining an interface module in Rust became a straightforward task.
 
 ```rust
 use vlcrs_core::error::Result;
@@ -160,7 +160,7 @@ The first major challenge, however, was adding the Extension capability as a sub
 
 The Module stores its information in the ModuleInfo struct, and since submodules are almost like modules, it made sense to include ModuleInfo within the SubmoduleModuleInfo struct. This approach allowed submodules to be parsed using the same logic as modules. However, nested submodules were not permitted, as confirmed by my mentor, so this needed to be handled separately with a clear error message to guide users. The detailed changes required to implement this can be found in this [commit](https://code.videolan.org/videolan/vlc/-/commit/983961ec9976fcb8d4a07797745fd6c4bd562a95).
 
-With this completed, the next step was to include the FFI bindings for the extension module. The logic for this was almost identical to what was done for the interface module, with one key difference: the extension module included control functions that were variadic. This necessitated the introduction of typed callbacks. The merge request related to this work can be found [here](https://code.videolan.org/videolan/vlc/-/merge_requests/5475). With this change merged, the control functions could now be easily defined in Rust.
+With this completed, the next step was to include the FFI bindings for the extension module. The logic for this was almost identical to what was done for the interface module, with one key difference: the extension module included control functions that were variadic. This necessitated the introduction of typed callbacks. The merge request related to this work can be found in [the typed callback merge request](https://code.videolan.org/videolan/vlc/-/merge_requests/5475). With this change merged, the control functions could now be easily defined in Rust.
 
 The Extension Manager submodule can be added using the following syntax:
 
@@ -207,7 +207,7 @@ In an ideal scenario, Rust would have full control over the lifetime of the Exte
 
 There has been draft proposal aimed at addressing this issue and making the extension system more future-proof. After several discussions, a [more refined approach](https://code.videolan.org/videolan/vlc/-/merge_requests/5777#note_447196) has been identified, which will be implemented in the near future to better align with Rust's ownership principles. This work is ongoing and will pave the way for a more robust and maintainable extension management system in VLC.
 
-For more detailed information of Extension, you can explore the current implementation [here](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/src/rust/vlcrs-core/src/extension/mod.rs?ref_type=heads)
+For more detailed information of Extension, you can explore the current implementation in [the extension implementation](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/src/rust/vlcrs-core/src/extension/mod.rs?ref_type=heads)
 
 ### Extension Manager Module
 
@@ -306,9 +306,9 @@ To overcome this, we use `wasmer::Memory`, which provides a `wasmer::MemoryView`
 
 #### Reading the Extension Description
 
-The functions for interacting with Wasm memory have been defined [here](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/lib.rs?ref_type=heads#L25). These functions enable us to read the extension description from the Wasm memory by accessing the specific memory location returned by `__wai_bindgen_extension_descriptor`.
+The functions for interacting with Wasm memory have been defined in [the Wasm memory helpers](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/lib.rs?ref_type=heads#L25). These functions enable us to read the extension description from the Wasm memory by accessing the specific memory location returned by `__wai_bindgen_extension_descriptor`.
 
-Using these functions, the extension manager module can retrieve and utilize the extension description as demonstrated [here](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/extension/mod.rs?ref_type=heads#L122). This allows the extension manager to understand and manage each Wasm extension's metadata effectively.
+Using these functions, the extension manager module can retrieve and utilize the extension description as demonstrated in [the extension descriptor loading code](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/extension/mod.rs?ref_type=heads#L122). This allows the extension manager to understand and manage each Wasm extension's metadata effectively.
 
 ### Extension Manager Control
 
@@ -336,14 +336,14 @@ The `activate` function plays a central role in the lifecycle management of exte
 
 #### Running the Extension Thread
 
-The `run_extension_thread` function, defined [here](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/extension/extension_thread.rs?ref_type=heads),  is responsible for managing the execution of the extension within a loop. Within this loop, the function listens for commands from the channel and acts accordingly:
+The `run_extension_thread` function, defined in [the extension thread implementation](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/extension/extension_thread.rs?ref_type=heads),  is responsible for managing the execution of the extension within a loop. Within this loop, the function listens for commands from the channel and acts accordingly:
 
 - **Activate Command**: When a `Command::Activate` is received, the Wasm extension's activation function is executed, and the state is updated to reflect the activation.
 - **Deactivate Command**: Similarly, when a `Command::Deactivate` is received, the deactivation function is executed, and the extension's state is updated accordingly.
 
 #### Executing Wasm Functions
 
-To execute a function within the Wasm environment, the `execute_function` method of the `WasmExtension` structure is used, as seen [here](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/extension/mod.rs?ref_type=heads#L172). This method retrieves the target function from the `instance.exports` and then invokes it. The output from the Wasm function is encapsulated in a `Box<[Value]>`, representing the return values of the function.
+To execute a function within the Wasm environment, the `execute_function` method of the `WasmExtension` structure is used, as seen in [the Wasm function execution code](https://code.videolan.org/vikram-kangotra/vlc/-/blob/wasm-plugin-system/modules/wasm-rs/src/extension/mod.rs?ref_type=heads#L172). This method retrieves the target function from the `instance.exports` and then invokes it. The output from the Wasm function is encapsulated in a `Box<[Value]>`, representing the return values of the function.
 
 ### Exposing VLC APIs to WebAssembly
 
@@ -449,7 +449,7 @@ Adding additional libraries to expose VLC APIs can be done by following a simila
 
 ### Testing WebAssembly Plugin
 
-The code for generating WebAssembly output that serves as a plugin for VLC can be found [here](https://github.com/vikram-kangotra/wasm_extension/blob/main/rust/src/lib.rs).  This plugin is intended for testing and demonstrates the full functionality of the WebAssembly integration.
+The code for generating WebAssembly output that serves as a plugin for VLC can be found in [the example WebAssembly plugin](https://github.com/vikram-kangotra/wasm_extension/blob/main/rust/src/lib.rs).  This plugin is intended for testing and demonstrates the full functionality of the WebAssembly integration.
 
 ## Conclusion
 

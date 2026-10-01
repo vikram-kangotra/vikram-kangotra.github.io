@@ -26,7 +26,7 @@ const flags = [
 
 function numeric(value) { return typeof value === 'number' && Number.isFinite(value); }
 function unsigned(value, width = 32) { return width === 16 ? value & 0xffff : value >>> 0; }
-function hex(value, width = 32) { return numeric(value) ? `0x${unsigned(value, width).toString(16).toUpperCase().padStart(width / 4, '0')}` : '—'; }
+function hex(value, width = 32) { return numeric(value) ? `0x${unsigned(value, width).toString(16).toUpperCase().padStart(width / 4, '0')}` : '-'; }
 function statusLabel(snapshot, phase) {
   if (phase === 'stopped') return 'Last sample · stopped';
   if (phase === 'paused') return 'Paused';
@@ -81,7 +81,7 @@ export default function RegisterInspector({ snapshot, error, phase, stale, onTog
         <div className={styles.machineState}>
           <span className={styles.stateBadge}>{statusLabel(snapshot, phase)}</span>
           <span>{snapshot.virtual8086 ? 'Virtual 8086 mode' : snapshot.protectedMode ? 'Protected mode' : 'Real mode'} · {snapshot.code32 ? '32-bit' : '16-bit'} code · {snapshot.stack32 ? '32-bit' : '16-bit'} stack</span>
-          <span>Ring {numeric(snapshot.cpl) ? snapshot.cpl : '—'} · Paging {snapshot.paging ? 'on' : 'off'}</span>
+          <span>Ring {numeric(snapshot.cpl) ? snapshot.cpl : '-'} · Paging {snapshot.paging ? 'on' : 'off'}</span>
         </div>
         {sourceLabel && <p className={styles.sectionHint}>CPU source: <strong>{sourceLabel}</strong> · loaded disk image.</p>}
 
@@ -94,17 +94,17 @@ export default function RegisterInspector({ snapshot, error, phase, stale, onTog
         <div className={styles.valueDetail}>
           <h4>{name} <span>One bit pattern, several ways to read it</span></h4>
           <p>{register.description}</p>
-          <dl className={styles.interpretations}><div><dt>Hexadecimal</dt><dd>{hex(rawValue, width)}</dd></div><div><dt>Unsigned decimal</dt><dd>{value === null ? '—' : value}</dd></div><div><dt>Signed decimal</dt><dd>{signed === null ? '—' : signed}</dd></div></dl>
-          <div className={styles.binary}><span>Binary · bit {width - 1} → bit 0</span><code>{binary.length ? binary.map((nibble, index) => <span key={index}>{nibble}</span>) : '—'}</code></div>
+          <dl className={styles.interpretations}><div><dt>Hexadecimal</dt><dd>{hex(rawValue, width)}</dd></div><div><dt>Unsigned decimal</dt><dd>{value === null ? '-' : value}</dd></div><div><dt>Signed decimal</dt><dd>{signed === null ? '-' : signed}</dd></div></dl>
+          <div className={styles.binary}><span>Binary · bit {width - 1} → bit 0</span><code>{binary.length ? binary.map((nibble, index) => <span key={index}>{nibble}</span>) : '-'}</code></div>
           <p className={styles.interpretationNote}>The CPU stores bits. Signed and unsigned interpretations use the same bits; your instruction decides how to use them.</p>
-          {register.high && <div className={styles.aliases}><span>Overlapping names</span><dl>{width === 32 && <div><dt>{register.short} · bits 15–0</dt><dd>{hex(rawValue, 16)}</dd></div>}<div><dt>{register.high} · bits 15–8</dt><dd>{numeric(rawValue) ? hex(rawValue >>> 8 & 0xff, 8) : '—'}</dd></div><div><dt>{register.low} · bits 7–0</dt><dd>{numeric(rawValue) ? hex(rawValue & 0xff, 8) : '—'}</dd></div></dl><p>These are parts of the same register, not separate storage.</p></div>}
+          {register.high && <div className={styles.aliases}><span>Overlapping names</span><dl>{width === 32 && <div><dt>{register.short} · bits 15–0</dt><dd>{hex(rawValue, 16)}</dd></div>}<div><dt>{register.high} · bits 15–8</dt><dd>{numeric(rawValue) ? hex(rawValue >>> 8 & 0xff, 8) : '-'}</dd></div><div><dt>{register.low} · bits 7–0</dt><dd>{numeric(rawValue) ? hex(rawValue & 0xff, 8) : '-'}</dd></div></dl><p>These are parts of the same register, not separate storage.</p></div>}
         </div>
         <div className={styles.sectionHeading}><h4>Instruction pointer & segments</h4></div>
         <dl className={styles.addresses}><div data-register="eip" data-value={hex(snapshot.eip, snapshot.code32 ? 32 : 16)}><dt>{snapshot.code32 ? 'EIP' : 'IP'} <span>offset in CS</span></dt><dd>{hex(snapshot.eip, snapshot.code32 ? 32 : 16)}</dd></div><div data-register="linearIp" data-value={hex(snapshot.linearIp)}><dt>Linear IP <span>before paging</span></dt><dd>{hex(snapshot.linearIp)}</dd></div>{['cs', 'ds', 'es', 'ss', 'fs', 'gs'].map(segment => <div key={segment} data-segment={segment} data-value={hex(snapshot.segments?.[segment], 16)}><dt>{segment.toUpperCase()}</dt><dd>{hex(snapshot.segments?.[segment], 16)}</dd></div>)}</dl>
         <p className={styles.sectionHint}>{snapshot.protectedMode && !snapshot.virtual8086 ? 'Segment registers contain selectors. Their descriptor bases help turn offsets into linear addresses.' : 'In ordinary real mode and virtual 8086 mode, a segment contributes its value × 16 to an address.'} Paging, when enabled, translates linear addresses into physical addresses.</p>
         <div className={styles.sectionHeading}><h4>Flags</h4><code className={styles.rawFlags}>EFLAGS {hex(snapshot.eflags)}</code></div>
         <p className={styles.sectionHint}>A flag is one bit: 1 means set, 0 means clear. Each instruction specifies which flags it changes, preserves, or leaves undefined; a sampled bit alone does not tell you which instruction set it.</p>
-        <dl className={styles.flags}>{flags.map(flag => { const bit = numeric(snapshot.eflags) ? snapshot.eflags >>> flag.bit & 1 : null; return <div key={flag.name} data-flag={flag.name} data-value={bit === null ? '' : bit} data-set={bit === 1}><dt><abbr title={flag.title}>{flag.name}</abbr><span>bit {flag.bit}</span><code>{bit === null ? '—' : bit}</code></dt><dd><strong>{flag.title}</strong>{flag.meaning}</dd></div>; })}</dl>
+        <dl className={styles.flags}>{flags.map(flag => { const bit = numeric(snapshot.eflags) ? snapshot.eflags >>> flag.bit & 1 : null; return <div key={flag.name} data-flag={flag.name} data-value={bit === null ? '' : bit} data-set={bit === 1}><dt><abbr title={flag.title}>{flag.name}</abbr><span>bit {flag.bit}</span><code>{bit === null ? '-' : bit}</code></dt><dd><strong>{flag.title}</strong>{flag.meaning}</dd></div>; })}</dl>
       </>}
   </section>;
 }

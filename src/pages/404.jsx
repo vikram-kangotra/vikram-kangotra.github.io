@@ -3,7 +3,7 @@ import { SEO, Eyebrow, Arrow } from '@/components/ui';
 export default function NotFound() {
   return (
     <div className="shell not-found">
-      <SEO title="Page not found — Vikram Kangotra" />
+      <SEO title="Page not found: Vikram Kangotra" />
       <Eyebrow>404 / A SMALL DETOUR</Eyebrow>
       <h1>
         Nothing here.
