@@ -1,0 +1,28 @@
+Browser OS course assets
+
+v86 0.5.462
+Upstream: https://github.com/copy/v86
+Package: https://registry.npmjs.org/v86/-/v86-0.5.462.tgz
+Bundled: libv86.js, v86.wasm, v86-fallback.wasm
+License: BSD 2-Clause; full notice in v86/LICENSE.
+
+SeaBIOS and SeaVGABIOS
+Bundled firmware was obtained from the upstream v86 bios directory:
+https://github.com/copy/v86/tree/master/bios
+The system firmware identifies itself as rel-1.16.2-0-gea1b7a0.
+SeaBIOS source: https://github.com/coreboot/seabios/tree/rel-1.16.2
+License information: v86/SeaBIOS-COPYING and v86/SeaBIOS-LICENSE.txt.
+These upstream projects remain the work of their respective contributors.
+
+Module 1 kernel and boot-sector examples are original educational examples
+created for this course. Their archive includes assembly/C sources, linker
+script, build rules, image builder, QEMU smoke test, and debugger checks.
+
+NASM 2.16.03 browser compiler
+Upstream: https://github.com/netwide-assembler/nasm/tree/cd37b81b320ead83ca5a6bbce5da0a6456663bc6
+WebAssembly distribution: https://github.com/uraraworks/WorkbenchNP2/tree/427e06e6c204825b7bea915bbbd6024f23c72142/toolchain/nasm-wasm
+Bundled: nasm/nasm.js, nasm/nasm.wasm (unmodified).
+License: BSD 2-Clause; full notice in nasm/LICENSE.
+Build provenance and SHA-256 checksums: nasm/PROVENANCE.txt.
+The browser editor uses real NASM in an isolated worker to produce x86 bytes.
+Full multi-file C/NASM kernel builds run in the downloadable native toolchain.

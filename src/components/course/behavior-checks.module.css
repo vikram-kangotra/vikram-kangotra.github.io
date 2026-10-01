@@ -1,0 +1,27 @@
+.contract{margin:16px 0;padding:14px;border:1px solid var(--line);border-radius:7px;background:var(--surface)}
+.target{margin:16px 0}.target strong{font-size:11px}.target pre{padding:14px;border:1px solid var(--line);border-radius:5px;background:var(--code-bg);color:var(--code-ink);font:12px/1.8 monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+.fileActions{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}.fileActions button{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:5px;padding:8px 10px;background:var(--surface);color:var(--ink);font-size:11px;cursor:pointer;min-width:0;max-width:100%}.fileActions button:hover{border-color:var(--accent)}.fileActions button span{min-width:0;overflow-wrap:anywhere}.fileActions code{font-size:10px}.fileActions button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.contract strong{font-size:12px;color:var(--ink)}
+.contract p,.contract summary{font-size:12px;line-height:1.7;color:var(--muted)}
+.contract summary{cursor:pointer;color:var(--ink)}
+.contract pre{overflow:auto;max-height:180px;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink)}
+.report{margin:16px 0}
+.report>details{margin:8px 0;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.report summary{display:flex;align-items:center;gap:10px;cursor:pointer;padding:12px;background:var(--surface);font-size:12px;color:var(--ink)}
+.pass,.fail{font:10px/1.5 monospace;border:1px solid currentColor;padding:1px 5px;border-radius:4px}
+.pass{color:var(--accent)}
+.fail{color:var(--ink)}
+.assertion{padding:12px;border-top:1px solid var(--line);font-size:12px;color:var(--ink)}
+.assertion dl{display:grid;grid-template-columns:65px minmax(0,1fr);gap:5px 10px;margin:9px 0 0}
+.assertion dt{color:var(--muted)}
+.assertion dd{margin:0;font-family:monospace;overflow-wrap:anywhere;white-space:pre-wrap}
+.assertion p{font-size:12px;line-height:1.7}
+
+.checkpointResult{margin:12px 0;padding:12px 14px;border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:6px;background:var(--surface);color:var(--ink);font-size:12px;line-height:1.65}
+.checkpointResult[data-passed='true']{border-left-color:var(--accent);background:var(--soft)}
+.checkpointResult>strong{display:block;font-size:13px;font-weight:650}
+.checkpointResult dl{display:grid;grid-template-columns:80px minmax(0,1fr);gap:3px 10px;margin:8px 0}
+.checkpointResult dt{color:var(--muted)}.checkpointResult dd{margin:0;font-weight:550;overflow-wrap:anywhere}
+.checkpointResult p{margin:7px 0 0;font-size:12px;line-height:1.65}
+.continueAction:disabled{color:var(--muted);border-bottom-color:transparent;opacity:.65;cursor:not-allowed}
+.reportHeading{margin:16px 0 8px;font-size:12px;font-weight:600;color:var(--ink)}

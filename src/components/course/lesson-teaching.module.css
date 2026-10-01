@@ -1,0 +1,25 @@
+.introduction{margin:22px 0 28px;border-bottom:1px solid var(--line);padding-bottom:22px}
+.goal{margin:8px 0 0;font-size:16px;line-height:1.7;color:var(--ink);font-weight:500}
+.goalLabel{margin:0;font:10px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--accent);letter-spacing:.04em;text-transform:uppercase;font-weight:600}
+.bridge{font-size:13px;line-height:1.85;color:var(--muted);margin:12px 0 0}
+.introduction code,.reasoning code{font:12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;background:var(--surface);border-radius:3px;padding:1px 4px;overflow-wrap:anywhere}
+.reasoning{position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin:30px 0;background:var(--paper);color:var(--ink);min-width:0}
+.question{padding:22px}
+.kicker{display:flex;align-items:center;gap:8px;font:10px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--accent);letter-spacing:.04em}
+.reasoning h3{font-size:18px;line-height:1.45;font-weight:600;letter-spacing:-.025em;margin:12px 0}
+.reasoning p{font-size:13px;line-height:1.9;overflow-wrap:anywhere;margin:10px 0}
+.reasoning label{display:block;font-size:11px;line-height:1.8;font-weight:600;margin:18px 0 8px}
+.reasoning textarea{display:block;width:100%;min-height:112px;resize:vertical;padding:12px 14px;border:1px solid var(--line);border-radius:5px;background:var(--code-bg);color:var(--ink);line-height:1.85;font-size:13px}
+.reasoning textarea::placeholder{color:var(--muted);opacity:1}
+.reasoning .note{font-size:11px;line-height:1.8;color:var(--muted);margin-top:10px}
+.question button{display:inline-flex;align-items:center;gap:10px;min-height:38px;font-size:12px;font-weight:500;margin-top:6px;padding:8px 12px;border:1px solid var(--line);border-radius:5px;background:var(--surface);color:var(--ink)}
+.question button:hover{border-color:var(--accent)}
+.explanation{padding:18px 22px;border-top:1px solid var(--line);background:var(--surface)}
+.explanation[hidden]{display:none}
+.explanation h4{font-size:13px;font-weight:600;line-height:1.65;margin:0 0 10px;color:var(--accent)}
+.takeaway{padding:16px 22px;border-top:1px solid var(--line);background:var(--soft)}
+.takeaway strong{font-size:11px;color:var(--accent);font-weight:600;line-height:1.7}
+.takeaway p{margin:6px 0 0;font-size:12px;line-height:1.85}
+.reasoning :is(button,textarea):focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(max-width:450px){.goal{font-size:15px}.question{padding:18px 14px}.explanation{padding:16px 14px}.takeaway{padding:14px}.reasoning h3{font-size:16px}}
+@media print{.reasoning textarea,.question label,.question button,.question>.note{display:none}.reasoning .explanation[hidden]{display:block!important}}

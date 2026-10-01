@@ -31,6 +31,9 @@ export default function Home({ blogs }) {
             <a className="text-link" href="#stories">
               Find something to read <span aria-hidden="true">↓</span>
             </a>
+            <Link className="text-link" href="/learn/os">
+              Build an OS from scratch <span aria-hidden="true">↗</span>
+            </Link>
           </div>
         </section>
         {latest && (

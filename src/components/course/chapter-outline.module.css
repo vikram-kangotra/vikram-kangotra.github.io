@@ -1,0 +1,23 @@
+.outline{display:flex;flex-direction:column;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden;border-right:1px solid var(--line);background:var(--canvas);color:var(--ink)}
+.header{flex-shrink:0;padding:24px 20px 20px}
+.header h2{margin:0;font-size:13px;font-weight:600;line-height:1.5;letter-spacing:-.01em}
+.header p{margin:7px 0 12px;font-size:11px;line-height:1.6;color:var(--muted)}
+.progress{display:block;width:100%;height:3px;border:0;border-radius:2px;overflow:hidden;appearance:none;background:var(--line);color:var(--accent);accent-color:var(--accent)}
+.progress::-webkit-progress-bar{background:var(--line);border-radius:2px}.progress::-webkit-progress-value{background:var(--accent);border-radius:2px}.progress::-moz-progress-bar{background:var(--accent);border-radius:2px}
+.scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line) transparent;padding:0 10px 16px}
+.lessons{list-style:none;margin:0;padding:0}.lessons li{margin:0;padding:0}.lessons li+li{margin-top:3px}
+.lesson{display:flex;align-items:flex-start;gap:10px;width:100%;min-height:43px;padding:11px 10px;border:0;border-left:2px solid transparent;border-radius:4px;background:transparent;color:var(--muted);text-align:left;font-family:inherit;font-size:12px;font-weight:400;line-height:1.6;cursor:pointer;transition:none}
+.lesson:hover{background:var(--surface);color:var(--ink)}
+.lesson[aria-current='step']{border-left-color:var(--accent);background:var(--soft);color:var(--ink);font-weight:550}
+.number{display:flex;align-items:center;justify-content:center;flex:0 0 18px;min-height:19px;font:10px/1.9 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--muted);font-variant-numeric:tabular-nums}
+.number svg{width:13px;height:13px;color:var(--accent);stroke-width:2}
+.lesson[aria-current='step'] .number{color:var(--accent)}
+.title{min-width:0;flex:1;overflow-wrap:anywhere}
+.codeMarker{display:flex;align-items:center;justify-content:center;flex:0 0 13px;height:19px;color:var(--muted)}.codeMarker svg{width:13px;height:13px}
+.lesson[data-checkpoint-state='passed'] .codeMarker{color:var(--accent)}
+.checkpoints{display:flex;align-items:center;gap:8px;flex-shrink:0;padding:17px 20px;border-top:1px solid var(--line);color:var(--muted);font-size:11px;line-height:1.6}.checkpoints svg{width:14px;height:14px;flex-shrink:0}
+.outline button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+@media print{.outline{display:none}}
+.lesson[aria-disabled='true']{cursor:not-allowed}.lesson[aria-disabled='true']:hover{background:transparent;color:var(--muted)}
+.lesson[data-checkpoint-state='skipped'] .codeMarker{color:var(--amber)}.checkpoints small{display:block;font-size:10px;margin-top:4px;color:var(--muted)}
+.skippedLabel{display:block;margin-top:3px;font-size:10px;font-weight:400;color:var(--amber)}

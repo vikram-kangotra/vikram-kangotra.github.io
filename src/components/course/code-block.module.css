@@ -1,0 +1,15 @@
+.codeBlock{min-width:0;max-width:100%;margin:24px 0;border:1px solid var(--line);border-radius:7px;background:var(--code-bg);color:var(--code-ink);overflow:hidden}
+.caption{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 14px;background:var(--surface);border-bottom:1px solid var(--line);color:var(--ink)}
+.description{display:flex;align-items:center;flex-wrap:wrap;gap:7px 10px;min-width:0}
+.filename{font:11px/1.65 ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospace;overflow-wrap:anywhere}
+.language{padding:1px 5px;border:1px solid var(--line);border-radius:3px;color:var(--muted);font:9px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:.03em}
+.caption button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:30px;flex-shrink:0;padding:5px 8px;border:1px solid var(--line);border-radius:4px;background:var(--paper);color:var(--muted);font-size:11px;line-height:1.5;font-family:inherit;cursor:pointer}
+.caption button:hover{border-color:var(--accent);color:var(--ink)}
+.caption button>span:first-child{display:flex;font-size:12px}
+.codeBlock pre{display:block;min-width:0;max-width:100%;max-height:600px;margin:0;padding:18px 20px;overflow:auto;tab-size:4;scrollbar-width:thin;color:var(--code-ink);background:var(--code-bg);font:12.5px/1.85 ui-monospace,SFMono-Regular,Consolas,'Liberation Mono',monospace;white-space:pre;text-align:left}
+.codeBlock pre code{color:inherit;background:none;padding:0;border:0;border-radius:0;font:inherit;white-space:inherit}
+.caption button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.codeBlock pre:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+.feedback{border-top:1px solid var(--line);margin:0;padding:10px 14px;background:var(--surface);color:var(--muted);font-size:11px;line-height:1.8}
+@media(max-width:600px){.caption{padding:10px 11px;gap:10px}.filename{font-size:10px}.caption button{font-size:10px}.codeBlock pre{padding:16px 14px;font-size:12px}.codeBlock{margin-block:20px}}
+@media print{.caption button{display:none}.codeBlock pre{max-height:none;white-space:pre-wrap;overflow:visible;overflow-wrap:anywhere}.codeBlock{break-inside:auto}}

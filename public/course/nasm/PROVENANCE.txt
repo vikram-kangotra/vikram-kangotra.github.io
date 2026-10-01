@@ -1,0 +1,24 @@
+NASM 2.16.03, compiled to WebAssembly with Emscripten
+
+NASM source (unmodified):
+https://github.com/netwide-assembler/nasm/tree/cd37b81b320ead83ca5a6bbce5da0a6456663bc6
+Upstream release tag: nasm-2.16.03
+License: BSD 2-Clause; complete notice in LICENSE.
+
+Pinned WebAssembly distribution:
+https://github.com/uraraworks/WorkbenchNP2/tree/427e06e6c204825b7bea915bbbd6024f23c72142/toolchain/nasm-wasm
+Files nasm.js and nasm.wasm are redistributed byte-for-byte.
+build-upstream.sh and PATCHES.md record the distributor's build procedure.
+Their build scripts are MIT licensed; see LICENSE.WorkbenchNP2.
+Run the build script in its original WorkbenchNP2 checkout, where it expects
+the sibling NASM source tree, verification helper, and Emscripten SDK.
+
+SHA-256:
+087af728b170da305522885e375a09104c65cdff927834ff0e6d0eaedce406bf  nasm.js
+d51fefa5f13153c62d05a1ad525779cb040b9a0259719c92aa91bbbd7e011cb4  nasm.wasm
+
+worker.js is the course's own adapter. It invokes NASM in a disposable Web
+Worker with an in-memory filesystem. The course's src/course/nasmCompiler.js
+sets a 30-second timeout and terminates each worker after compilation. No
+learner source is sent to a server. This editor builds a single 512-byte BIOS
+boot sector; complete multi-file C kernels use the downloadable toolchain.

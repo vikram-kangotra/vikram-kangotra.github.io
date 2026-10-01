@@ -1,0 +1,48 @@
+.workshop,.reflection{min-width:0;color:var(--ink);font-size:13px;line-height:1.8;scroll-margin-top:20px;outline:none}
+.workshop{padding-bottom:8px}
+.reflection{margin-top:30px;padding-top:28px;border-top:1px solid var(--line)}
+.metadata{display:flex;align-items:center;flex-wrap:wrap;gap:10px;color:var(--accent);font:600 10px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.1em}
+.metadata .badge{padding:3px 8px;border:1px solid var(--line);border-radius:4px;color:var(--muted);font-size:10px;font-weight:400;letter-spacing:0}
+.workshop h2,.reflection h2{font-size:22px;font-weight:600;line-height:1.35;letter-spacing:-.035em;margin:12px 0 14px;overflow-wrap:anywhere}
+.brief{margin:0;color:var(--ink);line-height:1.85;overflow-wrap:anywhere}
+.tasks{padding-left:22px;margin:22px 0 26px;line-height:1.8}
+.tasks li{padding-left:5px;margin:12px 0;overflow-wrap:anywhere}
+.tasks li::marker{color:var(--accent);font-weight:600}
+.implementation{min-width:0;overflow:hidden;border:1px solid var(--line);border-radius:7px;background:var(--code-bg)}
+.editorHeader{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 14px;background:var(--surface);border-bottom:1px solid var(--line);font-size:11px}
+.editorHeader>span{display:flex;align-items:center;flex-wrap:wrap;gap:9px;min-width:0}
+.editorHeader strong{font-weight:550}
+.editorHeader small{font:10px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--muted)}
+.editorHeader button{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex-shrink:0;border:1px solid var(--line);border-radius:4px;background:var(--paper);color:var(--ink);padding:6px 8px;font:inherit;min-height:30px;cursor:pointer}
+.editorHeader button:hover{border-color:var(--accent)}
+.editorHeader svg{font-size:13px}
+.executionNote,.note{font-size:11px;line-height:1.8;color:var(--muted);margin:12px 0;overflow-wrap:anywhere}
+.actions{display:flex;align-items:center;gap:12px 20px;flex-wrap:wrap;margin:22px 0 14px}
+.hintButton,.textButton{min-height:36px;font:inherit;font-size:11px;cursor:pointer}
+.hintButton{padding:8px 12px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:5px}
+.hintButton:hover:not(:disabled){border-color:var(--accent)}
+.hintButton:disabled{opacity:.5;cursor:not-allowed}
+.textButton{border:0;padding:6px 0;color:var(--accent);background:transparent;text-decoration:underline;text-underline-offset:4px}
+.hints{padding:15px 18px 15px 36px;margin:0 0 20px;border-left:2px solid var(--accent);border-radius:0 5px 5px 0;background:var(--soft);font-size:12px;line-height:1.9}
+.hints li{padding-left:4px;margin:6px 0;overflow-wrap:anywhere}
+.solution{margin:20px 0 24px;font-size:12px;line-height:1.9}
+.solution[hidden]{display:none}
+.solution>p{margin:12px 0;overflow-wrap:anywhere}
+.checklist{min-width:0;margin:25px 0 8px;padding:14px 18px 16px;border:1px solid var(--line);border-radius:6px}
+.checklist legend{max-width:100%;padding:0 7px;font-size:12px;font-weight:600;overflow-wrap:anywhere}
+.checklist>p{font-size:11px;line-height:1.8;color:var(--muted);margin:0 0 10px}
+.checklist label{display:flex;align-items:flex-start;gap:11px;padding:10px 0;font-size:12px;line-height:1.8;cursor:pointer}
+.checklist label+label{border-top:1px solid var(--line)}
+.checklist input{width:15px;height:15px;flex-shrink:0;margin:4px 0 0;accent-color:var(--accent)}
+.checklist label>span{min-width:0;overflow-wrap:anywhere}
+.fieldLabel{display:block;margin:21px 0 10px;font-size:12px;font-weight:550}
+.reflection textarea{display:block;box-sizing:border-box;width:100%;max-width:100%;min-height:190px;resize:vertical;border:1px solid var(--line);border-radius:6px;background:var(--code-bg);color:var(--ink);padding:15px;font-size:13px;line-height:1.85;font-family:inherit}
+.reflection textarea::placeholder{color:var(--muted);opacity:.8}
+.answer{margin:19px 0;font-size:12px;line-height:1.9}
+.answer summary{cursor:pointer;color:var(--accent);padding:6px 0;text-underline-offset:4px}
+.answer summary:hover{text-decoration:underline}
+.answer[open]>summary{margin-bottom:8px}
+.answer p{background:var(--surface);padding:15px 18px;border:1px solid var(--line);border-radius:5px;margin:0;overflow-wrap:anywhere}
+.workshop :is(button,input):focus-visible,.reflection :is(button,input,textarea,summary):focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media(max-width:600px){.workshop,.reflection{font-size:13px}.workshop h2,.reflection h2{font-size:21px}.editorHeader{padding:10px;gap:8px}.editorHeader>span{gap:5px}.editorHeader button{font-size:10px;gap:5px}.checklist{padding:12px 13px}.actions{gap:8px 14px}.reflection{padding-top:24px}.metadata{font-size:9px}}
+@media print{.editorHeader button,.actions{display:none}.implementation{break-inside:avoid}.reflection textarea{min-height:100px}}

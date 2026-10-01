@@ -41,6 +41,9 @@ export default function Navbar({ blogs }) {
           <Link href="/blogs" aria-current={pathname.startsWith('/blogs') ? 'page' : undefined}>
             Writing
           </Link>
+          <Link href="/learn/os" aria-current={pathname.startsWith('/learn/os') ? 'page' : undefined}>
+            OS course
+          </Link>
           <Link href="/#about" onClick={() => setOpen(false)}>
             About
           </Link>
