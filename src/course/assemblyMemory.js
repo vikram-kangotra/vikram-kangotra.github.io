@@ -159,7 +159,7 @@ export const assemblyMemory = [
           "bridge": "Before a program can load useful data, we need a way to place known bytes in its image.",
           "check": {
             "prompt": "What bytes does item: dw 0x5B26 followed by end: db 0xC8 emit, and how far is end from item?",
-            "answer": "The bytes are 26 5B C8. The word occupies two bytes, so end is two byte positions after item. The labels add names, not extra data."
+            "answer": "The bytes are 26 5B C8. The word occupies two bytes, so end is two byte positions after item. The labels name the existing positions and contribute zero bytes to the layout."
           },
           "takeaway": "Data declarations construct bytes during assembly; loads and stores use those bytes during execution.",
           "diagramAfter": 2
@@ -172,7 +172,7 @@ export const assemblyMemory = [
         paragraphs: [
           "For a sixteen-bit value, one byte contains the low eight bits and another contains the high eight. x86 stores the low byte at the lower address. This arrangement is called little-endian. If location p contains 0x26 and p + 1 contains 0x5B, a word load at p produces 0x5B26. Numerically, the result is 0x26 + 256 × 0x5B.",
           "The usual written number puts its most significant digit first, so a display of 5B26 and a memory dump of 26 5B agree. They show different arrangements: a numeric representation versus bytes in address order. Endianness concerns how several bytes form a value. It does not mean reversing the bits within an individual byte.",
-          "Work the conversion in both directions. To store 0xC407, place 07 at the first address and C4 at the next. To read those bytes as two independent unsigned values instead, use two byte loads; their meanings become 7 and 196. The bytes have not changed. A parser must therefore know both the field width and its byte order before interpreting a sequence correctly."
+          "Work the conversion in both directions. To store 0xC407, place 07 at the first address and C4 at the next. To read those bytes as two independent unsigned values, use two byte loads; their meanings become 7 and 196. The bytes have not changed. A parser must therefore know both the field width and its byte order before interpreting a sequence correctly."
         ],
         teaching: {
           "goal": "Reconstruct a word from bytes stored at increasing addresses.",
@@ -189,7 +189,7 @@ export const assemblyMemory = [
         id: 'label-or-value',
         title: '4. MOV AX, label is different from MOV AX, [label]',
         paragraphs: [
-          "Suppose a label item names offset 0x7D40 and the word stored there is 0x5B26. mov ax, item places the address 0x7D40 into AX. mov ax, [item] reads the word and places 0x5B26 into AX, assuming the expected data segment. The brackets are a request for memory access, not decoration around a variable name.",
+          "Suppose a label item names offset 0x7D40 and the word stored there is 0x5B26. mov ax, item places the address 0x7D40 into AX. mov ax, [item] reads the word and places 0x5B26 into AX, assuming the expected data segment. The brackets request a memory access at the named address.",
           "The destination determines how much to read in these examples. AX requests two bytes; AL requests one. Thus mov al, [item + 1] reads the byte at the following address into AL. It does not automatically place that byte in AH simply because it came from the high-byte position of a stored word. Source address and destination bit position are independent choices.",
           "Actual label addresses move as code and data change, which is why the label is preferable to a memorized numeric location. Use the listing or Bytes view when you need to inspect the current placement. For the first memory checkpoint, the task identifies the supplied data and desired load. Your job is to choose whether the operand should provide a location or the contents found there."
         ],
@@ -231,7 +231,7 @@ export const assemblyMemory = [
         paragraphs: [
           "A load or store also needs a width. With mov [item], ax, AX makes the width sixteen bits. With mov [item], 1, neither operand identifies whether one, two, or more bytes should be written. NASM therefore needs an explicit size such as byte or word for this otherwise ambiguous form.",
           "Assume item initially contains bytes 26 5B and a neighboring byte contains C8. A byte store of 0x77 at item gives 77 5B C8. A word store of 0x0077 at the same address gives 77 00 C8. A word store beginning at item + 1 touches the old high byte and the neighboring byte. The CPU follows the address and width; a previous DW declaration does not impose a runtime boundary.",
-          "This is why memory debugging should draw a small region rather than display only the intended value. A nearby byte can reveal an over-wide store that happens to leave the target looking plausible. In later chapters, the same reasoning will protect adjacent descriptor fields, allocator metadata, and device registers. Correctness includes the bytes that should remain unchanged."
+          "For memory debugging, draw the target and its neighboring bytes so the complete write range is visible. A nearby byte can reveal an over-wide store that happens to leave the target looking plausible. In later chapters, the same reasoning will protect adjacent descriptor fields, allocator metadata, and device registers. Correctness includes the bytes that should remain unchanged."
         ],
         teaching: {
           "goal": "Determine every byte touched by a memory operation.",
@@ -240,7 +240,7 @@ export const assemblyMemory = [
             "prompt": "The bytes at p, p + 1, and p + 2 are 11 22 33. What follows a word store of 0xABCD at p + 1?",
             "answer": "They become 11 CD AB. The store begins at p + 1 and writes two little-endian bytes, so p + 2 changes as well. The byte at p is outside the destination range."
           },
-          "takeaway": "A memory access is a starting address plus a width, not just one location.",
+          "takeaway": "A memory access touches the complete range selected by its starting address and width.",
           "diagramAfter": 2
         },
         code: { language: 'asm', filename: 'width.asm: independent experiments', source: 'mov byte [value], 0xaa ; 34 12 becomes AA 12\n; On a fresh run instead try:\n; mov word [value], 0xaa ; 34 12 becomes AA 00\n; Data: value: dw 0x1234\n' }
@@ -251,7 +251,7 @@ export const assemblyMemory = [
         paragraphs: [
           "If AX contains 0x7C90 and a byte load writes 0x25 into AL, AX becomes 0x7C25. Reading from memory does not change the meaning of the AL destination: only its eight bits are replaced. This often explains a hexadecimal output with an unexpected high byte. The load was correct, but the wider value was never fully initialized.",
           "For an unsigned byte, zero extension gives the intended wider number. You can clear AX before the load or use MOVZX to define the entire result directly. Those approaches have different flag effects: XOR changes arithmetic flags, whereas MOV and MOVZX do not. If flags are still needed from an earlier calculation, the initialization choice becomes part of the reasoning.",
-          "A signed byte needs sign extension instead. For instance, byte 0xD8 represents unsigned 216 or signed −40. The wider forms are 0x00D8 and 0xFFD8 respectively. The memory location does not tell the instruction which meaning to preserve; the surrounding data format does. Decide the interpretation before choosing how to fill the high bits."
+          "Use sign extension to preserve a signed byte’s numerical value. For instance, byte 0xD8 represents unsigned 216 or signed −40. The wider forms are 0x00D8 and 0xFFD8 respectively. The memory location does not tell the instruction which meaning to preserve; the surrounding data format does. Decide the interpretation before choosing how to fill the high bits."
         ],
         teaching: {
           "goal": "Turn a byte load into a fully defined wider value.",
@@ -288,8 +288,8 @@ export const assemblyMemory = [
         title: '9. Repair a real byte reconstruction',
         paragraphs: [
           "The memory checkpoint asks you to build a word from supplied bytes, save it in another location, and read the saved value back. Each stage answers a different question. The first loads show whether you selected the right source bytes. The store shows whether you wrote the reconstructed word. The final reload shows whether the value really reached the destination memory.",
-          "Use a separate paper example such as bytes 31 and 8A. Placing the first in AL and the second in AH gives AX = 0x8A31. A word store writes 31 followed by 8A; clearing AX and reloading that stored word gives 0x8A31 again. Reading the first source address twice would instead duplicate one byte, so an asymmetric pair makes that error easy to see.",
-          "Apply the same reasoning to the input named in the checkpoint rather than replacing the calculation with a familiar output constant. The behavior tests vary machine inputs and inspect relevant results. Their report helps locate a mismatch, while your byte trace explains its cause. If the store stage is wrong, correct that stage before changing the output routine, which can only display the value it receives."
+          "Use a separate paper example such as bytes 31 and 8A. Placing the first in AL and the second in AH gives AX = 0x8A31. A word store writes 31 followed by 8A; clearing AX and reloading that stored word gives 0x8A31 again. Reading the first source address twice would duplicate one byte, so an asymmetric pair makes that error easy to see.",
+          "Apply the same reasoning to the input named in the checkpoint so the result follows the supplied bytes. The behavior tests vary machine inputs and inspect relevant results. Their report helps locate a mismatch, while your byte trace explains its cause. If the store stage is wrong, correct that stage before changing the output routine, which can only display the value it receives."
         ],
         teaching: {
           "goal": "Build a load–store–load path that follows the input bytes.",
@@ -306,7 +306,7 @@ export const assemblyMemory = [
         id: 'memory-explain',
         title: '10. Explain the mechanism without running it',
         paragraphs: [
-          "Consider a stored word 0x6D24. In increasing address order its bytes are 24 6D. Replacing the first byte with 0x90 gives 90 6D, so a later word load reads 0x6D90. A word store of 0x0090 would instead write 90 00 and produce a different result. The address is the same in both cases; the width changes the effect.",
+          "Consider a stored word 0x6D24. In increasing address order its bytes are 24 6D. Replacing the first byte with 0x90 gives 90 6D, so a later word load reads 0x6D90. A word store of 0x0090 would write 90 00 and produce a different result. The address is the same in both cases; the width changes the effect.",
           "This example is worth explaining without running it. First draw the bytes, then mark the store’s range, then reconstruct the value. Nothing needs to know that the label originally used DW. The declaration chose initial bytes, while the executed instruction chose which bytes changed. The same method works for a field inside a larger file header or a device structure.",
           "The next chapter keeps this byte model and examines how x86 finds the address in the first place. Brackets request an access, but the registers inside them follow particular encoding rules. We will also account for segment registers, so that a numerical offset becomes a concrete physical location in the real-mode machine."
         ],
@@ -341,7 +341,7 @@ export const assemblyMemory = [
     reflection: {
       prompt: 'A learner says “MOV AL, [value] reads my word variable, so AX should now equal that word.” Diagnose the statement, give a concrete counterexample, and describe an experiment that separates the address, width, and partial-register issues.',
       rubric: ['Identifies the eight-bit load width from AL', 'Explains that AH keeps its previous value', 'Separates the label’s address from the memory contents', 'Uses concrete before/after bytes and register values'],
-      modelAnswer: 'With AX=ABCD and value containing bytes 34 12, MOV AL,[value] reads only 34 and leaves AX=AB34. The label does not enforce the DW declaration’s width. MOV AX,[value] would read both bytes and produce 1234. MOV AX,value would instead load the address. I would run those three variants from the same initialized state and compare printed AX values and the emitted data bytes.'
+      modelAnswer: 'With AX=ABCD and value containing bytes 34 12, MOV AL,[value] reads only 34 and leaves AX=AB34. The label does not enforce the DW declaration’s width. MOV AX,[value] would read both bytes and produce 1234. MOV AX,value would load the address. I would run those three variants from the same initialized state and compare printed AX values and the emitted data bytes.'
     },
     sources: [intel, nasmLanguage],
     nextBuild: 'Keep the memory trace habit. Next translate a source-level address expression into a real-mode segment and offset.'
@@ -379,7 +379,7 @@ export const assemblyMemory = [
         id: 'alias-pairs',
         title: '2. Different segment:offset pairs can name the same byte',
         paragraphs: [
-          "A physical location can have more than one segment:offset representation. The pairs 1000:0020 and 1002:0000 both identify 0x10020. In the first, the base is 0x10000 and the offset adds 0x20. In the second, the base itself is 0x10020. Segment boundaries are therefore not automatically separate allocations of memory.",
+          "Several segment:offset pairs can identify the same physical location. The pairs 1000:0020 and 1002:0000 both identify 0x10020. In the first, the base is 0x10000 and the offset adds 0x20. In the second, the base itself is 0x10020. Segment boundaries are therefore not automatically separate allocations of memory.",
           "The familiar boot address illustrates the same idea: 0000:7C00 and 07C0:0000 both reach physical 0x7C00. Firmware may enter the loaded sector using a representation that a bootloader should not blindly assume. Our setup normalizes the code location and establishes data and stack segments before calling your lesson. We will construct those steps in the bootloading module.",
           "An equivalent pair requires coordinated changes. Increasing a segment by one moves its base forward sixteen bytes, so the offset must decrease by sixteen to preserve the physical address, provided the new offset remains representable. Merely changing the segment notation in your explanation does not change the actual segment register used by the CPU."
         ],
@@ -399,8 +399,8 @@ export const assemblyMemory = [
         title: '3. Sixteen-bit address forms are a finite menu',
         paragraphs: [
           "For sixteen-bit addressing, x86 offers a specific menu: BX, BP, SI, DI, and the pairs BX + SI, BX + DI, BP + SI, BP + DI. Each can include a constant displacement; a direct constant address is also possible. This is why [bx + si + 4] can describe an address while [ax + cx] cannot use the same address-size encoding.",
-          "The assembler is not a general expression evaluator that invents extra runtime calculations inside brackets. It can simplify constants and select an available encoding, but the CPU must have a form for the requested registers. If an algorithm needs AX + CX, calculate or copy that value into a legal address register before the memory access, while tracking the values and flags those extra instructions change.",
-          "Later x86 address sizes add different forms, including scaled indexes. We stay with sixteen-bit forms here so that each address calculation remains explicit. For a word array, for instance, multiplying an index by two is a separate calculation rather than a sixteen-bit [si * 2] operand. Distinguishing the mathematical address from its machine encoding helps explain assembler errors constructively."
+          "The assembler can simplify constants and select an available address encoding. The requested registers must fit one of the CPU’s supported forms. If an algorithm needs AX + CX, calculate or copy that value into a legal address register before the memory access, while tracking the values and flags those extra instructions change.",
+          "Later x86 address sizes add different forms, including scaled indexes. We stay with sixteen-bit forms here so that each address calculation remains explicit. For a word array, for instance, multiply the index by two in a separate calculation, then use a supported sixteen-bit address form. Distinguishing the mathematical address from its machine encoding helps explain assembler errors constructively."
         ],
         teaching: {
           "goal": "Recognize the register combinations supported by 16-bit effective-address encoding.",
@@ -418,12 +418,12 @@ export const assemblyMemory = [
         id: 'default-segment',
         title: '4. BP changes the default segment selection',
         paragraphs: [
-          "Ordinary sixteen-bit memory operands generally use DS, but forms containing BP default to SS. BP is commonly used to locate items on the stack, so this default makes stack-frame accesses convenient. The rule depends on BP appearing in the effective address, not on the name of the data or on the programmer’s intention.",
+          "Ordinary sixteen-bit memory operands generally use DS, but forms containing BP default to SS. BP is commonly used to locate items on the stack, so this default makes stack-frame accesses convenient. Apply the default-segment rule by checking whether BP appears in the effective-address form.",
           "Imagine DS = 0x1000, SS = 0x1800, BX = BP = 0x0040, and SI = 2. Both [bx + si] and [bp + si] compute offset 0x0042. The first accesses physical 0x10042; the second accesses 0x18042. Identical offset numbers do not guarantee identical bytes when the segment choice differs.",
-          "Our harness initially sets these segments to the same value, which can hide an accidental segment selection in a small experiment. Learn to annotate the default even when the current bases happen to match. Keep differing-segment examples as paper traces rather than changing SS casually in a live routine, where the active stack and return address also depend on it."
+          "Our harness initially sets these segments to the same value, which can hide an accidental segment selection in a small experiment. Learn to annotate the default even when the current bases happen to match. Use paper traces for differing-segment examples. Changing SS in a live routine requires coordinating the active stack and its saved return address."
         ],
         teaching: {
-          "goal": "Predict when a BP-based address uses SS instead of DS.",
+          "goal": "Predict the segment selected by a BP-based address form.",
           "bridge": "Once the offset is known, we must identify which segment supplies its base.",
           "check": {
             "prompt": "If DS and SS differ, can replacing BX with an equal-valued BP change the byte read by mov al, [register]? Explain.",
@@ -437,16 +437,16 @@ export const assemblyMemory = [
         id: 'segment-override',
         title: '5. An override selects a segment; it does not change its value',
         paragraphs: [
-          "A segment override tells one memory operand which segment register to use. For example, [ds:bp + 2] calculates the offset from BP + 2 but chooses DS instead of BP’s usual SS default. The override is encoded as part of the instruction. It does not change BP or load a new value into DS.",
+          "A segment override tells one memory operand which segment register to use. For example, [ds:bp + 2] calculates the offset from BP + 2 and explicitly selects DS; an unqualified BP form would select SS. The override is encoded as part of the instruction. It does not change BP or load a new value into DS.",
           "Suppose DS = 0x1100, SS = 0x2200, and BP = 0x0030. A byte read from [bp + 2] normally reaches 0x22032. A read from [ds:bp + 2] reaches 0x11032. The offset calculation is identical; only the selected base changes. Separating these stages is the clearest way to understand the effect.",
-          "The checkpoint uses an override so a BP-based array access deliberately refers to data. This makes the address choice visible in source even when the harness has equal segment values. In a larger program, explicit overrides should express a real reason rather than compensate for unexplained state. They select among existing segment values; they cannot repair a segment register that was initialized incorrectly."
+          "The checkpoint uses an override so a BP-based array access deliberately refers to data. This makes the address choice visible in source even when the harness has equal segment values. In a larger program, document the region each override is intended to select and establish the corresponding segment value. They select among existing segment values; they cannot repair a segment register that was initialized incorrectly."
         ],
         teaching: {
           "goal": "Use an explicit segment selection without confusing it with a segment-register write.",
           "bridge": "Sometimes the desired data segment differs from the default chosen by the address form.",
           "check": {
             "prompt": "Does mov al, [es:si] alter ES? What two inputs determine the starting real-mode address?",
-            "answer": "It does not alter ES. The current ES value supplies the base ES × 16, and the effective offset comes from SI. The instruction selects ES for this access rather than rewriting it."
+            "answer": "It does not alter ES. The current ES value supplies the base ES × 16, and the effective offset comes from SI. The instruction uses the current ES value for this access."
           },
           "takeaway": "A segment override selects a base for one access; it does not initialize that base.",
           "diagramAfter": 2
@@ -455,11 +455,11 @@ export const assemblyMemory = [
       },
       {
         id: 'origin-contract',
-        title: '6. ORG changes assembled addresses, not the CPU',
+        title: '6. Match ORG, load placement, and runtime segments',
         paragraphs: [
           "ORG tells NASM which starting origin to assume when assigning addresses inside a flat binary. If the origin is 0x7C00 and a label is thirty-two bytes into the image, the label’s value is 0x7C20. The directive influences address calculations during assembly; it does not move the output file into memory or ask firmware to load it there.",
           "The loader’s placement and the segment setup must make those values useful at runtime. With DS = 0 and the image loaded at physical 0x7C00, the label value 0x7C20 addresses the intended byte. A different design could use another segment base and matching offsets. What matters is that all three parts agree: assembled values, actual load address, and address formation.",
-          "Some relative branches can keep working despite a misplaced image because both endpoints move together. Absolute data references may fail first, producing misleading symptoms such as correct control flow with the wrong string. When a memory access surprises you, check the label’s assembled value and the actual segment base instead of treating ORG as a runtime relocation operation."
+          "Some relative branches can keep working despite a misplaced image because both endpoints move together. Absolute data references may fail first, producing misleading symptoms such as correct control flow with the wrong string. When a memory access surprises you, check the label’s assembled value, the actual load placement, and the segment base together."
         ],
         teaching: {
           "goal": "Explain how ORG relates assembled label values to the loader’s placement.",
@@ -477,7 +477,7 @@ export const assemblyMemory = [
         title: '7. LEA calculates an offset without reading memory',
         paragraphs: [
           "LEA means load effective address. It calculates the offset described by its bracketed expression and writes that offset to a register without reading memory at the result. If BX = 0x0200 and DI = 6, lea si, [bx + di + 2] gives SI = 0x0208. No data byte at 0x0208 is fetched by that instruction.",
-          "Compare mov ax, [bx + di + 2]. That instruction uses the same offset expression to access a word in memory. LEA provides a location for later use; MOV retrieves contents from a location now. In these sixteen-bit examples, LEA produces the effective offset, not a segment-base-plus-offset physical address. The eventual memory access still chooses a segment.",
+          "Compare mov ax, [bx + di + 2]. That instruction uses the same offset expression to access a word in memory. LEA provides a location for later use; MOV retrieves contents from a location now. In these sixteen-bit examples, LEA produces the effective offset; the selected segment supplies its base when a later instruction accesses memory. The eventual memory access still chooses a segment.",
           "This separation is useful when stepping through arrays or passing a pointer to a routine. It also explains why brackets cannot always be read as “fetch the contents”: LEA is the instruction-specific exception being introduced here. LEA leaves arithmetic flags unchanged, which can be helpful when an address calculation must not replace a comparison’s result."
         ],
         teaching: {
@@ -497,7 +497,7 @@ export const assemblyMemory = [
         title: '8. An array index is not yet a byte offset',
         paragraphs: [
           "For elements of size s bytes, zero-based element i begins at base + i × s. A word array uses s = 2. Its first, second, and third elements therefore begin at byte offsets 0, 2, and 4. The index 2 means the third element, while the byte offset 2 means the second word. Naming which quantity a register holds prevents this common mix-up.",
-          "Imagine words 0x1203, 0x4506, and 0x7809. Their six bytes are 03 12 06 45 09 78. A load at offset four produces the third word. A load at offset one instead combines 12 and 06 into 0x0612. x86 can encode that unaligned read, but it is not an element of the intended array.",
+          "Imagine words 0x1203, 0x4506, and 0x7809. Their six bytes are 03 12 06 45 09 78. A load at offset four produces the third word. A load at offset one combines 12 and 06 into 0x0612. x86 can encode that unaligned read, which combines bytes from two adjacent array elements.",
           "For the checkpoint, derive the displacement from the requested element index and combine it with the requested address form and segment selection. The array’s length supplies another condition: the complete word must fit within its six bytes. Computing an address successfully is not the same as selecting a valid element."
         ],
         teaching: {
@@ -535,8 +535,8 @@ export const assemblyMemory = [
         title: '10. Explain the bytes your address selected',
         paragraphs: [
           "When a program reads an unexpected word, “the pointer is wrong” is only a starting description. We can ask more precise questions: was the index converted into bytes, was the intended segment selected, did the offset wrap, and did the whole access fit? Each question identifies a stage that can be checked with a small trace.",
-          "Distinct asymmetric words make useful examples. Repeated patterns such as 0x1111 can hide byte-order errors, while values such as 0x2A17 and 0x6C39 reveal which neighboring bytes were combined. Work out both the intended aligned read and an offset-one read on paper. The wrong result then becomes an explanation of the address mistake rather than an arbitrary hexadecimal surprise.",
-          "At the checkpoint, the behavior tests exercise the address calculation with supplied states. Read a failing case as a concrete machine situation, then retrace the stages that should lead to its expected byte. The next chapter adds decisions: instead of only calculating and copying data, we will choose different instruction paths based on the values we find."
+          "Distinct asymmetric words make useful examples. Repeated patterns such as 0x1111 can hide byte-order errors, while values such as 0x2A17 and 0x6C39 reveal which neighboring bytes were combined. Work out both the intended aligned read and an offset-one read on paper. Reconstructing the wrong result identifies the neighboring bytes selected by the mistaken address.",
+          "At the checkpoint, the behavior tests exercise the address calculation with supplied states. Read a failing case as a concrete machine situation, then retrace the stages that should lead to its expected byte. The next chapter adds decisions that choose different instruction paths from the values we load and calculate."
         ],
         teaching: {
           "goal": "Diagnose an address using offset, segment, width, and array bounds.",
@@ -568,8 +568,8 @@ export const assemblyMemory = [
     },
     reflection: {
       prompt: 'A word load through [BX+SI] works. Replacing BX with BP produces different data even though BX and BP contain the same value. Explain how this is possible, what evidence you need, and two ways to preserve the intended address.',
-      rubric: ['Identifies DS versus SS default selection', 'Computes both addresses using concrete segment values', 'Distinguishes an explicit override from changing a segment register', 'States the pointer’s segment contract rather than guessing'],
-      modelAnswer: 'In sixteen-bit addressing, BX+SI defaults to DS and BP+SI defaults to SS. If DS=1000h, SS=2000h, BX=BP=30h, and SI=2, they access 10032h and 20032h. I would inspect both segment registers and the offset calculation. Keeping BX preserves the original default; using [ds:bp+si] explicitly preserves DS while retaining BP. Changing SS merely to make the numbers match could corrupt stack operations and is not an appropriate local repair.'
+      rubric: ['Identifies DS versus SS default selection', 'Computes both addresses using concrete segment values', 'Distinguishes an explicit override from changing a segment register', 'States the pointer’s required segment and verifies its current value'],
+      modelAnswer: 'In sixteen-bit addressing, BX+SI defaults to DS and BP+SI defaults to SS. If DS=1000h, SS=2000h, BX=BP=30h, and SI=2, they access 10032h and 20032h. I would inspect both segment registers and the offset calculation. Keeping BX preserves the original default; using [ds:bp+si] explicitly preserves DS while retaining BP. The active stack depends on SS. Preserve its setup while making this data access use the intended segment explicitly.'
     },
     sources: [intel, nasmLanguage, nasmBinary],
     nextBuild: 'You can now say exactly where an operand comes from. Next decide which instruction executes after comparing two operands.'
@@ -625,7 +625,7 @@ export const assemblyMemory = [
       },
       {
         id: 'equality',
-        title: '3. Equality needs ZF, not a signedness choice',
+        title: '3. Equality uses ZF for either signedness',
         paragraphs: [
           "After CMP, ZF is one exactly when the compared patterns are equal. JE, jump if equal, tests that condition. JNE tests the opposite. The names JZ and JNZ refer to the same respective conditions: zero or nonzero. JE reads naturally after a comparison, while JZ can read naturally after an arithmetic result.",
           "Signedness does not change equality. The byte 0xF0 equals another 0xF0 whether both are described as unsigned 240 or signed −16. Ordering changes with interpretation, but equality of the bit patterns does not. This lets us handle many simple conditions before introducing separate signed and unsigned jump families.",
@@ -671,7 +671,7 @@ export const assemblyMemory = [
           "You do not need to memorize this as a mysterious Boolean formula. Start with the question “does the mathematical signed difference lie below zero?” If there is no overflow, SF answers it. If overflow flipped the sign, OF tells us to reverse that answer. The signed branch family packages this reasoning into one instruction."
         ],
         teaching: {
-          "goal": "Derive signed ordering from SF and OF rather than the sign bit alone.",
+          "goal": "Derive signed ordering from the combined SF and OF conditions.",
           "bridge": "Negative values require a comparison that accounts for signed overflow.",
           "check": {
             "prompt": "Why would testing only SF after comparing signed bytes −110 and 30 give the wrong ordering?",
@@ -685,7 +685,7 @@ export const assemblyMemory = [
         id: 'flags-lifetime',
         title: '6. Flags are shared state with a short useful lifetime',
         paragraphs: [
-          "Suppose CMP establishes that two values are equal. An ADD used to advance a pointer then replaces the flags before JE runs. JE now asks whether the pointer addition produced zero, not whether the original values matched. There is no association stored between a branch and a particular earlier CMP.",
+          "Suppose CMP establishes that two values are equal. An ADD used to advance a pointer then replaces the flags before JE runs. JE now asks whether the pointer addition produced zero. Track the most recent flag producer to identify the question that the branch actually answers.",
           "A practical first style is to place CMP and its conditional jump next to each other. When an intervening instruction is necessary, check whether it preserves the relevant flags. MOV and LEA do; arithmetic such as ADD generally does not. DEC preserves CF but changes ZF, so whether it is safe depends on the exact condition still needed.",
           "For a longer-lived decision, capture the condition with SETcc or turn it into an explicit branch before unrelated work. When debugging, add a “last flag producer” column to the trace. That one annotation often explains a branch that seems to disagree with the comparison values visible in registers."
         ],
@@ -694,9 +694,9 @@ export const assemblyMemory = [
           "bridge": "The correct jump can still make the wrong decision if it reads the wrong operation’s flags.",
           "check": {
             "prompt": "CMP sets ZF to one. Then DEC CX changes CX from 3 to 2, followed by JE. Which result does JE test?",
-            "answer": "DEC leaves a nonzero result and sets ZF to zero, so JE is not taken. It tests DEC’s current ZF, not the earlier equality from CMP."
+            "answer": "DEC leaves a nonzero result and sets ZF to zero, so JE is not taken. Its input is the current ZF produced by DEC."
           },
-          "takeaway": "A branch reads current flags, not the nearest comparison you intended it to mean.",
+          "takeaway": "A branch reads the current flags, so trace the instruction that last produced each condition it consumes.",
           "diagramAfter": 2
         },
         code: { language: 'asm', filename: 'clobbered-condition.asm: counterexample', source: 'mov ax, 5\nmov bx, 1\ncmp ax, 5  ; ZF=1: AX equals 5\ndec bx     ; ZF=1 here by coincidence; try BX=2 instead\nje .equal  ; now reads DEC\'s ZF, not CMP\'s\n.equal:\n; Repair by moving the comparison immediately before JE.\n' }
@@ -711,7 +711,7 @@ export const assemblyMemory = [
         ],
         teaching: {
           "goal": "Inspect selected bits with TEST without modifying the original value.",
-          "bridge": "Some decisions ask whether particular bits are set rather than which number is larger.",
+          "bridge": "Status and permission decisions often ask whether particular bits are set.",
           "check": {
             "prompt": "AX is 0x0010 and the mask is 0x0030. Does a nonzero TEST result prove both masked bits are set?",
             "answer": "No. The result is 0x0010, so at least one selected bit is set. Bit 5 is still clear. Proving all selected bits are set requires checking that the masked result equals 0x0030."
@@ -746,7 +746,7 @@ export const assemblyMemory = [
         title: '9. Repair signedness with an adversarial input',
         paragraphs: [
           "If both compared bytes are small positive numbers, signed and unsigned ordering often give the same answer. A wrong jump family can therefore pass a friendly example. Choose a pattern with its highest bit set and compare it with a small positive value. As unsigned it is large; as signed it is negative. The two interpretations now predict different paths.",
-          "For example, compare byte pattern 0xE0 with 7. Unsigned, 224 is above 7. Signed, −32 is below 7. The checkpoint specifies which interpretation the routine must implement. Use that specification to choose the jump, then verify that the output corresponds to the selected path rather than merely replacing a message to match one display.",
+          "For example, compare byte pattern 0xE0 with 7. Unsigned, 224 is above 7. Signed, −32 is below 7. The checkpoint specifies which interpretation the routine must implement. Use that specification to choose the jump, then verify which path executes and connect its output to the chosen comparison condition.",
           "A second pass should cover equality and a reversed ordering. These cases check the inclusiveness and direction of the chosen condition. When the tests report a failing input, write its signed and unsigned meanings side by side. This makes the reason for a branch correction visible and prepares you to review bounds checks later in C."
         ],
         teaching: {
@@ -762,7 +762,7 @@ export const assemblyMemory = [
       },
       {
         id: 'branch-debug',
-        title: '10. Debug a decision with a trace, not repeated guesses',
+        title: '10. Trace the inputs, flags, branch, and continuation',
         paragraphs: [
           "Begin a branch trace with the operand width and intended interpretation. Then record the two actual values, the subtraction or test that produces flags, and the condition the jump reads. Finally follow the target or fall-through path. Each link is specific enough to check independently.",
           "For instance, a correct signed comparison can still fail if an intervening instruction changes flags, or if its target label points to the wrong arm. A correctly selected arm can still produce a wrong final result by falling through into the other arm. This is why changing jump mnemonics at random is less useful than finding the first link that disagrees with the intended behavior.",
@@ -773,7 +773,7 @@ export const assemblyMemory = [
           "bridge": "We can turn a surprising decision into a short chain of answerable questions.",
           "check": {
             "prompt": "A comparison and jump choose the correct true arm, but both messages appear. Which stage of the trace should you inspect next?",
-            "answer": "Inspect control flow after the true arm. It may fall into the false arm instead of jumping to the shared continuation. The operand interpretation and branch condition can be correct while the later layout is wrong."
+            "answer": "Inspect control flow after the true arm. It may fall into the false arm because the jump to the shared continuation is missing. The operand interpretation and branch condition can be correct while the later layout is wrong."
           },
           "takeaway": "Debug decisions as a chain from input meaning to the complete executed path.",
           "diagramAfter": 2
@@ -798,7 +798,7 @@ export const assemblyMemory = [
     },
     reflection: {
       prompt: 'Why is “jump when the subtraction result has its sign bit set” not a correct general implementation of signed less-than? Give an eight-bit counterexample, derive SF and OF, and name the correct condition.',
-      rubric: ['Uses a concrete signed-overflow comparison', 'Distinguishes mathematical and truncated results', 'Derives SF and OF rather than only naming JL', 'States that CMP does not store the subtraction result'],
+      rubric: ['Uses a concrete signed-overflow comparison', 'Distinguishes mathematical and truncated results', 'Derives SF and OF from the chosen subtraction', 'States that CMP does not store the subtraction result'],
       modelAnswer: 'Compare AL=80h (−128) with one. The mathematical difference is −129, but the eight-bit result is 7Fh, so SF=0 even though −128 is less than one. Signed overflow gives OF=1. JL tests SF≠OF and therefore takes the branch. CMP changes the flags while leaving AL=80h; it does not replace AL with 7Fh.'
     },
     sources: [intel, nasmLanguage],
@@ -820,7 +820,7 @@ export const assemblyMemory = [
         paragraphs: [
           "Suppose we need the sum of several words in memory. Copying the same load-and-add lines for every element would tie the program to one array length. A loop reuses the body by branching back to it while work remains. Its four useful parts are initialization, the condition, the repeated body, and the update that moves toward completion.",
           "For our sum, SI can point to the next word, CX can count the words remaining, and AX can hold the accumulated total. These roles are choices made by the program. A body reads one word, adds it, advances the pointer by two bytes, and reduces the remaining count. The condition determines whether another such body is allowed.",
-          "Start with the empty array: its sum should be zero and it should cause no element reads. That requirement tells us the first condition must prevent entering the body when the count is zero. Defining this small case early makes the loop’s shape follow from the problem rather than from a copied pattern that only happens to work for nonempty data."
+          "Start with the empty array: its sum should be zero and it should cause no element reads. That requirement tells us the first condition must prevent entering the body when the count is zero. Defining the empty case early gives the loop an explicit entry condition that works across the full permitted count range."
         ],
         teaching: {
           "goal": "Identify initialization, condition, body, and update in a repeated computation.",
@@ -840,7 +840,7 @@ export const assemblyMemory = [
           "A while-shaped loop tests before processing an item. For a remaining-count version, compare CX with zero and leave if equal. Otherwise process one item, advance the pointer, decrement the count, and jump back to the test. Every path into the body passes through the same question: is there still an item available?",
           "With an initial count of two, the test admits a body at CX = 2. The update leaves CX = 1, so the next test admits another body. The second update leaves zero, and the following test exits. With an initial zero, the first test exits immediately. The register always means “items still unprocessed,” which makes all three cases consistent.",
           "The top-tested form is explicit and easy to trace. It may use more visible instructions than another arrangement, but compactness is not the first objective. Once the state meaning is clear, we can rearrange the loop while preserving the same behavior. This is a useful way to learn optimization later: begin with something whose correctness you can explain.",
-          "In this chapter’s checkpoints, the lab supplies the initial CX before calling your routine. Treat CX as an incoming argument: test and decrease the value you receive, rather than replacing it with the sample count. Loading CX with 3 yourself would make every run repeat three times, including a test that supplied zero. In a separate playground experiment you may choose your own starting count; in the checkpoint, the supplied input is what lets the same loop handle several amounts of work."
+          "In this chapter’s checkpoints, the lab supplies the initial CX before calling your routine. Treat CX as an incoming argument: test and decrease the value you receive so every invocation follows its supplied count. Loading CX with 3 yourself would make every run repeat three times, including a test that supplied zero. In a separate playground experiment you may choose your own starting count; in the checkpoint, the supplied input is what lets the same loop handle several amounts of work."
         ],
         teaching: {
           "goal": "Trace a top-tested loop that can execute zero times.",
@@ -859,8 +859,8 @@ export const assemblyMemory = [
         title: '3. A do/while loop needs a reason its first iteration is valid',
         paragraphs: [
           "A do/while-shaped loop performs the body first and then decides whether to repeat. That is appropriate when at least one iteration is required. For an arbitrary element count, we must establish that an item exists before entering the body. An entry guard handles zero, while the bottom test handles the remaining iterations.",
-          "In our sixteen-bit examples, JCXZ branches directly when CX is zero. It reads CX rather than ZF, so it can serve as that entry guard without a preceding comparison. At the bottom, DEC CX followed by JNZ uses the zero flag from the decrement to decide whether more work remains. The two decisions read different kinds of state.",
-          "Without the guard, an initial zero still runs one body. DEC then wraps CX to 0xFFFF instead of finishing, and the loop continues through a huge count cycle. For memory traversal, the first read was already unjustified. The entry guard is therefore part of the algorithm’s behavior, not merely an optional shortcut for an unusual input."
+          "In our sixteen-bit examples, JCXZ branches directly when CX is zero. It reads CX directly, so it can serve as that entry guard without a preceding comparison. At the bottom, DEC CX followed by JNZ uses the zero flag from the decrement to decide whether more work remains. The two decisions read different kinds of state.",
+          "Without the guard, an initial zero still runs one body. DEC then wraps CX to 0xFFFF, and the loop continues through a full sixteen-bit count cycle. For memory traversal, the first read was already unjustified. The entry guard establishes that the first memory read is permitted and gives an empty request its required zero-iteration behavior."
         ],
         teaching: {
           "goal": "Add an entry guard when a bottom-tested loop must accept zero work.",
@@ -876,11 +876,11 @@ export const assemblyMemory = [
       },
       {
         id: 'loop-instruction',
-        title: '4. LOOP hides a decrement, not a zero-entry check',
+        title: '4. Give LOOP a valid initial count',
         paragraphs: [
-          "LOOP decrements the count register selected by address size and branches if the new count is nonzero. With our sixteen-bit address size, it uses CX. Unlike DEC, LOOP leaves arithmetic flags unchanged. The instruction is compact notation for a particular control-flow step, not a complete source-level loop with automatic initialization and bounds checks.",
+          "LOOP decrements the count register selected by address size and branches if the new count is nonzero. With our sixteen-bit address size, it uses CX. Unlike DEC, LOOP leaves arithmetic flags unchanged. The instruction combines a decrement and a conditional branch. The surrounding routine must initialize or receive the count and check the bounds before entering the body.",
           "If CX begins at three before a conventional body-then-LOOP sequence, the bottom decrements give two, one, and zero, producing three body executions. If entry CX is zero and the body is entered anyway, the first decrement produces 0xFFFF. It takes a full sixteen-bit count cycle to reach zero again. A JCXZ entry guard avoids that behavior when zero work is valid.",
-          "The choice between LOOP and separate instructions should begin with meaning, not a guess about speed. Implementations differ in performance, and a short encoding is not automatically the fastest. More importantly for this chapter, whichever form you choose must keep the pointer update, body count, and allowed memory range aligned."
+          "Choose between LOOP and separate instructions by comparing their count updates, flag effects, and exit conditions. Implementations differ in performance, and a short encoding is not automatically the fastest. More importantly for this chapter, whichever form you choose must keep the pointer update, body count, and allowed memory range aligned."
         ],
         teaching: {
           "goal": "Explain LOOP as a decrement and conditional branch, including zero entry.",
@@ -896,15 +896,15 @@ export const assemblyMemory = [
       },
       {
         id: 'for-index',
-        title: '5. A for loop can count completed elements instead',
+        title: '5. A for loop tracks completed elements',
         paragraphs: [
-          "An indexed loop starts i at zero and compares it with a fixed length before each body. If i is at least the length, the loop exits; otherwise it processes element i and increments i. For unsigned counts, an above-or-equal rejection expresses the condition. The meaning of i is now “elements already completed,” rather than “elements still remaining.”",
+          "An indexed loop starts i at zero and compares it with a fixed length before each body. If i is at least the length, the loop exits; otherwise it processes element i and increments i. For unsigned counts, an above-or-equal rejection expresses the condition. The meaning of i is now “elements already completed”; subtracting it from the fixed length gives the remaining count.",
           "The index is not automatically a byte address. For words, element i lives at base + 2i. A program may calculate that offset each time or keep a separate pointer that advances by two. Because sixteen-bit addressing lacks a scaled [si * 2] form, a separate pointer often makes the early implementation easier to follow.",
-          "Both count styles can implement the same sum. Choose one meaning for each register and keep it consistent at the loop label. If a value means an element count in one instruction and a byte displacement in the next, an explicit conversion should connect those uses. That clarity matters more than shaving one register from a tiny demonstration."
+          "Both count styles can implement the same sum. Choose one meaning for each register and keep it consistent at the loop label. If a value means an element count in one instruction and a byte displacement in the next, an explicit conversion should connect those uses. Keeping those units explicit makes the traversal and its bounds checkable at every iteration."
         ],
         teaching: {
           "goal": "Keep an element index distinct from a byte pointer.",
-          "bridge": "A loop can count completed work instead of work remaining.",
+          "bridge": "An index can track completed work, with the fixed length defining its stopping point.",
           "check": {
             "prompt": "An index register contains 4 in a word array. If another register is the corresponding byte offset from the base, what must it contain?",
             "answer": "It must contain 8 because each word occupies two bytes. The values 4 and 8 describe the same element using different units: elements and bytes."
@@ -958,7 +958,7 @@ export const assemblyMemory = [
         title: '8. A one-byte stride can produce plausible but wrong words',
         paragraphs: [
           "Suppose the array contains words 0x0012, 0x0034, and 0x0056. Its bytes are 12 00 34 00 56 00. A faulty loop that advances by one byte reads words at offsets zero, one, and two: 0x0012, 0x3400, and 0x0034. The resulting sum is wrong for a specific reason: the second read straddles the intended elements.",
-          "Changing the count to make one example print a desired total does not repair that address pattern. The pointer must advance by the size of the item consumed by the body. For a word load, the next distinct array element is two bytes farther on. Restoring that relationship repairs the algorithm rather than adjusting its symptoms.",
+          "Changing the count to make one example print a desired total does not repair that address pattern. The pointer must advance by the size of the item consumed by the body. For a word load, the next distinct array element is two bytes farther on. Restoring that relationship makes each iteration read the next intended array element.",
           "An asymmetric test array helps expose these errors because its neighboring bytes form recognizable unexpected words. Test zero, one, and the full valid count after changing the stride. Counts above the allocated length require a separate rejection check; a raw loop does not receive hidden array bounds from the processor."
         ],
         teaching: {
@@ -976,9 +976,9 @@ export const assemblyMemory = [
         id: 'accumulator-overflow',
         title: '9. Choose enough bits for the total',
         paragraphs: [
-          "A sixteen-bit accumulator retains the low sixteen bits after every ADD. Summing 0xFFFE and 3 therefore leaves 1, with a carry from the second addition. If the problem wants a modulo-65,536 total, that is meaningful. If it wants the full unsigned sum 65,537, the accumulator must represent more than one word.",
+          "A sixteen-bit accumulator retains the low sixteen bits after every ADD. Summing 0xFFFE and 3 therefore leaves 1, with a carry from the second addition. If the problem wants a modulo-65,536 total, that is meaningful. If it wants the full unsigned sum 65,537, use a wider accumulator that can represent 65,537 exactly.",
           "A wider real-mode total can use DX:AX. Each element is added into AX, and ADC adds the low-word carry into DX. The ADC must consume the carry before another flag-changing operation, such as advancing SI with ADD, replaces it. This connects arithmetic ordering with loop ordering: the pointer update is correct only after the numerical carry has been preserved or used.",
-          "Width should be chosen from the largest possible count and element, not only the sample array. A thirty-two-bit total may be sufficient for a bounded number of sixteen-bit items, but a more general routine needs that range argument stated. In the current exercise, follow the requested result width; treat a wider accumulator as a deliberate extension with its own expected outputs."
+          "Choose the accumulator width from the maximum permitted element count and element value. A thirty-two-bit total may be sufficient for a bounded number of sixteen-bit items, but a more general routine needs that range argument stated. In the current exercise, follow the requested result width; treat a wider accumulator as a deliberate extension with its own expected outputs."
         ],
         teaching: {
           "goal": "Choose an accumulator wide enough for the intended total.",
@@ -996,7 +996,7 @@ export const assemblyMemory = [
         id: 'counted-or-terminated',
         title: '10. Counted data and sentinel-terminated data have different exits',
         paragraphs: [
-          "A counted array carries its length separately from its elements. A null-terminated string instead places a zero byte after its characters. A string loop must load the candidate byte and inspect it before deciding whether to print it. The zero is a sentinel: a reserved value that signals the end of meaningful content.",
+          "A counted array carries its length separately from its elements. A null-terminated string places a zero byte after its characters. A string loop must load the candidate byte and inspect it before deciding whether to print it. The zero is a sentinel: a reserved value that signals the end of meaningful content.",
           "If the sentinel is missing, an unbounded scan can continue into unrelated memory. A bounded scan combines a maximum readable length with the terminator test. It stops successfully when it finds zero, or reports exhaustion when no more permitted bytes remain. The length answers whether a read is allowed; the terminator answers whether the content has ended.",
           "Our early printing helper receives deliberately declared, terminated strings from the boot image. That controlled situation explains why its simple loop works; it does not make the helper a general parser for arbitrary disk or user data. Later interfaces will carry lengths explicitly, and the loop-state reasoning from this chapter will tell us exactly which next byte is permitted."
         ],

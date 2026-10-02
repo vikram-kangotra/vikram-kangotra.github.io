@@ -268,7 +268,7 @@ Field Breakdown
 5. **thread_handle**: Stores the thread handle returned by `thread::spawn`. This is used to ensure that the thread has completed its work. Currently, the mechanism for dropping `WasmExtension` is not yet implemented due to pending work related to the extension's lifetime.
 6. **tx_command and rx_command**: These channels facilitate message passing between the main thread and the extension thread.
 7. **WasmExtensionState**: Describes the current state of the extension (e.g., Activated, Deactivated, Exiting).
-8. **thread_running**: Indicates whether the thread has already been spawned. If the thread is already running, re-activation code is executed instead of spawning a new thread.
+8. **thread_running**: Indicates whether the thread has already been spawned. If the thread is already running, the existing thread executes the re-activation code.
 
 ### Reading Extension Description from Wasm File
 
@@ -455,6 +455,6 @@ The code for generating WebAssembly output that serves as a plugin for VLC can b
 
 As I conclude my Google Summer of Code (GSoC) 2024 journey with VideoLAN, I am filled with both gratitude and excitement. This summer has been an incredible adventure, allowing me to contribute to VLC by integrating Rust support and developing a plugin system using WebAssembly (Wasm) with Wasmer.
 
-I couldn’t have done this without the incredible guidance from [Alexandre Janniaux](https://code.videolan.org/alexandre-janniaux) and the amazing support from the VideoLAN team. Their help has made this project not just a success but a truly enriching experience.
+I couldn’t have done this without the incredible guidance from [Alexandre Janniaux](https://code.videolan.org/alexandre-janniaux) and the amazing support from the VideoLAN team. Their feedback helped me finish the project and understand the code more deeply.
 
 Looking ahead, I’m eager to see how this project evolves and excited to receive feedback from the community. Thank you to everyone who supported me throughout this journey. I look forward to continuing to contribute to VLC and exploring new possibilities in open-source development.

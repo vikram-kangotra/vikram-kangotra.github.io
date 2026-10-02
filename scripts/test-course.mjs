@@ -6,11 +6,18 @@ const { assembleBoot, bootExample } = await sourceModule('src/course/bootAssembl
 assert.equal(chapters.length, 30);
 assert.equal(new Set(chapters.map(chapter => chapter.slug)).size, 30);
 for (const chapter of chapters) {
-  assert(chapter.sections.length >= 5, `${chapter.slug}: enough substantive lessons`);
+  assert(chapter.sections.length >= 10, `${chapter.slug}: enough substantive lessons`);
   assert.equal(new Set(chapter.sections.map(section => section.id)).size, chapter.sections.length);
   for (const section of chapter.sections) {
     assert(section.title && section.paragraphs.length);
     if (section.code) assert(section.code.source.length > 0);
+    if (section.parentSectionId) {
+      const parent = chapter.sections.findIndex(item => item.id === section.parentSectionId);
+      const index = chapter.sections.indexOf(section);
+      assert(parent >= 0 && parent < index, `${section.id}: supporting lesson follows its parent`);
+      assert(chapter.sections.slice(parent + 1, index).every(item => item.parentSectionId === section.parentSectionId), `${section.id}: checkpoint reading group is contiguous`);
+      assert(section.topics?.length && section.topics.every(topic => topic.blocks.some(block => block.type === 'exercise')), `${section.id}: worked mechanism includes practice`);
+    }
   }
   assert(chapter.challenge.starter && chapter.challenge.solution);
   assert(chapter.challenge.hints.length >= 3);

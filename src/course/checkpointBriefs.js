@@ -25,7 +25,7 @@ const suppliedInterfaces = {
 const cProblems = {
   'descriptors-and-interrupts': ['Pack one interrupt gate into exactly eight bytes.', 'handler = 0x12345678', 'out = 78 56 08 00 00 8E 34 12; neighboring bytes stay unchanged.', 'You own the eight-byte output buffer encoding. The test supplies writable storage and a handler address.'],
   'memory-discovery': ['Find only the complete 4 KiB frames inside a firmware range.', 'base = 0x1003, length = 0x3FFD', 'first = 2, end = 5: frame indices 2, 3, and 4 are usable.', 'The range uses byte addresses; your result uses frame indices and an exclusive end.'],
-  'drivers-and-irqs': ['Implement a bounded FIFO that preserves unread keyboard bytes.', 'An empty eight-slot queue; put seven bytes, then attempt an eighth.', 'Seven puts succeed; the eighth returns false and increments lost. Gets return the first seven bytes in order.', 'You write the queue structure and put/get functions. This checkpoint supplies calls, not hardware interrupts.'],
+  'drivers-and-irqs': ['Implement a bounded FIFO that preserves unread keyboard bytes.', 'An empty eight-slot queue; put seven bytes, then attempt an eighth.', 'Seven puts succeed; the eighth returns false and increments lost. Gets return the first seven bytes in order.', 'You write the queue structure and put/get functions. The checkpoint invokes these functions directly; hardware IRQ integration is a later step.'],
   'physical-memory': ['Allocate each available frame once, then safely release and reuse it.', '16 frame indices, 0 through 15; frames 0 and 3 are reserved.', '14 unique allocations succeed. Further allocations return -1. Releasing an allocated frame makes that frame available again.', 'You write the bitmap state and both functions. Begin with only bits 0 and 3 set. Allocation order is your choice.'],
   'virtual-memory': ['Translate a virtual address using a supplied directory and table entry.', 'v = 0x0040307A, pde = 0x00102003, pte = 0x00345067', 'Directory index 1, table index 3; translate succeeds with physical address 0x0034507A.', 'The caller supplies entry values directly. This exercise does not ask you to dereference a real page table or enable paging.'],
   'kernel-heap': ['Round an allocation request safely to a multiple of 16 bytes.', 'requested = 17; then try requested = 16, 0, and 0xFFFFFFFF.', '17 rounds to 32 and 16 stays 16. Zero and 0xFFFFFFFF must be rejected without changing the output.', 'The test supplies a 32-bit size_t request and an output pointer. This checkpoint isolates size arithmetic before you integrate it into a heap.'],
@@ -65,7 +65,7 @@ export function makeCheckpointBrief(chapter, guide, step, index) {
   const draft = step.runnable === false;
   const problem = cProblems[chapter.slug];
   const tasks = sentences(cFunction ? step.tests.contract : cleanInstructions(step.instructions));
-  if (guide.kind === 'kernel' && (step.sectionId === 'kernel' || step.tests)) tasks.push('Let kernel_main return after writing the required output. The assembly entry stub, not C, owns the final halt loop; the test must observe both C entry and C return.');
+  if (guide.kind === 'kernel' && (step.sectionId === 'kernel' || step.tests)) tasks.push('Let kernel_main return after writing the required output. The assembly entry stub owns the final halt loop; the test must observe both C entry and C return.');
   const files = assembly ? ['lesson.asm', ...(step.reference?.data ? ['data.inc'] : [])] : step.filesToCreate?.length ? step.filesToCreate : guide.kind === 'kernel' ? step.sectionId === 'observe' ? ['README.md', 'boot/stage1.asm', 'kernel/main.c', 'kernel/entry.asm'] : ['README.md', 'kernel/main.c', 'kernel/entry.asm', 'include/vga.h', 'build.json'] : [guide.file];
   const cases = step.tests?.cases || [];
   const first = cases[0];
@@ -73,7 +73,7 @@ export function makeCheckpointBrief(chapter, guide, step, index) {
   const expectedRows = checkpointStateRows(first?.expect);
   const goal = problem?.[0] || tasks[0] || step.title;
   const startingPoint = assembly
-    ? index === 0 ? 'Start this chapter in lesson.asm. The editor contains a comment; write the instructions beneath it.' : 'Continue with your saved chapter draft. Follow the changes below; some checkpoints replace an earlier experiment instead of appending to it.'
+    ? index === 0 ? 'Start this chapter in lesson.asm. The editor contains a comment; write the instructions beneath it.' : 'Continue with your saved chapter draft. Follow the changes below; some checkpoints ask you to replace an earlier experiment.'
     : cFunction ? 'Create the exercise file below in the file tree. Use the interface skeleton, then fill in its function bodies. This focused test can run before your complete kernel is ready.'
       : index === 0 ? 'Open README.md and replace its prompts with your design decisions.' : 'Keep the files from earlier stages. Create or edit the paths below; the boot chain becomes runnable at the linker checkpoint.';
   const supplied = assembly

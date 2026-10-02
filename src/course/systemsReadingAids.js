@@ -2,7 +2,7 @@
 // to the section that establishes its assumptions; checkpoint answers live elsewhere.
 const node = (id, title, subtitle, explanation, extra = {}) => ({ id, title, subtitle, explanation, ...extra });
 const edge = (from, to, label) => ({ from, to, label });
-const code = (language, source, filename = 'Worked fragment · not a complete program') => ({ language, source, filename });
+const code = (language, source, filename = 'Worked fragment') => ({ language, source, filename });
 const facts = (...pairs) => pairs.map(([label, value]) => ({ label, value }));
 const aid = (kind, title, intro, nodes, connections, caption, sample) => ({
   kind, title, intro, nodes, connections: connections || [], caption,
@@ -13,19 +13,19 @@ export const systemsReadingAids = {
   bootloading: {
     contract: aid('flow', 'Who is responsible for the next instruction?',
       'Follow control from firmware into C. At each arrow, the outgoing component must establish the incoming component’s assumptions. A successful assembly command cannot establish these runtime conditions.', [
-        node('bios', 'BIOS', 'Firmware owns initialization', 'The firmware locates a boot target and places its boot sector at physical 0x7C00. DL identifies the boot drive. Your code must establish useful segment and stack state rather than inheriting arbitrary values.'),
-        node('stage1', 'Stage 1', '512 bytes · real mode', 'Normalize CS, initialize DS/ES/SS/SP, save DL, and check the disk read. This stage’s job is to load and enter stage 2, not to initialize every kernel subsystem.'),
+        node('bios', 'BIOS', 'Firmware owns initialization', 'The firmware locates a boot target and places its boot sector at physical 0x7C00. DL identifies the boot drive. Your code must explicitly establish the segment and stack state it needs.'),
+        node('stage1', 'Stage 1', '512 bytes · real mode', 'Normalize CS, initialize DS/ES/SS/SP, save DL, and check the disk read. This stage loads and enters stage 2.'),
         node('stage2', 'Stage 2', 'Load bytes · change CPU contract', 'Load the kernel while BIOS services are usable. Then install the GDT, enable protected mode, reload segment state, and provide the stack and entry address promised to the kernel.'),
         node('entry', 'C entry', 'ABI before kernel_main', 'Assembly clears the direction flag, zeroes BSS, and aligns the stack before calling C. The C compiler supplies instruction generation; it does not invent this boot-time environment.'),
       ], [edge('bios', 'stage1', '0x7C00 + boot drive'), edge('stage1', 'stage2', 'checked read → 0x8000'), edge('stage2', 'entry', '32-bit entry → 0x10000')],
       'Trace a failure backward: did C receive a valid stack, did stage 2 load the correct bytes, and did stage 1 actually enter stage 2?',
-      code('asm', '; One handoff calculation, not a loader:\n; 0x0800 * 16 + 0x0000 = 0x8000\n; 0x0800 * 16 + 0x8000 = 0x10000\n; Segment and offset are both part of the address.')),
+      code('asm', '; Worked handoff address calculation:\n; 0x0800 * 16 + 0x0000 = 0x8000\n; 0x0800 * 16 + 0x8000 = 0x10000\n; Segment and offset are both part of the address.')),
     firmware: aid('memory', 'Disk positions and RAM addresses are different coordinates',
-      'The loader copies bytes between two separate address spaces. These are the fixed regions of this course’s unpartitioned BIOS image, not a universal PC disk layout.', [
+      'The loader copies bytes between two separate address spaces. These fixed regions belong to this course’s unpartitioned BIOS image. Other disk formats use different layouts.', [
         node('boot', 'Stage 1', 'Disk LBA 0 → RAM 0x7C00–0x7DFF', 'The 512-byte sector ends in bytes 55 AA. Its signature does not validate its instructions. The stack starts below the boot sector and grows toward lower addresses.', { facts: facts(['Length', '1 × 512 bytes'], ['Owner', 'Firmware loads; stage 1 executes']) }),
         node('loader', 'Stage 2', 'Disk LBA 1–8 → RAM 0x8000–0x8FFF', 'Eight sectors supply 4096 bytes. On a GPT disk, LBA 1 is reserved for the GPT header, so this layout must not be reused on a GPT image.'),
         node('kernel', 'Kernel file bytes', 'Disk LBA 9–40 → RAM 0x10000–0x13FFF', 'The reserved slot is 16 KiB. The linker and image builder must enforce that limit together. ELF metadata is retained separately for debugging; this early loader expects raw kernel bytes.'),
-        node('stack', 'Runtime memory', 'BSS below 0x60000 · initial ESP 0x70000', 'BSS is memory that entry code initializes, not a separate required disk payload. The reserved stack region must remain outside both the kernel image and BSS.'),
+        node('stack', 'Runtime memory', 'BSS below 0x60000 · initial ESP 0x70000', 'Entry code initializes BSS in memory, so its zero-filled contents can be omitted from the disk payload. The reserved stack region must remain outside both the kernel image and BSS.'),
       ], [], 'Moving a file on disk does not move its linked addresses. Changing either coordinate requires updating the component that interprets it.'),
     'stage-two': aid('flow', 'Protected mode is a sequence of state changes',
       'CR0.PE changes architectural interpretation, but it does not load all segment descriptors or set up paging. Select each step to see the state it changes.', [
@@ -35,11 +35,11 @@ export const systemsReadingAids = {
         node('data', 'Establish the C environment', 'Data selectors + ESP', 'Load writable data and stack descriptors, set a known 32-bit stack, and transfer to the linked entry address. Flat segment bases simplify addresses; they do not create paging or process isolation.'),
       ], [edge('gdt', 'pe', 'table exists'), edge('pe', 'far', 'PE set'), edge('far', 'data', '32-bit code active')],
       'The intermediate states matter. A selector that points outside the GDT can fault even when the instruction encoding is perfectly valid.',
-      code('asm', '; Descriptor arithmetic, not the transition sequence:\n; selector 0x10 = index 2, GDT, privilege request 0\n; descriptor address = GDTR.base + 2 * 8\n; page translation remains disabled while CR0.PG = 0')),
+      code('asm', '; Worked descriptor arithmetic:\n; selector 0x10 = index 2, GDT, privilege request 0\n; descriptor address = GDTR.base + 2 * 8\n; page translation remains disabled while CR0.PG = 0')),
   },
   'descriptors-and-interrupts': {
     'descriptor-contract': aid('bits', 'Decode a segment selector before following it',
-      'A 16-bit selector is an index plus two control fields. It is not a segment base. The processor follows the selector to an eight-byte descriptor and checks the requested access.', [
+      'A 16-bit selector is an index plus two control fields. The processor follows the selector to an eight-byte descriptor and checks the requested access.', [
         node('index', 'Descriptor index', 'Bits 15–3', 'These thirteen bits choose an entry. Multiply the index by eight, add the chosen table’s base, and check that the whole descriptor fits its limit.', { code: code('c', '/* Worked value: selector 0x23. */\nunsigned index = 0x23u >> 3; /* 4 */') }),
         node('table', 'Table indicator', 'Bit 2 · TI', 'Zero selects the GDT; one selects the current LDT. This course initially uses only the GDT, so an unexpected TI bit is a useful clue when a load faults.'),
         node('rpl', 'Requested privilege', 'Bits 1–0 · RPL', 'RPL participates in privilege checks together with current privilege and descriptor privilege. Setting the low bits to three does not create a user segment; the descriptor itself must permit the access.'),
@@ -47,7 +47,7 @@ export const systemsReadingAids = {
     'idt-layout': aid('flow', 'From an interrupt vector to a handler instruction',
       'The IDT chooses a destination; the GDT describes the code segment containing that destination. These two tables solve different parts of the same control transfer.', [
         node('vector', 'Vector number', '0–255', 'An exception, external interrupt, or software INT supplies a vector. The origin matters: the gate DPL controls software INT access, while hardware delivery follows different checks.'),
-        node('gate', 'IDT gate', 'IDTR.base + vector × 8', 'A 32-bit interrupt gate holds a split handler offset, a code selector, present bit, DPL, and gate type. Its offset halves form one address, not two separate pointers.'),
+        node('gate', 'IDT gate', 'IDTR.base + vector × 8', 'A 32-bit interrupt gate holds a split handler offset, a code selector, present bit, DPL, and gate type. Combine its offset halves to form the handler address.'),
         node('segment', 'Code descriptor', 'Selector → GDT', 'The target selector must describe valid executable code. A present IDT gate cannot compensate for an invalid code descriptor or an unmapped handler address.'),
         node('handler', 'Entry stub', 'Save → normalize → call C', 'An interrupt gate clears IF on entry. The stub still owns register saving, direction-flag setup, error-code normalization, and a return frame that IRET can consume.'),
       ], [edge('vector', 'gate', 'index'), edge('gate', 'segment', 'selector'), edge('segment', 'handler', 'validated target')],
@@ -63,13 +63,13 @@ export const systemsReadingAids = {
   },
   'memory-discovery': {
     ownership: aid('memory', 'Installed RAM is not one free interval',
-      'This schematic map emphasizes ownership rather than exact firmware-specific boundaries. A region becomes allocatable only after both the firmware map and your own reservations allow it.', [
-        node('firmware', 'Firmware and device regions', 'Reserved · unavailable', 'Some physical addresses route to devices or firmware rather than ordinary RAM. Never turn an unknown firmware type into free memory simply because a RAM-size counter includes nearby addresses.'),
+      'This schematic map shows ownership categories; exact boundaries depend on firmware. A region becomes allocatable only after both the firmware map and your own reservations allow it.', [
+        node('firmware', 'Firmware and device regions', 'Reserved · unavailable', 'Some physical addresses route to devices or firmware. Never turn an unknown firmware type into free memory simply because a RAM-size counter includes nearby addresses.'),
         node('kernel', 'Loaded kernel and boot state', 'Usable RAM · currently owned', 'The firmware may label these pages usable even while they hold your kernel, page tables, stack, or memory-map buffer. Your boot reservations must override the generic type.'),
-        node('free', 'Whole unowned frames', 'Page-aligned interior', 'Only complete page frames inside a usable interval enter the PMM. Discard partial edge pages rather than allocating a page whose tail overlaps reserved memory.'),
-        node('reclaim', 'Reclaimable later', 'Requires an explicit transition', 'Bootloader pages and reclaimable firmware data become free only when no live pointer or future firmware contract needs them. Reclamation is a change of ownership, not a different spelling of usable.'),
+        node('free', 'Whole unowned frames', 'Page-aligned interior', 'Only complete page frames inside a usable interval enter the PMM. Discard partial edge pages to keep each allocated frame entirely within usable memory.'),
+        node('reclaim', 'Reclaimable later', 'Requires an explicit transition', 'Bootloader pages and reclaimable firmware data become free only when no live pointer or future firmware contract needs them. Reclamation explicitly transfers those pages to the allocator.'),
       ], [], 'Record why every reservation exists. A page that is physically present may still be unsafe to allocate.'),
-    e820: aid('flow', 'E820 is a conversation, not a single RAM-size query',
+    e820: aid('flow', 'Collect the memory map through repeated E820 calls',
       'Collect the BIOS map before leaving the real-mode firmware interface. Carry the continuation token through the loop and keep the destination inside a bounded buffer.', [
         node('request', 'Prepare a request', 'EAX = E820h · EDX = SMAP', 'Use EBX=0 for the first request, provide ES:DI and a supported buffer size, and initialize the extended-attributes field when requesting the extended form. Later requests reuse the returned EBX token.'),
         node('validate', 'Validate the response', 'Carry, signature, returned length', 'Do not append bytes just because INT 15h returned. Check success, the SMAP signature, and the returned structure size; reject a malformed response before it can influence allocator ownership.'),
@@ -87,7 +87,7 @@ export const systemsReadingAids = {
   },
   'drivers-and-irqs': {
     path: aid('flow', 'One key crosses four interfaces',
-      'A key press is not a character delivered directly to the shell. Each stage translates or buffers a different kind of information.', [
+      'A key press passes through several stages before reaching the shell. Each stage translates or buffers a different kind of information.', [
         node('device', 'Keyboard / controller', 'Scancode bytes', 'The controller exposes bytes through I/O ports. Extended prefixes and make/break sequences mean one byte is not necessarily one complete key event.'),
         node('irq', 'IRQ entry', 'Bounded work in interrupt context', 'The handler reads available device data according to the controller protocol, records overflow, and acknowledges the interrupt controller. It should not block, allocate unpredictably, or print a long diagnostic.'),
         node('queue', 'Input queue', 'Producer → consumer handoff', 'The handler and consumer share queue state. Define full and empty conditions, synchronization, and a measurable overflow policy before turning on interrupts.'),
@@ -103,17 +103,17 @@ export const systemsReadingAids = {
       ], [edge('remap', 'install', 'vector policy'), edge('install', 'unmask', 'entry path ready'), edge('unmask', 'eoi', 'service a delivery')],
       'STI does not configure a device, unmask a PIC input, or install a handler. It only changes the CPU’s willingness to accept maskable interrupts.'),
     pit: aid('trace', 'A timer tick is a sample of time',
-      'The PIT divides an input near 1,193,182 Hz by an integer. Requesting 100 Hz therefore produces an approximation, not an exact one-hundredth-second physical clock.', [
+      'The PIT divides an input near 1,193,182 Hz by an integer. Requesting 100 Hz therefore produces an approximate interval, determined by the selected integer divisor.', [
         node('divide', 'Choose a divisor', '1,193,182 / 100 ≈ 11,932', 'Round according to your policy and enforce the channel’s supported divisor encoding. Dividing by the actual programmed value gives the achieved rate; the requested rate is only a target.'),
         node('tick', 'Count delivery', 'IRQ0 → monotonic tick count', 'Increment a counter with an explicit width and wrap policy. On i386, readers cannot assume that an arbitrary 64-bit load is atomic while an interrupt updates the same value.'),
         node('delay', 'Observe service delay', 'Interrupts may be masked', 'A pending timer event does not necessarily preserve a count of every elapsed period. Long interrupt-disabled regions can make tick-count time lose information.'),
         node('schedule', 'Request rescheduling', 'Policy runs at a safe boundary', 'The timer can mark that a time slice expired. Switching immediately from every interrupt is unsafe if the kernel has not designed its locking and preemption boundaries.'),
       ], [edge('divide', 'tick', 'program channel'), edge('tick', 'delay', 'compare with elapsed time'), edge('delay', 'schedule', 'bounded work')],
       'Measure both average rate and worst service latency. A counter that increases does not prove that it measures real elapsed time accurately.',
-      code('c', '/* Worked frequency calculation, not PIT setup. */\ndouble achieved_hz = 1193182.0 / 11932.0;\n/* approximately 99.9985 Hz */')),
+      code('c', '/* Worked frequency calculation for the selected divisor. */\ndouble achieved_hz = 1193182.0 / 11932.0;\n/* approximately 99.9985 Hz */')),
   },
   'physical-memory': {
-    unit: aid('bits', 'One bitmap bit represents one frame, not one byte',
+    unit: aid('bits', 'Each bitmap bit tracks a whole frame',
       'In this allocator, a set bit means unavailable and a clear bit means free. Fix that convention before implementing scanning or accounting.', [
         node('frame', 'Physical frame number', 'physical_address / 4096', 'Frame 35 begins at physical 0x23000. The allocator returns ownership of a 4096-byte page; it does not automatically return a usable kernel virtual pointer.'),
         node('byte', 'Bitmap byte index', 'frame_number / 8', 'Frame 35 lies in byte 4. Eight frames share each byte, so updating one bit must preserve the other seven owners.'),
@@ -124,7 +124,7 @@ export const systemsReadingAids = {
         node('closed', '1. Start unavailable', 'Every bit set', 'Assume no frame may be allocated until evidence proves otherwise. Round the bitmap storage size upward and reserve its own backing pages.'),
         node('firmware', '2. Admit usable interiors', 'Whole pages only', 'For each normalized firmware interval, clear only complete usable pages within the allocator’s supported physical range. Preserve holes and unknown types.'),
         node('reserve', '3. Overlay live owners', 'Kernel, stack, tables, boot info', 'Set bits for all course-owned objects, even when the firmware calls their underlying RAM usable. Include pages touched by a partially aligned object.'),
-        node('account', '4. Recompute the invariant', 'Total = free + unavailable', 'Count actual bitmap states rather than trusting a chain of increments during overlapping reservations. Separate permanently reserved and allocated ownership if the API needs to diagnose invalid frees.'),
+        node('account', '4. Recompute the invariant', 'Total = free + unavailable', 'Count actual bitmap states to account for overlapping reservations correctly. Separate permanently reserved and allocated ownership if the API needs to diagnose invalid frees.'),
       ], [edge('closed', 'firmware', 'raw ownership'), edge('firmware', 'reserve', 'candidate free pool'), edge('reserve', 'account', 'final state')],
       'Try reversing steps 2 and 3 on paper: a later usable interval would clear your kernel’s reservation. The order is part of correctness.'),
     concurrency: aid('trace', 'The duplicate-frame race',
@@ -139,7 +139,7 @@ export const systemsReadingAids = {
   'virtual-memory': {
     walk: aid('bits', 'Split 0x0040307A into the three paging fields',
       'This is classic non-PAE 32-bit paging with 4 KiB pages. A directory and each page table hold 1024 four-byte entries. Large-page and PAE layouts are different.', [
-        node('directory', 'Directory index = 1', 'Bits 31–22 · 10 bits', 'CR3 identifies the page-directory frame. Read PDE 1 at directory_base + 4. The PDE must be present and, for this walk, point to a page table rather than a large page.'),
+        node('directory', 'Directory index = 1', 'Bits 31–22 · 10 bits', 'CR3 identifies the page-directory frame. Read PDE 1 at directory_base + 4. The PDE must be present and, for this walk, select a page table with PS clear.'),
         node('table', 'Table index = 3', 'Bits 21–12 · 10 bits', 'Mask the PDE to find the page-table frame. Read PTE 3 at table_base + 12. Effective access combines permissions from both the PDE and PTE.'),
         node('offset', 'Byte offset = 0x07A', 'Bits 11–0 · 12 bits', 'The offset selects a byte inside the final physical frame. If the PTE names frame base 0x001A0000, the requested physical byte is 0x001A007A.'),
       ], [], 'A page-table entry contains a physical frame address. Dereferencing that number in C requires a kernel mapping that makes it accessible.',
@@ -147,7 +147,7 @@ export const systemsReadingAids = {
     bootstrap: aid('flow', 'Keep the next instruction reachable when paging turns on',
       'Enabling CR0.PG changes how linear addresses reach memory immediately. The instructions after the control-register write, their stack, and fault-handling data must remain accessible.', [
         node('tables', 'Build page tables', 'Aligned physical frames', 'Allocate and initialize the directory and tables before activation. Write explicit present and permission bits; do not leave uninitialized entries that happen to resemble mappings.'),
-        node('identity', 'Map the transition', 'Current code and stack survive', 'An identity mapping makes selected linear addresses reach the same numerical physical addresses. Include every byte the transition will touch, not just the instruction containing MOV CR0.'),
+        node('identity', 'Map the transition', 'Current code and stack survive', 'An identity mapping makes selected linear addresses reach the same numerical physical addresses. Include every byte the transition will touch, including its code, stack, and data.'),
         node('enable', 'Load CR3, then enable paging', 'Change the translation rule', 'CR3 receives the physical directory address. After activation, data pointers are linear addresses interpreted through the new tables. A physical allocator return value is no longer automatically a valid pointer.'),
         node('steady', 'Enter the intended layout', 'Then retire temporary aliases', 'If using a higher-half kernel, transfer to its mapped virtual address and establish permanent access to page-table memory. Remove temporary mappings only after their last user has left.'),
       ], [edge('tables', 'identity', 'valid entries'), edge('identity', 'enable', 'transition reachable'), edge('enable', 'steady', 'new address contract')],
@@ -157,7 +157,7 @@ export const systemsReadingAids = {
         node('address', 'Faulting linear address', 'CR2', 'Capture CR2 before another page fault can overwrite it. CR2 identifies the memory access that failed, while saved EIP identifies the instruction associated with the exception.'),
         node('present', 'Present/protection distinction', 'Error bit 0 · P', 'Zero normally indicates a missing translation; one identifies a protection-related failure. Inspect the entire walk and the other error bits before deciding which entry to change.'),
         node('write', 'Access direction', 'Error bit 1 · W/R', 'One means the access was a write. A write fault can be an intentional copy-on-write event, a bad kernel pointer, or an attempt to modify protected code; policy decides which.'),
-        node('user', 'Access privilege and reserved bits', 'Bit 2 · U/S; bit 3 · RSVD', 'U/S records the access privilege, not merely a PTE flag. A reserved-bit violation points at malformed paging structures or an unsupported combination of flags, rather than an ordinary demand-zero page.'),
+        node('user', 'Access privilege and reserved bits', 'Bit 2 · U/S; bit 3 · RSVD', 'U/S records the privilege of the faulting access. A reserved-bit violation points at malformed paging structures or an unsupported combination of flags, and requires diagnosis of the paging structures.'),
       ], [], 'A diagnostic should print CR2, saved EIP, error code, and relevant PDE/PTE values before changing state. Blindly setting every permission bit destroys the evidence.'),
   },
   'kernel-heap': {
@@ -175,33 +175,33 @@ export const systemsReadingAids = {
         node('remainderheader', 'New free header', '[48, 64) · 16 bytes', 'Creating a second block consumes metadata space. Subtracting only the requested payload from the original free size would accidentally count this header as free payload.'),
         node('remainder', 'Remainder payload', '[64, 112) · 48 bytes', 'The new payload remains aligned and large enough for the allocator’s minimum free block. If it were too small, the original block should be consumed without creating an unusable fragment.'),
       ], [], 'The intervals partition all 112 bytes exactly: 16 + 32 + 16 + 48. No byte belongs to both blocks.',
-      code('c', '/* Constant worked arithmetic; not a general allocator. */\nsize_t aligned_request = 32;\nsize_t remaining_payload = 96 - aligned_request - 16;\n/* General code must check overflow and minimum block size. */')),
+      code('c', '/* Constant worked arithmetic for this example. */\nsize_t aligned_request = 32;\nsize_t remaining_payload = 96 - aligned_request - 16;\n/* General code must check overflow and minimum block size. */')),
     fragmentation: aid('trace', 'Enough total space can still be unusable',
       'Imagine three consecutive 64-byte payload blocks, with headers omitted from these labels. Only adjacent free blocks can be physically coalesced.', [
         node('abc', 'A, B, C allocated', 'Three live owners', 'Each block may be freed independently. Allocation order does not imply that the heap may move a still-live object, because ordinary C pointers would keep its old address.'),
         node('ac', 'Free A and C', '128 free bytes, two holes', 'A request needing one contiguous 96-byte payload cannot fit either hole. Reporting only total free bytes hides this external fragmentation.'),
         node('b', 'Free B', 'The separator disappears', 'Now neighboring free blocks may merge. Correct coalescing must remove obsolete list nodes and account for the internal headers that no longer separate blocks.'),
-        node('whole', 'Recover one free interval', 'Largest hole grows', 'A useful invariant test allocates several blocks, frees them in different orders, and verifies that the heap returns to its original shape rather than merely its original total free count.'),
+        node('whole', 'Recover one free interval', 'Largest hole grows', 'A useful invariant test allocates several blocks, frees them in different orders, and verifies both its original shape and its original total free count.'),
       ], [edge('abc', 'ac', 'kfree(A), kfree(C)'), edge('ac', 'b', 'kfree(B)'), edge('b', 'whole', 'coalesce neighbors')],
       'Measure total free space and largest contiguous free block separately. They answer different questions about future allocations.'),
   },
   'threads-and-scheduling': {
     continuation: aid('memory', 'A suspended thread is a saved continuation',
-      'A thread needs a place to resume and enough private state to make resuming meaningful. This is a software context-switch design, not x86 hardware task switching.', [
+      'A thread needs a place to resume and enough private state to make resuming meaningful. The kernel implements this context switch in software.', [
         node('stack', 'Private kernel stack', 'Call frames + return addresses', 'The stack preserves nested calls and local storage. Reusing one stack for two suspended threads destroys the history needed for either thread to resume correctly.'),
         node('registers', 'Saved context', 'ESP + callee-saved registers', 'A cooperative switch invoked as a normal function follows its ABI. The caller already treats caller-saved registers as volatile; a timer interrupt must save a fuller interrupted context.'),
-        node('state', 'Scheduler state', 'Running / ready / blocked', 'The run queue represents eligibility, not all existing threads. A blocked thread retains its continuation while waiting for an event and must not be selected as runnable.'),
+        node('state', 'Scheduler state', 'Running / ready / blocked', 'The run queue contains eligible threads. A blocked thread retains its continuation while waiting for an event and must not be selected as runnable.'),
         node('resources', 'Referenced resources', 'Address space + owned objects', 'The continuation may depend on a process mapping, open object, or synchronization wait. Thread exit must retire those lifetimes without freeing the stack while still executing on it.'),
       ], [], 'The initial stack of a new thread is manufactured to look like a suspended call. Its return path should reach a defined thread-exit routine.'),
     switch: aid('trace', 'Changing ESP changes which return address RET sees',
-      'Follow a cooperative switch from A to B. The crucial operation is not a loop copying every byte of state: it is selecting the stack containing B’s saved continuation.', [
+      'Follow a cooperative switch from A to B. Selecting the stack containing B’s saved continuation lets execution resume in B.', [
         node('save', 'Save A’s ABI context', 'Push preserved registers', 'The switch routine saves the registers that its calling convention promises to preserve. Its own caller has already placed a return address on A’s stack.'),
         node('remember', 'Record A’s stack pointer', 'A.saved_sp = current ESP', 'Save the pointer only after the stack has the exact layout expected by the restore path. The restore order must be the reverse of the save order.'),
         node('load', 'Select B’s saved stack', 'ESP = B.saved_sp', 'From this instruction onward, pops and returns read B’s memory. Ordinary local variables or arguments addressed through the old stack can no longer be used casually.'),
         node('return', 'Restore and return as B', 'RET consumes B’s address', 'The switch appears to return inside B’s earlier call. A freshly created B needs an artificial context with the same shape, suitable entry address, and a defined final return target.'),
       ], [edge('save', 'remember', 'layout fixed'), edge('remember', 'load', 'continuation stored'), edge('load', 'return', 'different stack active')],
       'Single-step the first switch and inspect ESP before and after the load. The return address should belong to B, even though A initiated the switch.',
-      code('asm', '; One 32-bit stack operation, not a context switch.\n; Before: ESP = 0x70000, EBX = 0x12345678\npush ebx\n; After: ESP = 0x6FFFC, [ESP] = 0x12345678\npop ebx\n; ESP returns to 0x70000.')),
+      code('asm', '; One 32-bit stack operation within the switch setup.\n; Before: ESP = 0x70000, EBX = 0x12345678\npush ebx\n; After: ESP = 0x6FFFC, [ESP] = 0x12345678\npop ebx\n; ESP returns to 0x70000.')),
     wakeup: aid('trace', 'Why checking a condition and sleeping must be one protocol',
       'A lost wakeup does not require two CPUs. An interrupt or scheduler interleaving on one CPU can expose the same gap.', [
         node('check', 'Reader sees an empty queue', 'No item available', 'The reader decides it must wait. If it releases the condition lock before registering itself as a waiter, the next event can happen while nobody is waiting.'),
@@ -239,19 +239,19 @@ export const systemsReadingAids = {
   'elf-loader': {
     format: aid('flow', 'The executable describes a memory image',
       'ELF sections help tools organize an object file. The loader primarily follows program headers describing segments that must exist when execution starts.', [
-        node('header', 'ELF header', 'Class, machine, type, entry', 'Validate the format and supported architecture before interpreting later fields. The entry address is a virtual address in the proposed process, not a byte offset into the file.'),
+        node('header', 'ELF header', 'Class, machine, type, entry', 'Validate the format and supported architecture before interpreting later fields. The entry address is a virtual address in the proposed process.'),
         node('phdr', 'Program headers', 'PT_LOAD entries', 'Each loadable segment states file offset, virtual address, file size, memory size, permissions, and alignment. Validate the table’s entire extent before iterating it.'),
         node('mapping', 'Fresh address space', 'Copy file bytes, clear remainder', 'Create the requested memory privately. Copy only p_filesz bytes from the file; initialize the extra memory up to p_memsz to zero. Reject file size larger than memory size.'),
         node('start', 'Published process', 'Entry + stack + ABI', 'The task becomes runnable only after loading, permissions, argument stack, and entry validation all succeed. A half-loaded process must remain invisible to the scheduler.'),
       ], [edge('header', 'phdr', 'validated table'), edge('phdr', 'mapping', 'checked segments'), edge('mapping', 'start', 'commit')],
       'Pointing EIP at the first byte of an ELF file executes its header as instructions. A loader must interpret the format before transferring control.'),
-    pages: aid('memory', 'A segment’s zero-fill tail is not another file read',
+    pages: aid('memory', 'Initialize the segment’s zero-fill tail in memory',
       'Worked segment: p_vaddr=0x00402000, p_filesz=0x180, p_memsz=0x300. Both extents fit inside one 4 KiB page, but they describe different initialization rules.', [
-        node('file', 'File-backed bytes', '[0x00402000, 0x00402180)', 'Copy 384 bytes beginning at the validated p_offset. These bytes can include initialized variables or instructions; the loader uses the segment metadata rather than guessing from section names.'),
+        node('file', 'File-backed bytes', '[0x00402000, 0x00402180)', 'Copy 384 bytes beginning at the validated p_offset. These bytes can include initialized variables or instructions; the segment metadata tells the loader which bytes to copy.'),
         node('zero', 'Required zero-fill', '[0x00402180, 0x00402300)', 'Initialize these 384 bytes to zero without reading beyond the segment’s file extent. Stale frame contents here would violate the executable’s initial-state contract and may leak another process’s data.'),
         node('padding', 'Page padding', '[0x00402300, 0x00403000)', 'The hardware maps at page granularity. Clear newly allocated pages before exposure, and enforce a documented policy for segments that share a page but ask for conflicting permissions.'),
-      ], [], 'For p_align greater than one, the file offset and virtual address must have the required matching alignment residue. Malformed alignments are input errors, not linker advice.',
-      code('c', '/* A validated worked segment, not a general ELF parser. */\nuint32_t file_bytes = 0x180;\nuint32_t memory_bytes = 0x300;\nuint32_t zero_bytes = memory_bytes - file_bytes; /* 0x180 */\n/* Reject memory_bytes < file_bytes before subtracting. */')),
+      ], [], 'For p_align greater than one, the file offset and virtual address must have the required matching alignment residue. Reject malformed alignments as input errors.',
+      code('c', '/* Arithmetic for one validated ELF segment. */\nuint32_t file_bytes = 0x180;\nuint32_t memory_bytes = 0x300;\nuint32_t zero_bytes = memory_bytes - file_bytes; /* 0x180 */\n/* Reject memory_bytes < file_bytes before subtracting. */')),
     heap: aid('trace', 'Growing brk is a transaction over mappings',
       'The process break is a byte-level policy boundary. Pages are added only when growth crosses a page boundary, and allocation failure must preserve the old state.', [
         node('old', 'Old break', '0x00802FF0', 'The process already owns mappings through the current heap extent. Record the old break before making changes so rollback has a precise target.'),
@@ -274,10 +274,10 @@ export const systemsReadingAids = {
         node('end', 'First physical span', 'Slots 6–7', 'The oldest two bytes occupy the end of the array. A bulk read can consume this contiguous span before it wraps to index zero.'),
         node('start', 'Second physical span', 'Slots 0–1', 'The next two bytes continue the same logical sequence. Array order and queue order differ whenever the live interval wraps.'),
         node('free', 'Available slots', 'Slots 2–5', 'The writer starts at w=2. It must not overwrite unread slots, and count must remain between zero and capacity under the same synchronization as the read and write positions.'),
-      ], [], 'A wrap test should compare the entire byte sequence after several write/read cycles, not merely the final index values.',
+      ], [], 'A wrap test should compare the entire byte sequence and final index values after several write/read cycles.',
       code('c', '/* Index arithmetic for this power-of-two ring only. */\nunsigned next = (7u + 1u) & (8u - 1u); /* 0 */\n/* The mask formula requires a power-of-two capacity. */')),
     'lost-wakeup': aid('trace', 'The wait queue and data predicate share one lock',
-      'A wakeup is a notification to retry, not ownership of a byte. The reader must test the predicate again after the scheduler returns it to execution.', [
+      'A wakeup tells the waiting reader to retry its condition check. The reader must test the predicate again after the scheduler returns it to execution.', [
         node('inspect', 'Inspect under the pipe lock', 'Data? Writers? Error?', 'A reader considers buffered data and writer count together. An empty buffer with live writers leads toward waiting; an empty buffer with no writers leads to EOF.'),
         node('queue', 'Enroll atomically', 'Wait primitive owns the transition', 'The provided wait_locked contract queues the current task and releases the condition lock without exposing the lost-wakeup gap. Its implementation must coordinate with the scheduler’s task-state lock.'),
         node('produce', 'Producer changes the predicate', 'Data or endpoint state changes', 'The producer updates shared state under the same condition lock and wakes the relevant queue. Waking without the protected state change gives readers nothing reliable to observe.'),
@@ -297,11 +297,11 @@ export const systemsReadingAids = {
     poll: aid('flow', 'Polling must have a success path and a failure path',
       'For the selected ATA PIO command, status bits describe the device’s current phase. An unbounded loop can turn a missing device into a kernel that appears frozen.', [
         node('status', 'Read meaningful status', 'BSY, DRQ, ERR, DF', 'Follow the command’s timing and register protocol. While BSY is set, do not interpret other status bits as a completed transfer decision.'),
-        node('wait', 'Device still busy', 'Time budget remains', 'Retry until the bounded deadline or attempt policy expires. A loop counter bounds CPU work but is not a calibrated wall-clock timeout; label the chosen contract honestly.'),
+        node('wait', 'Device still busy', 'Time budget remains', 'Retry until the bounded deadline or attempt policy expires. A loop counter bounds CPU work. A wall-clock deadline requires a suitable time source; state which contract the driver uses.'),
         node('data', 'Ready for data', 'BSY clear + DRQ set', 'Check the defined error conditions before transferring the data words. Transfer the exact command-defined quantity; do not assume that any nonzero status means success.'),
         node('fail', 'Error or timeout', 'Return a structured failure', 'Record enough command and status context to distinguish absent hardware, command failure, and a late device. Callers must not parse the destination buffer after a failed read as if it were valid metadata.'),
       ], [edge('status', 'wait', 'busy'), edge('wait', 'status', 'retry within budget'), edge('status', 'data', 'ready'), edge('status', 'fail', 'error / deadline')],
-      'Inject a device that never asserts DRQ. The expected result is a bounded error, not an infinitely spinning kernel.',
+      'Inject a device that never asserts DRQ. The driver should return an error within its bounded wait policy.',
       code('c', '/* Decode a sample only after following command timing. */\nuint8_t status = 0x48; /* BSY clear, DRDY and DRQ set */\nbool busy = (status & 0x80u) != 0;\nbool data_request = (status & 0x08u) != 0;\n/* Error checks and a bounded poll loop are still required. */')),
     bounds: aid('trace', 'Validate a request before adding its base',
       'Worked partition: start LBA 2048, length 4096 sectors. Request relative LBA 4094 with count 4. Every individual number looks plausible, but the interval escapes the partition.', [
@@ -311,11 +311,11 @@ export const systemsReadingAids = {
       ], [], 'Add the partition base only after validation. Test values near UINT64_MAX as well as ordinary off-by-one boundaries.'),
   },
   'fat-read-driver': {
-    compare: aid('compare', 'The FAT name describes entry encoding, not a label to trust',
-      'Determine the variant from the validated data-cluster count. The boot sector’s human-readable FAT label is not an authoritative type field.', [
+    compare: aid('compare', 'Determine the FAT variant from cluster count',
+      'Determine the variant from the validated data-cluster count. Treat the boot sector’s human-readable FAT label as descriptive text.', [
         node('fat12', 'FAT12', '12-bit entries · fewer than 4085 clusters', 'Two adjacent entries share three bytes. A read may cross a sector boundary even though it needs only two bytes. FAT12/16 use a fixed root-directory region outside the data-cluster chain.'),
         node('fat16', 'FAT16', '16-bit entries · fewer than 65525 clusters', 'Each entry is a little-endian 16-bit value. Compared with FAT12, entry extraction is simpler, but geometry, chain classification, file-size bounds, and corrupt-loop handling are still necessary.'),
-        node('fat32', 'FAT32', '32-bit storage · 28-bit cluster value', 'Mask the upper four bits when reading cluster values, and preserve them on writes. The root directory is a cluster chain identified by BPB_RootClus rather than the FAT12/16 fixed root area.'),
+        node('fat32', 'FAT32', '32-bit storage · 28-bit cluster value', 'Mask the upper four bits when reading cluster values, and preserve them on writes. The root directory is a cluster chain identified by BPB_RootClus with a layout that differs from the FAT12/16 fixed root area.'),
       ], [], 'The thresholds select an encoding after geometry validation. A format name never removes the need to classify free, reserved, bad, data, and end-of-chain values.'),
     geometry: aid('memory', 'Find the data region before following a cluster',
       'Every sector below is relative to the volume start. BPB fields determine the lengths; checked arithmetic and device bounds determine whether those lengths are believable.', [
@@ -332,13 +332,13 @@ export const systemsReadingAids = {
         node('nine', 'Cluster 9', 'Return only bytes 512–699', 'Only 188 bytes remain in the file. Do not expose the unused 324 bytes at the end of the allocation unit as file contents.'),
         node('end', 'Bounded termination', 'End marker + traversal budget', 'Reject a premature end marker, invalid cluster, or cyclic chain according to the driver’s corruption policy. Never let a repeated cluster turn one read into an infinite loop.'),
       ], [edge('entry', 'five', 'first cluster'), edge('five', 'nine', 'FAT[5] = 9'), edge('nine', 'end', 'FAT[9] = EOC')],
-      'Mutate FAT[9] to 5 in a disposable image. A correct reader detects or bounds the cycle instead of repeatedly returning old data.'),
+      'Mutate FAT[9] to 5 in a disposable image. A correct reader detects or bounds the cycle and reports an error.'),
   },
   'fat-write-driver': {
     contract: aid('flow', 'Durability requires knowing what has actually reached storage',
-      'A successful memory copy into a cache is not a durable write. Define whether this driver promises only in-memory consistency, ordered device writes, or recovery after power loss.', [
-        node('caller', 'Caller modifies a file', 'Intent and success semantics', 'Specify when the API reports success and what remains guaranteed after an interrupted write. A teaching driver should state this limit rather than suggesting that every successful write is crash-atomic.'),
-        node('cache', 'Dirty cache state', 'New bytes still in RAM', 'Metadata and data may be modified together in memory yet reach storage at different times. A lock preserves concurrent in-memory consistency, not persistence order.'),
+      'A memory copy updates the cache; durability requires the relevant device writes to complete. Define whether this driver promises only in-memory consistency, ordered device writes, or recovery after power loss.', [
+        node('caller', 'Caller modifies a file', 'Intent and success semantics', 'Specify when the API reports success and what remains guaranteed after an interrupted write. Document the driver’s durability guarantee and its recovery limits.'),
+        node('cache', 'Dirty cache state', 'New bytes still in RAM', 'Metadata and data may be modified together in memory yet reach storage at different times. A lock preserves concurrent in-memory consistency. Persistence ordering requires the appropriate storage protocol.'),
         node('device', 'Device write completion', 'Controller may still cache', 'A block write acknowledgement can precede durable media persistence. Flush support, ordering constraints, and error propagation determine which stronger promises the stack can make.'),
         node('recovery', 'Recovery after interruption', 'Inspect actual on-disk state', 'FAT has no general journal in this design. Repair may need to identify leaks, truncated chains, or inconsistent metadata; do not claim atomic recovery merely because normal runs mount successfully.'),
       ], [edge('caller', 'cache', 'modify'), edge('cache', 'device', 'submit and flush'), edge('device', 'recovery', 'power-cut experiment')],
@@ -351,7 +351,7 @@ export const systemsReadingAids = {
       ], [], 'If 0x123 becomes 0x456, the bytes should become 56 C4 AB. The neighbor must still decode to 0xABC; test it explicitly.',
       code('c', '/* Known fixture for a decoder/writeback property test. */\nconst uint8_t before[3] = {0x23, 0xC1, 0xAB};\nconst uint8_t expected_after[3] = {0x56, 0xC4, 0xAB};\n/* Change one entry; assert the other remains 0xABC. */')),
     ordering: aid('trace', 'Creating a file exposes several possible crash points',
-      'This is a reasoning model for an initially absent file, not a journal protocol or a claim of crash atomicity. Each stage needs its own error and recovery policy.', [
+      'This model follows creation of an initially absent file. Crash atomicity would require additional recovery machinery, such as a suitable journal protocol. Each stage needs its own error and recovery policy.', [
         node('claim', 'Select and reserve clusters', 'No live owner may reuse them', 'Serialize allocation against other writers. If the operation fails before publication, track which reservations must be released or recovered.'),
         node('data', 'Initialize data', 'Avoid exposing stale bytes', 'Write the intended content and initialize any bytes the file may expose. Publishing a directory entry before this stage risks readers observing prior contents from reused clusters.'),
         node('chain', 'Persist allocation metadata', 'Link clusters; update required FAT copies', 'Respect the volume’s mirroring policy. A crash between copies or between cluster links can leave a repair problem even when each individual sector write succeeded.'),
@@ -362,24 +362,24 @@ export const systemsReadingAids = {
   'libc-and-shell': {
     boundary: aid('flow', 'The shell reaches hardware through replaceable interfaces',
       'A shell parses user intent. Keeping it outside the kernel forces the OS to provide usable process, file, and I/O contracts.', [
-        node('shell', 'Shell process', 'Read → parse → execute → wait', 'The shell owns command syntax and user-facing behavior. An unknown command should become a controlled process-launch error rather than a kernel parser special case.'),
+        node('shell', 'Shell process', 'Read → parse → execute → wait', 'The shell owns command syntax and user-facing behavior. Handle an unknown command as a controlled process-launch error.'),
         node('libc', 'Small C runtime', 'Functions and syscall wrappers', 'Libc supplies convenient interfaces such as string operations and write wrappers. It translates the course’s syscall ABI without assuming that a host libc can run in this freestanding environment.'),
-        node('kernel', 'Kernel services', 'Descriptors, processes, mappings', 'The kernel validates operations and owns resources. Descriptor 1 refers to an open object in a process table; it is not inherently the VGA screen.'),
+        node('kernel', 'Kernel services', 'Descriptors, processes, mappings', 'The kernel validates operations and owns resources. Descriptor 1 refers to an open object in a process table; that object determines where output goes.'),
         node('drivers', 'Devices or files', 'Concrete I/O implementation', 'A write can target a terminal, regular file, or pipe through the same descriptor interface. This indirection is what makes redirection possible without rewriting the program.'),
       ], [edge('shell', 'libc', 'C interface'), edge('libc', 'kernel', 'syscall ABI'), edge('kernel', 'drivers', 'object operation')],
       'Use the same tiny program with output directed to the terminal and then a pipe. If it needs different device code, the interface boundary is leaking.'),
     startup: aid('flow', 'The first user instruction is usually not main',
       'The loader and runtime must agree on stack contents, argument representation, alignment, and the meaning of program termination.', [
-        node('loader', 'ELF loader', 'Creates address space and entry stack', 'Place argument strings and pointer arrays in valid user mappings. Every pointer stored on the stack must refer to the process’s virtual addresses, not temporary kernel buffers.'),
+        node('loader', 'ELF loader', 'Creates address space and entry stack', 'Place argument strings and pointer arrays in valid user mappings. Every pointer stored on the stack must refer to a valid mapping in the process’s virtual address space.'),
         node('start', '_start', 'Assembly/runtime entry', 'The entry routine reads the chosen startup layout and arranges a normal C call to main. There is no ordinary caller whose return address makes RET a valid exit operation.'),
         node('main', 'main(argc, argv)', 'Application code', 'The application can use the runtime’s documented interfaces. Its local stack behavior now follows the selected C ABI, including alignment and preserved-register rules.'),
         node('exit', 'exit syscall', 'Release resources and notify parent', 'Returning from main passes its result to the exit wrapper. The kernel retires the process and makes its status available to waiters; execution must not fall into uninitialized bytes.'),
       ], [edge('loader', 'start', 'validated entry'), edge('start', 'main', 'ABI call'), edge('main', 'exit', 'return status')],
       'A tiny program returning 7 is a better first process test than an interactive shell: its startup, exit, and wait result are easy to observe.'),
     parser: aid('trace', 'Quoted text changes token boundaries',
-      'Work through: echo "two words". The output is two arguments, not three. The parser’s state changes what a space means.', [
+      'Work through: echo "two words". The output has two arguments: echo and the quoted string. The parser’s state changes what a space means.', [
         node('plain', 'Unquoted state', 'Read e c h o', 'Ordinary characters append to the current token. Whitespace finishes a token only when the parser is not inside a quoting context.'),
-        node('quote', 'Opening quote', 'Enter quoted state', 'The quote changes parser state rather than becoming part of the final argument under this simple policy. Record that a token has started so an empty quoted string can still produce an argument.'),
+        node('quote', 'Opening quote', 'Enter quoted state', 'Under this simple policy, the quote changes parser state and is omitted from the final argument. Record that a token has started so an empty quoted string can still produce an argument.'),
         node('space', 'Space inside quotes', 'Append a literal space', 'The characters two, one space, and words belong to one argument. Apply output-buffer and argument-count limits before writing, including the terminating NUL.'),
         node('end', 'Closing quote and end', 'Emit the second argument', 'Return to unquoted state, finish the token, and terminate the pointer array. End-of-input while still quoted should produce a clear syntax error according to the chosen grammar.'),
       ], [edge('plain', 'quote', 'quote encountered'), edge('quote', 'space', 'literal characters'), edge('space', 'end', 'matching quote')],
@@ -390,18 +390,18 @@ export const systemsReadingAids = {
     separate: aid('compare', 'Firmware interface and CPU mode are separate choices',
       'Plan the migration as two architectural boundaries. Replacing BIOS with UEFI does not automatically port the kernel’s types, calling convention, page tables, or interrupt entry.', [
         node('bios', 'Current BIOS path', 'Real-mode stages → 32-bit kernel', 'The loader uses BIOS services, a raw sector image, and a controlled protected-mode transition. Its kernel contract can remain stable while other boot implementations are developed.'),
-        node('long', '64-bit kernel port', 'New paging and ABI assumptions', 'Long mode changes address handling, descriptor details, register width, interrupt frames, and compiler calling conventions. Audit structures containing pointers instead of mechanically widening every integer.'),
+        node('long', '64-bit kernel port', 'New paging and ABI assumptions', 'Long mode changes address handling, descriptor details, register width, interrupt frames, and compiler calling conventions. Audit pointer-containing structures and choose each field’s width according to its role.'),
         node('uefi', 'UEFI loader port', 'PE/COFF application + firmware protocols', 'The loader obtains files, framebuffer metadata, and memory descriptors from firmware protocols. The successful ExitBootServices handoff replaces BIOS service use with kernel-owned drivers and memory policy.'),
       ], [], 'The browser’s v86 target is the course’s 32-bit path. Use a suitable QEMU x86-64/UEFI setup for these migration experiments; do not label a browser-only trace as a 64-bit boot.'),
     'long-mode': aid('flow', 'Long-mode entry depends on a complete translation path',
-      'This outline assumes feature checks passed, paging is initially off, and a conventional four-level long-mode setup is selected. It is a dependency diagram, not a standalone transition routine.', [
+      'This outline assumes feature checks passed, paging is initially off, and a conventional four-level long-mode setup is selected. Use this dependency diagram to plan the complete transition routine.', [
         node('maps', 'Build the hierarchy', 'PML4 → PDPT → PD → PT', 'Use aligned paging structures with supported entries. Map the transition code, stack, descriptor tables, and intended 64-bit destination. The CPU still needs to fetch instructions immediately after paging changes.'),
         node('pae', 'Prepare control state', 'CR4.PAE and physical CR3', 'Enable the required PAE paging interpretation and load CR3 with the physical root address. Preserve unrelated control bits and follow the architectural enable sequence.'),
         node('lme', 'Request long mode', 'EFER.LME before CR0.PG', 'With the required state ready, setting PG activates IA-32e operation. The current code segment determines whether execution is in compatibility or 64-bit submode.'),
         node('code64', 'Enter a 64-bit code segment', 'L = 1, D = 0', 'A far control transfer selects the appropriate descriptor. Establish the 64-bit stack and ABI before calling compiled code; merely assembling BITS 64 instructions cannot change the CPU mode.'),
       ], [edge('maps', 'pae', 'valid tables'), edge('pae', 'lme', 'control prerequisites'), edge('lme', 'code64', 'paging enabled')],
       'A noncanonical pointer and an unmapped canonical pointer are different errors. Both need deliberate return-address and memory-access policies.',
-      code('asm', '; Diagnostic fragment in 32-bit ring-0 code.\nmov eax, cr4\ntest eax, 1 << 5          ; Inspect PAE; do not change it.\n; ZF=0 means PAE is set, not that long mode is active.\n; Inspect EFER and the current code descriptor as well.')),
+      code('asm', '; Diagnostic fragment in 32-bit ring-0 code.\nmov eax, cr4\ntest eax, 1 << 5          ; Inspect PAE; do not change it.\n; ZF=0 means PAE is set; long-mode activation needs further checks.\n; Inspect EFER and the current code descriptor as well.')),
     uefi: aid('flow', 'ExitBootServices consumes the current memory-map version',
       'Firmware owns the boot-services environment until the exit succeeds. Allocations can change the map, so the final handoff must be narrow and deliberate.', [
         node('prepare', 'Prepare permanent inputs', 'Kernel image, stack, boot info', 'Allocate required buffers and capture graphics information while the relevant protocols remain available. Keep space for a map that may grow during preparation.'),
@@ -421,17 +421,17 @@ export const systemsReadingAids = {
       'State which data a lock protects and which operations participate. A lock used by only one of the CPUs does not protect a shared invariant.',
       code('c', '/* Isolated counting example; not object publication. */\n__atomic_fetch_add(&counter, 1u, __ATOMIC_RELAXED);\n/* Atomic increment alone promises no ordering of other data. */')),
     apic: aid('flow', 'An interrupt route includes a destination CPU',
-      'The APIC system separates external interrupt routing from each CPU’s local interrupt controller. Discover actual topology rather than assuming legacy IRQ numbers describe it.', [
+      'The APIC system separates external interrupt routing from each CPU’s local interrupt controller. Discover the actual interrupt-routing topology from the platform information.', [
         node('source', 'Device interrupt source', 'Line or message', 'An external device event enters the configured routing mechanism. Firmware tables describe relevant controller addresses, IDs, and source overrides for the platform.'),
         node('io', 'I/O APIC routing', 'Vector + destination + trigger policy', 'For routed line interrupts, redirection entries choose how and where to deliver an event. Polarity and edge/level behavior must match the source; a wrong level-trigger policy can create repeated interrupts.'),
-        node('local', 'Local APIC on one CPU', 'Per-CPU delivery and EOI', 'The local APIC handles local timer events and interprocessor interrupts as well as routed events. Its identity is hardware topology information, not automatically a dense array index.'),
+        node('local', 'Local APIC on one CPU', 'Per-CPU delivery and EOI', 'The local APIC handles local timer events and interprocessor interrupts as well as routed events. Its hardware identifier needs an explicit mapping if the kernel stores CPU records in a dense array.'),
         node('handler', 'That CPU’s entry path', 'IDT + stack + per-CPU state', 'Every receiving CPU needs valid entry state and a handler for the chosen vector. EOI and device acknowledgement must match the source protocol and the chosen interrupt-controller mode.'),
       ], [edge('source', 'io', 'external line'), edge('io', 'local', 'route to CPU'), edge('local', 'handler', 'vector delivery')],
       'First route one known timer or device event to one CPU and record its CPU ID. Add load distribution only after the path is observable.'),
     startup: aid('flow', 'Each application processor boots through its own entry path',
       'The bootstrap processor cannot assume that another CPU already shares its segment registers, stack, TSS, or local interrupt state.', [
         node('trampoline', 'Prepare a low-memory trampoline', 'Page-aligned startup region', 'The startup vector identifies a 4 KiB page below 1 MiB. Keep the trampoline and handoff data reserved while processors may still read them; validate the exact startup protocol for the chosen APIC mode.'),
-        node('signal', 'Send the startup sequence', 'INIT / SIPI protocol', 'Use the architectural timing and delivery rules rather than arbitrary busy waits. Record which AP is expected to start and bound the wait for its acknowledgement.'),
+        node('signal', 'Send the startup sequence', 'INIT / SIPI protocol', 'Follow the architectural timing and delivery rules. Record which AP is expected to start and bound the wait for its acknowledgement.'),
         node('private', 'AP establishes private state', 'Unique stack, descriptors, CPU record', 'A shared startup stack creates immediate corruption. The AP enters the intended mode, selects its stack, initializes local state, and identifies its per-CPU record before joining normal execution.'),
         node('ready', 'Publish readiness', 'Synchronized acknowledgement', 'The BSP must observe an initialized AP state through a valid synchronization protocol. A visible flag without ordering does not prove the rest of the AP’s setup is visible.'),
       ], [edge('trampoline', 'signal', 'entry bytes ready'), edge('signal', 'private', 'AP begins'), edge('private', 'ready', 'initialization complete')],
@@ -440,7 +440,7 @@ export const systemsReadingAids = {
       'CPU B may have cached a translation even after CPU A clears the page-table entry. A frame cannot be repurposed while another CPU can still access it through the old translation.', [
         node('revoke', 'A removes or changes the PTE', 'Page-table memory updated', 'Synchronize the address-space update so software walkers and concurrent mappings see a coherent state. Decide which CPUs could have used this address space.'),
         node('notify', 'A requests invalidation', 'Shootdown message to relevant CPUs', 'An interprocessor interrupt or equivalent protocol tells other CPUs which translation context needs invalidation. The chosen operation must match the address-space and global-mapping policy.'),
-        node('invalidate', 'B invalidates and acknowledges', 'Local cached translation retired', 'An INVLPG performed by A affects A’s translation state, not B’s. Each target acknowledges only after completing the required local invalidation and ordering.'),
+        node('invalidate', 'B invalidates and acknowledges', 'Local cached translation retired', 'An INVLPG performed by A updates A’s local translation state. B must perform its own invalidation. Each target acknowledges only after completing the required local invalidation and ordering.'),
         node('reuse', 'A may finally release the frame', 'After all required acknowledgements', 'Reusing the frame earlier can let B write through a stale address into a completely different owner’s data. Frame lifetime therefore includes the translation-revocation protocol.'),
       ], [edge('revoke', 'notify', 'mapping revoked in memory'), edge('notify', 'invalidate', 'IPI'), edge('invalidate', 'reuse', 'all targets complete')],
       'Stress-test unmap and frame reuse concurrently with accesses on another CPU. Single-CPU paging tests cannot expose this stale-translation race.'),
@@ -448,14 +448,14 @@ export const systemsReadingAids = {
   capstone: {
     definition: aid('flow', 'Connect each engineering claim to reproducible evidence',
       '“The OS works” combines many unrelated claims. Break it into contracts that another engineer can reproduce from source, a toolchain, and named inputs.', [
-        node('claim', 'Concrete claim', 'Example: no frame has two live owners', 'Name the subsystem, input domain, and observable invariant. A screenshot of a boot message establishes that output path, not allocator uniqueness or filesystem crash consistency.'),
-        node('input', 'Controlled experiment', 'Known setup + adversarial cases', 'Specify machine configuration, image, seed, and fault injection. Include boundary cases that could falsify the claim rather than only examples expected to succeed.'),
+        node('claim', 'Concrete claim', 'Example: no frame has two live owners', 'Name the subsystem, input domain, and observable invariant. A boot screenshot demonstrates the output path. Allocator uniqueness and filesystem recovery each need dedicated evidence.'),
+        node('input', 'Controlled experiment', 'Known setup + adversarial cases', 'Specify machine configuration, image, seed, and fault injection. Include boundary and failure cases that could falsify the claim.'),
         node('evidence', 'Recorded result', 'Expected and actual state', 'Keep logs, failing seeds, binaries, and the commands needed to rerun them. Explain which state was inspected and whether the check ran natively, in an emulator, or only as a host model.'),
         node('limit', 'Explicit scope', 'What remains unproved', 'State remaining concurrency, hardware, and malformed-input coverage. A narrow supported contract is useful; an unqualified production-ready label hides the engineering work still required.'),
       ], [edge('claim', 'input', 'falsifiable test'), edge('input', 'evidence', 'execute and observe'), edge('evidence', 'limit', 'interpret honestly')],
       'Put the reproduction command beside every major claim in your final report. Someone else should be able to obtain the same evidence.'),
     testing: aid('compare', 'Choose the cheapest environment that can expose the bug',
-      'Testing layers complement each other. A successful low-level model test is not automatically a successful hardware integration test.', [
+      'Testing layers complement each other. Check hardware integration separately after validating the low-level model.', [
         node('host', 'Host model tests', 'Pure algorithms and hostile metadata', 'Use ordinary C tests for checked arithmetic, bitmap invariants, FAT decoding, parsing, and scheduling policy models. These tests run quickly but do not prove interrupt entry or real device behavior.'),
         node('cpu', 'Machine execution tests', 'Registers, memory, flags, exceptions', 'Execute native instructions in the emulator and compare actual state against independent expectations. Vary inputs and initial memory so hard-coded output or friendly zero-filled RAM cannot substitute for the intended behavior.'),
         node('integration', 'Whole-system tests', 'Boot → drivers → userspace', 'Boot the integrated image, run programs, inject disk failures, and verify resource cleanup. SMP races, UEFI handoff, and persistence boundaries need environments that actually expose those mechanisms.'),
@@ -464,7 +464,7 @@ export const systemsReadingAids = {
     architecture: aid('flow', 'How your source becomes evidence inside this site',
       'The editor, compiler, emulator, and grader have separate roles. Keeping those boundaries visible helps distinguish an editing issue from a compile error or a genuine CPU failure.', [
         node('source', 'Authored project snapshot', 'Files + selected checkpoint', 'The workspace captures the exact current sources for a run. Editing afterward makes that run stale: old output cannot certify new code.'),
-        node('compile', 'Build worker', 'NASM / Clang → LLD → artifacts', 'Assembly and freestanding C become native x86 bytes. The build checks limits and reports file-and-line diagnostics; a downloadable binary is the result of this stage, not proof of correct behavior.'),
+        node('compile', 'Build worker', 'NASM / Clang → LLD → artifacts', 'Assembly and freestanding C become native x86 bytes. The build checks limits and reports file-and-line diagnostics; this stage produces a downloadable binary whose behavior you can then test.'),
         node('machine', 'x86 emulator', 'Execute the actual artifact', 'The machine boots the built image and exposes observable state. A bounded run must distinguish successful completion, expected halt, timeout, and an architectural fault.'),
         node('grade', 'Behavior checks and reflection', 'Expected state versus observed state', 'Machine checks assess the implemented contracts against varied cases. The explanation records why the result occurs and identifies any integration evidence that the local exercise cannot supply.'),
       ], [edge('source', 'compile', 'immutable run input'), edge('compile', 'machine', 'binary image'), edge('machine', 'grade', 'actual state')],

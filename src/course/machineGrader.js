@@ -304,7 +304,7 @@ export async function runCheckpointTests({ files, guide, signal, onProgress }) {
   checkAbort(signal);
   const tests = guide?.step?.tests;
   if (!tests || !['routine', 'kernel', 'c-function'].includes(tests.kind) || !Array.isArray(tests.cases) || !tests.cases.length) {
-    return { passed: false, kind: 'manual', summary: 'This project does not yet have an automated behavior contract.', scope: 'Booting is an observation, not a correctness result. Record the chapter’s requested evidence.', cases: [] };
+    return { passed: false, kind: 'manual', summary: 'This project does not yet have an automated behavior contract.', scope: 'Record the boot observation alongside the chapter’s requested correctness evidence.', cases: [] };
   }
   if (tests.cases.length > 24) throw new Error('A checkpoint may run at most twenty-four machine-test cases.');
   const snapshot = { ...files }; const cases = [];
@@ -336,5 +336,5 @@ export async function runCheckpointTests({ files, guide, signal, onProgress }) {
   checkAbort(signal);
   const passed = cases.length === tests.cases.length && cases.every(testCase => testCase.passed);
   const successful = cases.filter(testCase => testCase.passed).length;
-  return { passed, kind: tests.kind, summary: `${successful}/${tests.cases.length} machine cases passed.`, scope: tests.scope || 'Tests cover the stated inputs and machine assertions; passing examples are not a proof for every possible program.', cases };
+  return { passed, kind: tests.kind, summary: `${successful}/${tests.cases.length} machine cases passed.`, scope: tests.scope || 'Tests cover the stated inputs and machine assertions. Review additional cases that your program needs to support.', cases };
 }

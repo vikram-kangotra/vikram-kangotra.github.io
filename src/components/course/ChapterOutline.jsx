@@ -1,7 +1,7 @@
 /* global Set */
 import { useEffect, useId, useRef } from 'react';
 import { FiCheck, FiCode, FiLock, FiSkipForward } from 'react-icons/fi';
-import { isCheckpointSkipped } from '@/course/lessonAccess';
+import { getCheckpointLessonIndex, isCheckpointSkipped } from '@/course/lessonAccess';
 import styles from './chapter-outline.module.css';
 
 function lessonTitle(title) {
@@ -54,10 +54,10 @@ export default function ChapterOutline({ chapter, lessonIndex, readLessons = [],
           const active = index === lessonIndex;
           const locked = !!gate && index > gate.lessonIndex;
           const lockReason = locked ? `Pass or skip the checkpoint in lesson ${gate.lessonIndex + 1} to unlock this lesson.` : '';
-          const checkpoints = steps.map((step, stepIndex) => ({ step, stepIndex })).filter(({ step }) => step.sectionId === section.id);
+          const checkpoints = steps.map((step, stepIndex) => ({ step, stepIndex })).filter(({ step }) => getCheckpointLessonIndex(chapter, step) === index);
           const passed = checkpoints.length > 0 && checkpoints.every(({ step, stepIndex }) => checkpointPassed(step, stepIndex));
           const skipped = !passed && checkpoints.some(({ stepIndex }) => isCheckpointSkipped(stepIndex, state));
-          const checkpointStatus = checkpoints.length ? passed ? 'Coding checkpoint passed' : skipped ? 'Coding checkpoint skipped, not passed' : 'Coding checkpoint not passed' : '';
+          const checkpointStatus = checkpoints.length ? passed ? 'Coding checkpoint passed' : skipped ? 'Coding checkpoint skipped; submission pending' : 'Coding checkpoint not passed' : '';
           const statusId = `${outlineId}-lesson-${index}-status`;
           return <li key={section.id}>
             <button ref={active ? selected : undefined} type="button" className={styles.lesson} data-lesson-index={index} data-read={read} data-locked={locked} data-checkpoint-state={checkpoints.length ? passed ? 'passed' : skipped ? 'skipped' : 'pending' : undefined} aria-disabled={locked || undefined} aria-current={active ? 'step' : undefined} title={lockReason || undefined} aria-describedby={statusId} onClick={() => onSelectLesson?.(index)}>

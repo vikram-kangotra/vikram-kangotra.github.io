@@ -1,18 +1,10 @@
 /* global globalThis */
-import { bootExample } from './bootAssembler';
-import { kernelProjectFiles } from './kernelProject';
+import { playgroundProjects } from './playgroundProjects';
 import { validateProjectFiles } from '@/components/course/useProjectFiles';
 
 const COPY_PREFIX = 'vk-os-playground-copy-v1:';
-const routineFiles = {
-  'lesson.asm': '; Your x86 scratchpad. Write 16-bit instructions here.\n; Available helpers: putc, puts, newline, print_hex16.\n; The harness calls this routine, then halts. End your routine with ret.\n',
-  'data.inc': '; Optional data, included after the routine and its return.\n',
-};
-const projects = {
-  example: routineFiles,
-  challenge: { 'boot.asm': bootExample },
-  kernel: kernelProjectFiles,
-};
+const projects = playgroundProjects;
+const routineFiles = projects.example;
 
 export const defaultPlayground = {
   id: 'main', title: 'Your scratchpad', initialMode: 'example',

@@ -360,7 +360,7 @@ int32_t os_write(int fd, const void *buffer, uint32_t length) {
     COURSE_ASSERT_EQ(user_return_address(UINT64_C(0x1000000001000)), false);
     COURSE_ASSERT_EQ(user_return_address(UINT64_C(0xffff000000001000)), false);`, 'Keep the input 64 bits wide even though this exercise executes in an i386 test kernel.'),
     ],
-    scope: 'Checks a 64-bit address-policy function compiled for i386. This is not a long-mode boot, UEFI test, executable-page check, or complete SYSRET safety proof.',
+    scope: 'Checks a 64-bit address-policy function compiled for i386. Long-mode boot, UEFI, executable-page checks, and complete SYSRET safety require separate validation.',
   },
   'apic-and-smp': {
     contract: 'Keep struct message { int payload; unsigned ready; }. Implement void publish(struct message *, int) and int consume(struct message *) for one-shot release/acquire publication. The machine checks below cover completed publication only; justify the memory ordering separately.',

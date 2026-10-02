@@ -246,7 +246,7 @@ export default function ProjectEditor({ files = {}, activeFile, onSelectFile, on
 
   return <div ref={workspace} className={`${styles.workspace} ${compact ? styles.compact : ''}`}>
     <div className={styles.workspaceBar}>
-      <button ref={explorerToggle} type="button" className={`${styles.filesToggle} ${showExplorer ? styles.pressed : ''}`} aria-label={showExplorer ? 'Hide files' : 'Show files'} aria-expanded={showExplorer} aria-controls={`${dialogId}-explorer`} onClick={() => setExplorerOpen(!showExplorer)} title={showExplorer ? 'Hide file explorer' : 'Show file explorer'}><FiSidebar aria-hidden="true" /><span>Files</span>{paths.length > 1 && <span className={styles.fileCount} aria-hidden="true">{paths.length}</span>}</button>
+      <button ref={explorerToggle} type="button" className={`${styles.filesToggle} ${showExplorer ? styles.pressed : ''}`} aria-label={`${showExplorer ? 'Hide' : 'Show'} files${paths.length > 1 ? ` ${paths.length}` : ''}`} aria-expanded={showExplorer} aria-controls={`${dialogId}-explorer`} onClick={() => setExplorerOpen(!showExplorer)} title={showExplorer ? 'Hide file explorer' : 'Show file explorer'}><FiSidebar aria-hidden="true" /><span>Files</span>{paths.length > 1 && <>{' '}<span className={styles.fileCount}>{paths.length}</span></>}</button>
       <button type="button" className={styles.newFileButton} disabled={disabled || !onCreateFile} onClick={() => beginOperation('create')} title="Create a file"><FiFilePlus aria-hidden="true" /><span>New file</span></button>
     </div>
     <div className={styles.body}>

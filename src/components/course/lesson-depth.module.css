@@ -1,0 +1,58 @@
+.depth{margin:36px 0;padding-top:28px;border-top:1px solid var(--line);color:var(--ink);min-width:0;container-type:inline-size}
+.depth .kicker{font:11px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.04em;color:var(--accent)}
+.depth h3{font-size:23px;line-height:1.4;font-weight:650;letter-spacing:-.025em;margin:9px 0 18px}
+.depth h4{font-size:18px;line-height:1.5;font-weight:600;letter-spacing:-.015em;margin:8px 0 14px}
+.depth p{font-size:15px;line-height:1.9;margin:14px 0;overflow-wrap:anywhere}
+.depth code{font: .9em/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;background:var(--surface);padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}
+.example{margin:28px 0;padding:24px;border:1px solid var(--line);border-radius:10px;background:var(--surface);min-width:0}
+.steps{list-style:none;padding:0;margin:24px 0;display:grid;gap:22px}
+.steps>li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;margin:0;padding:0}
+.steps strong{font-size:15px;line-height:1.6}
+.steps p{margin:6px 0 0}
+.stepNumber{display:grid;place-items:center;align-self:start;height:28px;border-radius:50%;background:var(--soft);color:var(--accent);font:12px ui-monospace,SFMono-Regular,Consolas,monospace;border:1px solid var(--line)}
+.depth .state{margin:12px 0 0;padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--code-bg);color:var(--code-ink);white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.8}
+.state code{padding:0;background:none;font-size:inherit}
+.depth .conclusion{border-top:1px solid var(--line);padding-top:18px;margin-bottom:0}
+.pitfalls{margin:30px 0;padding-left:18px;border-left:3px solid var(--amber)}
+.transfer{padding:20px 24px;background:var(--soft);border:1px solid var(--line);border-radius:8px;margin:26px 0}
+.transfer p{margin-bottom:0}
+.flowchart{margin:30px 0;border:1px solid var(--line);border-radius:10px;background:var(--paper);overflow:hidden;min-width:0}
+.flowchart header{padding:22px 24px 8px}
+.depth .graphHint{font-size:12px;color:var(--muted);padding:0 24px;margin:8px 0 20px}
+.graph{position:relative;margin:0 8px;isolation:isolate}
+.paths{position:absolute;width:100%;height:100%;inset:0;overflow:visible}
+.paths path{fill:none;stroke:var(--muted);stroke-width:1.5}
+.paths path[data-active='true']{stroke:var(--accent);stroke-width:2}
+.edge{position:absolute;transform:translate(-50%,-50%);font:11px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--muted);background:var(--paper);padding:3px;width:max-content;max-width:66px;text-align:center;overflow-wrap:anywhere}
+.edge:empty{display:none}
+.edge[data-active='true']{color:var(--accent)}
+.arrow{position:absolute;width:0;height:0;border:5px solid transparent;transform:translate(-50%,-50%);color:var(--muted)}
+.arrow[data-active='true']{color:var(--accent)}
+.arrow[data-direction='down']{border-top-color:currentColor;margin-top:-2px}
+.arrow[data-direction='left']{border-right-color:currentColor}
+.arrow[data-direction='right']{border-left-color:currentColor}
+.node{position:absolute;left:24%;width:52%;height:80px;background:transparent;border:0;color:var(--ink);display:grid;place-items:center;text-align:center;cursor:pointer;padding:9px 12px;font-family:inherit;font-size:14px;font-weight:600;line-height:1.35;isolation:isolate}
+.node>svg{position:absolute;inset:0;width:100%;height:100%;z-index:-1;fill:var(--surface);stroke:var(--muted);stroke-width:1}
+.node[aria-pressed='true']>svg{fill:var(--soft);stroke:var(--accent);stroke-width:2}
+.node>span{max-width:100%;font-size:14px;line-height:1.3;overflow-wrap:anywhere}
+.node[data-kind='decision']>span{max-width:68%;font-size:13px}
+.node:hover>svg{stroke:var(--accent)}
+.node:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:5px}
+.nodeDetail{padding:18px 24px;border-top:1px solid var(--line);background:var(--surface)}
+.nodeDetail strong{font-size:15px;color:var(--accent)}
+.nodeDetail p{margin-bottom:0}
+.pathsText{border-top:1px solid var(--line);font-size:14px;line-height:1.8}
+.pathsText summary{padding:14px 24px;cursor:pointer;min-height:48px;color:var(--ink)}
+.pathsText ol{margin:0;padding:0 24px 20px 44px}
+.pathsText ol>li{padding:8px 0}
+.pathsText ul{list-style:disc;margin:4px 0 0;padding-left:20px;color:var(--muted)}
+.flowchart figcaption{border-top:1px solid var(--line);padding:14px 24px;font-size:12px;line-height:1.8;color:var(--muted)}
+.studyPlan{margin:20px 0 26px;padding:18px 20px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.studyPlan h3{font-size:15px!important;margin:0 0 12px!important;font-weight:600}
+.studyPlan dl{display:flex;gap:24px;flex-wrap:wrap;margin:0}
+.studyPlan dl>div{display:flex;flex-direction:column;gap:4px}
+.studyPlan dt{font-size:12px;color:var(--muted)}
+.studyPlan dd{font-size:18px;font-weight:600;color:var(--ink);margin:0}
+.studyPlan p{font-size:12px!important;line-height:1.8!important;color:var(--muted);margin:14px 0 0!important}
+@container(max-width:420px){.depth h3{font-size:21px}.example{padding:18px 14px}.steps>li{grid-template-columns:24px minmax(0,1fr);gap:9px}.stepNumber{height:24px}.flowchart header{padding:18px 14px 8px}.depth .graphHint{padding:0 14px}.nodeDetail{padding:18px 14px}.flowchart figcaption{padding:14px}.pathsText summary{padding:14px}.pathsText ol{padding-right:14px;padding-left:34px}.transfer{padding:18px 14px}.edge{font-size:10px;max-width:50px}.node>span{font-size:13px}.node[data-kind='decision']>span{font-size:12px}}
+@media print{.pathsText{display:block}.pathsText>ol{display:block!important}.nodeDetail{display:none}.example,.transfer{break-inside:avoid}}

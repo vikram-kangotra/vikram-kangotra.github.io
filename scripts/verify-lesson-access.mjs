@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readCourseModule } from './course-loader.mjs';
 
-const { isCheckpointPassed, isCheckpointSkipped, getLessonGate } = await readCourseModule('src/course/lessonAccess.js');
+const { isCheckpointPassed, isCheckpointSkipped, getLessonGate, getCheckpointLessonIndex } = await readCourseModule('src/course/lessonAccess.js');
 const tested = { sectionId: 'code', tests: { kind: 'routine' } };
 const draft = { sectionId: 'plan', runnable: false };
 
@@ -52,30 +52,37 @@ for (const chapter of course) {
 }
 
 const first = course.find(chapter => chapter.slug === 'assembly-first-instructions');
-assert.deepEqual(getLessonGate(first), { lessonIndex: 6, stepIndex: 0 }, 'The first gate is section 7');
-assert.deepEqual(getLessonGate(first, { buildSteps: [0, 1, 2] }), { lessonIndex: 6, stepIndex: 0 });
-assert.deepEqual(getLessonGate(first, { behaviorChecks: [1, 2], read: true }), { lessonIndex: 6, stepIndex: 0 }, 'Later legacy passes cannot bypass the first missing checkpoint');
-assert.deepEqual(getLessonGate(first, { behaviorChecks: [0] }), { lessonIndex: 8, stepIndex: 1 }, 'Passing section 7 unlocks section 8 and the section-9 checkpoint');
-assert.deepEqual(getLessonGate(first, { behaviorChecks: [0, 1] }), { lessonIndex: 9, stepIndex: 2 });
+assert.deepEqual(getLessonGate(first), { lessonIndex: 7, stepIndex: 0 }, 'The first gate retains its printing checkpoint after the new decoding lesson');
+assert.deepEqual(getLessonGate(first, { buildSteps: [0, 1, 2] }), { lessonIndex: 7, stepIndex: 0 });
+assert.deepEqual(getLessonGate(first, { behaviorChecks: [1, 2], read: true }), { lessonIndex: 7, stepIndex: 0 }, 'Later legacy passes cannot bypass the first missing checkpoint');
+assert.deepEqual(getLessonGate(first, { behaviorChecks: [0] }), { lessonIndex: 9, stepIndex: 1 }, 'Passing the printing checkpoint unlocks the scaffold and first-program checkpoint');
+assert.deepEqual(getLessonGate(first, { behaviorChecks: [0, 1] }), { lessonIndex: 10, stepIndex: 2 });
 assert.equal(getLessonGate(first, { behaviorChecks: [0, 1, 2] }), null);
-assert.deepEqual(getLessonGate(first, { skippedCheckpoints: [0] }), { lessonIndex: 8, stepIndex: 1 }, 'Explicit skip unlocks later reading');
+assert.deepEqual(getLessonGate(first, { skippedCheckpoints: [0] }), { lessonIndex: 9, stepIndex: 1 }, 'Explicit skip unlocks later reading');
 assert.equal(isCheckpointPassed(first.guide.steps[0], 0, { skippedCheckpoints: [0] }), false, 'A skip never counts as passed');
 assert.equal(isCheckpointSkipped(0, { skippedCheckpoints: ['0'] }), false);
 assert.equal(isCheckpointSkipped(0, { skippedCheckpoints: '0' }), false);
-assert.deepEqual(getLessonGate(first, { skippedCheckpoints: [1, 2] }), { lessonIndex: 6, stepIndex: 0 }, 'Skipping later tasks cannot bypass an earlier one');
+assert.deepEqual(getLessonGate(first, { skippedCheckpoints: [1, 2] }), { lessonIndex: 7, stepIndex: 0 }, 'Skipping later tasks cannot bypass an earlier one');
 assert.equal(getLessonGate(first, { skippedCheckpoints: [0, 1, 2] }), null, 'All explicit skips permit reading without awarding any passes');
-assert.deepEqual(getLessonGate(first, { skippedCheckpoints: [1], behaviorChecks: [0] }), { lessonIndex: 9, stepIndex: 2 }, 'Passes and deliberate skips both permit navigation');
+assert.deepEqual(getLessonGate(first, { skippedCheckpoints: [1], behaviorChecks: [0] }), { lessonIndex: 10, stepIndex: 2 }, 'Passes and deliberate skips both permit navigation');
 const firstGate = getLessonGate(first);
-assert.equal(6 > firstGate.lessonIndex, false, 'The checkpoint lesson itself stays accessible');
-assert.equal(7 > firstGate.lessonIndex, true, 'Section 8 stays locked until section 7 passes');
+assert.equal(7 > firstGate.lessonIndex, false, 'The checkpoint lesson itself stays accessible');
+assert.equal(8 > firstGate.lessonIndex, true, 'The next lesson stays locked until the printing checkpoint passes');
 
 // Progressive programs change at later checkpoints. Invalidation retains the
 // earlier achievements instead of requiring H, HI, and OK simultaneously.
 const passed = { buildSteps: [0, 1, 2], behaviorChecks: [0, 1, 2], buildRuns: [0, 1, 2] };
 const editedSecond = Object.fromEntries(Object.entries(passed).map(([key, values]) => [key, values.filter(index => index < 1)]));
 assert.equal(isCheckpointPassed(first.guide.steps[0], 0, editedSecond), true);
-assert.deepEqual(getLessonGate(first, editedSecond), { lessonIndex: 8, stepIndex: 1 });
+assert.deepEqual(getLessonGate(first, editedSecond), { lessonIndex: 9, stepIndex: 1 });
 const editedFirst = Object.fromEntries(Object.keys(passed).map(key => [key, []]));
-assert.deepEqual(getLessonGate(first, editedFirst), { lessonIndex: 6, stepIndex: 0 }, 'Earlier invalidation must relock later reading');
+assert.deepEqual(getLessonGate(first, editedFirst), { lessonIndex: 7, stepIndex: 0 }, 'Earlier invalidation must relock later reading');
 
 console.log(`PASS lesson access: pass semantics, ordered gates, safe orphan handling, first-chapter boundaries, explicit skips without pass credit, suffix invalidation; ${course.length} actual chapter guides / ${checkpointCount} valid checkpoint mappings.`);
+
+const expanded = { sections: [{id:'intro'},{id:'code'},{id:'table',parentSectionId:'code'},{id:'trace',parentSectionId:'code'},{id:'next'}], guide:{steps:[tested]} };
+assert.equal(getCheckpointLessonIndex(expanded,tested),3);
+assert.deepEqual(getLessonGate(expanded),{lessonIndex:3,stepIndex:0},'Supporting table and trace remain readable before submitting');
+assert.equal(expanded.sections[1].id,tested.sectionId,'Problem anchor stays stable');
+assert.equal(getLessonGate(expanded,{behaviorChecks:[0]}),null);
+for (const chapter of course.filter(c=>!c.slug.startsWith('assembly-') && c.slug!=='bootloading')) assert.equal(chapter.guide.steps[0].sectionId,chapter.legacySectionIds.at(-1),'Project checkpoint stays on original section');

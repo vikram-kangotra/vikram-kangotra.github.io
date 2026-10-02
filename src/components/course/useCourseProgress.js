@@ -11,6 +11,7 @@ function parse(raw) {
     const state = {};
     ['complete', 'read', 'lab', 'assembly'].forEach((key) => { state[key] = record[key] === true; });
     ['code', 'reflection'].forEach((key) => { if (typeof record[key] === 'string') state[key] = record[key].slice(0, 200000); });
+    if (Array.isArray(record.lessonIds)) state.lessonIds = record.lessonIds.filter(id => typeof id === 'string' && /^[a-z0-9-]+$/.test(id)).slice(0, 1000);
     ['checks', 'rubric', 'lessons', 'openBuilds', 'buildAttempts', 'buildSteps', 'buildRuns', 'behaviorChecks', 'skippedCheckpoints'].forEach((key) => { state[key] = Array.isArray(record[key]) ? record[key].filter((i) => Number.isInteger(i) && i >= 0 && i < 100) : []; });
     // Older output-only completions remain readable, but must not appear as
     // completed behavioral verification in the curriculum or course overview.

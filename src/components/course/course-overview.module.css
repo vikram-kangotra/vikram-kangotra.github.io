@@ -120,6 +120,8 @@
 .download small { display: block; font-size: 9px; color: var(--muted); }
 .download:hover { color: var(--accent); }
 .references { padding: 2px 9px; }
+.referenceLink { margin: 0 0 16px; }
+.referenceLink a { display: inline-block; min-height: 32px; padding: 6px 0; line-height: 1.6; }
 .references > p { margin-top: 7px; color: var(--muted); font-size: 11px; line-height: 1.7; }
 .references ul { list-style: none; padding: 0; margin: 13px 0 0; display: grid; gap: 2px; }
 .references a { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 11px; color: var(--muted); padding: 7px 0; }
@@ -233,3 +235,4 @@
   .phase { break-inside: avoid; }
   .chapterRow { padding: 10px; }
 }
+.studyEstimate{font-size:11px!important;line-height:1.7!important;color:var(--muted);margin:9px 0 0!important}

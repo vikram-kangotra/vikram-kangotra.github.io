@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { FiArrowRight, FiBookOpen, FiCheck, FiChevronRight, FiClock, FiCode, FiCpu, FiExternalLink, FiLayers, FiSearch, FiTerminal, FiX } from 'react-icons/fi';
 import { SEO } from '@/components/ui';
 import { chapters, chapterSummary, courseTitle } from '@/course';
+import { isChapterComplete } from '@/course/lessonProgress';
 import CourseShell from '@/components/course/CourseShell';
 import useCourseProgress from '@/components/course/useCourseProgress';
 import styles from '@/components/course/course-overview.module.css';
@@ -25,7 +26,7 @@ function hasStarted(state) {
   return Boolean(state && (state.read || state.lessons?.length || state.lab || state.assembly || state.code || state.reflection));
 }
 
-export default function Course({ roadmap, lessonCount }) {
+export default function Course({ roadmap, lessonCount, courseTitle }) {
   const { progress, loaded, storageAvailable } = useCourseProgress();
   const [query, setQuery] = useState('');
   const [lastChapter, setLastChapter] = useState(null);
@@ -35,11 +36,11 @@ export default function Course({ roadmap, lessonCount }) {
       if (roadmap.some((chapter) => chapter.slug === saved)) setLastChapter(saved);
     } catch { /* Resume falls back to saved progress or the first chapter. */ }
   }, [roadmap]);
-  const done = roadmap.filter((chapter) => progress[chapter.slug]?.complete).length;
+  const done = roadmap.filter((chapter) => isChapterComplete(chapter, progress[chapter.slug])).length;
   const started = Boolean(lastChapter) || roadmap.some((chapter) => hasStarted(progress[chapter.slug]));
-  const next = roadmap.find((chapter) => chapter.slug === lastChapter && !progress[chapter.slug]?.complete)
-    || roadmap.find((chapter) => hasStarted(progress[chapter.slug]) && !progress[chapter.slug]?.complete)
-    || roadmap.find((chapter) => !progress[chapter.slug]?.complete) || roadmap[0];
+  const next = roadmap.find((chapter) => chapter.slug === lastChapter && !isChapterComplete(chapter, progress[chapter.slug]))
+    || roadmap.find((chapter) => hasStarted(progress[chapter.slug]) && !isChapterComplete(chapter, progress[chapter.slug]))
+    || roadmap.find((chapter) => !isChapterComplete(chapter, progress[chapter.slug])) || roadmap[0];
   const allComplete = done === roadmap.length;
   const visible = roadmap.filter((chapter) => `${chapter.title} ${chapter.subtitle} ${chapter.phase} ${chapter.slug}`.toLowerCase().includes(query.trim().toLowerCase()));
   const phases = [...new Set(roadmap.map((chapter) => chapter.phase))];
@@ -66,6 +67,7 @@ export default function Course({ roadmap, lessonCount }) {
             <div><h2 id="curriculum-title">Your learning path</h2><p>Follow the chapters in order. Each new layer uses something you learned in the previous one.</p></div>
             <a className={styles.jumpToNext} href={`#phase-${next.phase.toLowerCase().replace(/\s+/g, '-')}`}>Jump to your stage <FiArrowRight aria-hidden="true" /></a>
           </div>
+          <p className={styles.referenceLink}><Link href="/learn/os/reference">Browse the detailed topic reference: descriptors, paging, allocation, scheduling, storage, and more.</Link></p>
           <div className={styles.searchRow}>
             <label className={styles.search}>
               <FiSearch aria-hidden="true" />
@@ -81,7 +83,7 @@ export default function Course({ roadmap, lessonCount }) {
               const items = visible.filter((chapter) => chapter.phase === phase);
               if (!items.length) return null;
               const allInPhase = roadmap.filter((chapter) => chapter.phase === phase);
-              const phaseDone = allInPhase.filter((chapter) => progress[chapter.slug]?.complete).length;
+              const phaseDone = allInPhase.filter((chapter) => isChapterComplete(chapter, progress[chapter.slug])).length;
               const { description, icon: Icon } = phaseDetails[phase];
               return <section key={phase} id={`phase-${phase.toLowerCase().replace(/\s+/g, '-')}`} className={styles.phase} aria-labelledby={`phase-title-${phase.toLowerCase().replace(/\s+/g, '-')}`}>
                 <header className={styles.phaseHeader}>
@@ -91,13 +93,13 @@ export default function Course({ roadmap, lessonCount }) {
                 </header>
                 <ol className={styles.chapters}>
                   {items.map((chapter) => {
-                    const complete = progress[chapter.slug]?.complete;
+                    const complete = isChapterComplete(chapter, progress[chapter.slug]);
                     const inProgress = hasStarted(progress[chapter.slug]) && !complete;
                     const isNext = chapter.slug === next.slug && !allComplete;
                     return <li key={chapter.slug}>
                       <Link href={`/learn/os/${chapter.slug}`} className={`${styles.chapterRow} ${isNext ? styles.nextChapter : ''}`} aria-current={isNext ? 'step' : undefined}>
                         <span className={`${styles.chapterNumber} ${complete ? styles.completedNumber : ''}`} aria-label={complete ? `Chapter ${chapter.id}, complete` : `Chapter ${chapter.id}`}>{complete ? <FiCheck aria-hidden="true" /> : chapter.id}</span>
-                        <div className={styles.chapterContent}><h4>{chapter.title}</h4><p>{chapter.subtitle}</p><div className={styles.chapterTags}>{isNext && <span className={styles.nextBadge}>{inProgress ? 'In progress' : 'Up next'}</span>}<span><FiClock aria-hidden="true" />{duration(chapter.minutes)}</span><span>{chapter.lessons} lessons · Code · Test</span></div></div>
+                        <div className={styles.chapterContent}><h4>{chapter.title}</h4><p>{chapter.subtitle}</p><div className={styles.chapterTags}>{isNext && <span className={styles.nextBadge}>{inProgress ? 'In progress' : 'Up next'}</span>}<span><FiClock aria-hidden="true" />About {duration(chapter.minutes)} guided study</span><span>{chapter.lessons} lessons · Code · Test</span></div><p className={styles.studyEstimate}>{chapter.studyPlan.readingMinutes} min reading & tracing · {chapter.studyPlan.practiceMinutes} min coding & review</p></div>
                         <FiChevronRight className={styles.rowArrow} aria-hidden="true" />
                       </Link>
                     </li>;
@@ -144,8 +146,8 @@ export default function Course({ roadmap, lessonCount }) {
 
           <section className={styles.references} aria-labelledby="references-title">
             <h2 id="references-title">Go deeper</h2>
-            <p>Built on ideas from the OS development community.</p>
-            <ul><li><a href="https://wiki.osdev.org/Expanded_Main_Page">OSDev Wiki<FiExternalLink aria-hidden="true" /></a></li><li><a href="https://www.ecsdump.net/wp-content/uploads/2020/12/os-dev.pdf">Nick Blundell’s guide<FiExternalLink aria-hidden="true" /></a></li><li><a href="https://os.phil-opp.com/">Writing an OS in Rust<FiExternalLink aria-hidden="true" /></a></li><li><Link href="/projects/zenos">ZenOS project<FiArrowRight aria-hidden="true" /></Link></li></ul>
+            <p>Read the corresponding source alongside each worked lesson. Topic pages link to the relevant chapters and specifications.</p>
+            <ul><li><a href="https://pages.cs.wisc.edu/~remzi/OSTEP/">Operating Systems: Three Easy Pieces<FiExternalLink aria-hidden="true" /></a></li><li><a href="https://www.os-book.com/OS10/">Operating System Concepts<FiExternalLink aria-hidden="true" /></a></li><li><a href="https://wiki.osdev.org/Expanded_Main_Page">OSDev Wiki<FiExternalLink aria-hidden="true" /></a></li><li><a href="https://www.ecsdump.net/wp-content/uploads/2020/12/os-dev.pdf">Nick Blundell’s guide<FiExternalLink aria-hidden="true" /></a></li><li><a href="https://os.phil-opp.com/">Writing an OS in Rust<FiExternalLink aria-hidden="true" /></a></li><li><Link href="/projects/zenos">ZenOS project<FiArrowRight aria-hidden="true" /></Link></li></ul>
           </section>
         </aside>
       </div>
@@ -155,4 +157,4 @@ export default function Course({ roadmap, lessonCount }) {
 }
 
 Course.coursePage = true;
-export function getStaticProps() { return { props: { roadmap: chapters.map(chapterSummary), lessonCount: chapters.reduce((count, chapter) => count + chapter.sections.length, 0) } }; }
+export function getStaticProps() { return { props: { courseTitle, roadmap: chapters.map(chapterSummary), lessonCount: chapters.reduce((count, chapter) => count + chapter.sections.length, 0) } }; }

@@ -20,31 +20,31 @@ export const assemblyReadingAids = {
   'assembly-first-instructions': {
     'a-machine-you-can-question': visual('flow', 'Where your two instructions actually run',
       'Follow one program from the editor to a visible machine effect. Select a stage to distinguish your responsibility from the support already provided.', [
-        node('source', 'Your source', 'lesson.asm', 'You author a small routine. Its lines describe CPU operations, not browser instructions. The editor stores text; changing that text has no effect on an already running machine.', [fact('You own', 'Instructions inside the lesson')]),
-        node('assembler', 'NASM + harness', 'source → x86 bytes', 'NASM assembles your routine together with setup and output helpers. The generated boot sector contains actual machine code, padding, and a signature. Assembly validates encodings, not your algorithm.', [fact('Artifact', '512-byte boot sector')]),
+        node('source', 'Your source', 'lesson.asm', 'You author a small routine. Its instructions run on the emulated x86 CPU. The editor stores text; changing that text has no effect on an already running machine.', [fact('You own', 'Instructions inside the lesson')]),
+        node('assembler', 'NASM + harness', 'source → x86 bytes', 'NASM assembles your routine together with setup and output helpers. The generated boot sector contains actual machine code, padding, and a signature. Assembly validates the instruction encodings. Run and test the program to check its behavior.', [fact('Artifact', '512-byte boot sector')]),
         node('cpu', 'Emulated x86', 'fetch → decode → execute', 'The emulator runs firmware, which loads the sector. The harness initializes a known environment and calls your routine. A register write changes the guest CPU state.', [fact('Execution', 'Real x86 instruction semantics')]),
         node('screen', 'Visible evidence', 'guest VGA display', 'Only an output operation changes the screen. The course reads guest output and, in behavior tests, relevant machine state. Correct-looking text alone cannot prove a general algorithm.', [fact('Observe', 'Output and tested machine state')]),
       ], 'The harness is a temporary teaching interface. In bootloading, you will take over each setup responsibility.',
-      '; A focused experiment, not a complete boot sector.\nmov al, \'Z\'     ; Establish one input byte.\ncall putc       ; Ask the supplied helper to display it.',
+      '; Focused experiment for the supplied boot-sector wrapper.\nmov al, \'Z\'     ; Establish one input byte.\ncall putc       ; Ask the supplied helper to display it.',
       [{ from: 'source', to: 'assembler', label: 'assemble' }, { from: 'assembler', to: 'cpu', label: 'boot' }, { from: 'cpu', to: 'screen', label: 'perform I/O' }]),
     'state-before-syntax': visual('compare', 'Four different places state can live',
       'Changing one part of the machine does not automatically update the others. Read the effect of MOV before assuming that it printed anything.', [
         node('register', 'AL register', '8 bits inside the CPU', 'AL can hold a character code such as 0x5A. That number is simply CPU state until another instruction gives it meaning.', [fact('After MOV', 'AL = 0x5A')], "mov al, 'Z'"),
-        node('pointer', 'Instruction pointer', 'next instruction address', 'The instruction pointer advances past MOV to the next encoded instruction. It names code; it is not the character you intend to print.', [fact('After ordinary MOV', 'Next sequential instruction')]),
+        node('pointer', 'Instruction pointer', 'next instruction address', 'The instruction pointer advances past MOV to the next encoded instruction. It identifies the next code location.', [fact('After ordinary MOV', 'Next sequential instruction')]),
         node('memory', 'Memory bytes', 'addressed storage', 'RAM holds code, data, and the stack. MOV AL, immediate does not store AL into a RAM location.', [fact('This instruction', 'No data-memory store')]),
         node('output', 'Display state', 'device-visible text', 'The display changes only when your program invokes an output path. A blank screen is compatible with a correctly completed register-only program.', [fact('After MOV alone', 'No new character')]),
       ], 'Write separate trace columns for CPU state and visible output. They answer different questions.'),
     'source-and-machine-code': visual('memory', 'Decode one instruction, byte by byte',
-      'These two bytes are one instruction in our 16-bit environment. Byte positions are offsets within this small example, not the beginning of the full boot sector.', [
+      'These two bytes are one instruction in our 16-bit environment. Byte positions are offsets within this small example.', [
         node('opcode', 'B0', 'offset +0', 'The opcode identifies MOV into AL with an immediate byte. The destination register is encoded in this opcode form.', [fact('Meaning', 'MOV AL, imm8')]),
         node('immediate', '5A', 'offset +1', 'This byte supplies the value copied into AL. Replacing Z with Y changes this byte from 5A to 59; it does not change the opcode.', [fact('Hex 5A', 'Decimal 90 / ASCII Z')]),
         node('next', 'Next instruction', 'offset +2', 'Decoding this instruction consumes two bytes. The next instruction may have a different length; x86 instructions are not fixed-size records.', [fact('Total here', '2 bytes')]),
       ], 'Comments and whitespace are absent from the instruction stream. A listing connects source positions to emitted bytes.',
       "mov al, 'Z'     ; B0 5A\nmov al, 'Y'     ; B0 59"),
     'fetch-decode-execute': trace('Follow one architectural step',
-      'Assume execution has reached bytes B0 5A. This is a model of visible instruction behavior, not a claim about a modern CPU’s internal pipeline.', [
+      'Assume execution has reached bytes B0 5A. This model follows architectural instruction effects. Modern CPUs can overlap the internal work.', [
         node('fetch', '1. Fetch', 'IP = p', 'Use the current code address to obtain instruction bytes. CS participates in locating those bytes in real mode.', [fact('Bytes', 'B0 5A')]),
-        node('decode', '2. Decode', 'operation and operands', 'Recognize the MOV AL, immediate-byte encoding. The immediate is part of the instruction, not a separate memory variable.', [fact('Destination', 'AL'), fact('Input', '0x5A')]),
+        node('decode', '2. Decode', 'operation and operands', 'Recognize the MOV AL, immediate-byte encoding. The immediate byte is encoded within the instruction.', [fact('Destination', 'AL'), fact('Input', '0x5A')]),
         node('execute', '3. Commit the effect', 'AL = 5A', 'Replace the selected eight register bits. This MOV leaves arithmetic flags unchanged and requests no output.', [fact('AL after', '0x5A'), fact('Flags', 'Unchanged')]),
         node('continue', '4. Continue', 'IP = p + 2', 'Continue at the following instruction. A later jump or call can deliberately select a different continuation.', [fact('Visible output', 'Still unchanged')]),
       ], 'Instruction boundaries and effects matter. Host timing and browser animation are not CPU cycle measurements.'),
@@ -56,7 +56,7 @@ export const assemblyReadingAids = {
         node('source', '0x5A', 'immediate / 8 bits', 'The second operand supplies the value. NASM encodes this constant in the instruction.'),
       ], 'Read it aloud as “AL receives 0x5A.” The semicolon introduces a comment, which emits no instruction.',
       'again:  mov al, 0x5a  ; destination receives source'),
-    'mov-means-copy': trace('A copy is a snapshot, not a live connection',
+    'mov-means-copy': trace('MOV captures the current source value',
       'Select each row and track both registers. The last write changes only AX; it does not revisit the earlier copy into BX.', [
         node('set', 'Establish AX', 'mov ax, 23', 'The program supplies an initial value so the trace does not depend on unspecified entry contents.', [fact('AX', '23'), fact('BX', 'Not established')]),
         node('copy', 'Copy into BX', 'mov bx, ax', 'BX receives the current sixteen-bit value of AX. AX remains available and unchanged.', [fact('AX', '23'), fact('BX', '23')]),
@@ -69,33 +69,33 @@ export const assemblyReadingAids = {
         node('print1', 'Consume first input', 'call putc', 'The course helper displays the character currently in AL. It preserves general registers and FLAGS when it returns.', [fact('AL', '5A'), fact('Display', 'Z')]),
         node('prepare2', 'Prepare next input', "mov al, 'Y'", 'The earlier Z has already been displayed. Replacing AL cannot edit that past output.', [fact('AL', '59'), fact('Display', 'Z')]),
         node('print2', 'Consume next input', 'call putc', 'The same interface now observes a different byte. The effect depends on state at this call.', [fact('AL', '59'), fact('Display', 'ZY')]),
-      ], 'Try predicting the result if both MOVs come before both CALLs. Track AL at each call, not the comments beside the MOVs.',
+      ], 'Try predicting the result if both MOVs come before both CALLs. Track AL at each call.',
       "mov al, 'Z'\ncall putc\nmov al, 'Y'\ncall putc"),
     'the-scaffold-contract': visual('flow', 'Who establishes the starting state?',
       'Read this as a responsibility boundary. The course makes these promises; they are not general BIOS guarantees.', [
         node('firmware', 'Firmware', 'loads the boot sector', 'The legacy BIOS environment recognizes a boot sector and transfers control. Real boot programs must establish the state they require.'),
         node('harness', 'Teaching harness', 'known execution environment', 'The wrapper normalizes segments, creates a stack, clears the direction flag, and selects text video mode before calling your lesson.', [fact('DS / ES / SS', '0'), fact('DF', '0'), fact('Lesson-entry SP', '0x7BFE')]),
         node('lesson', 'Your routine', 'instructions under study', 'You use only the documented entry state and helper contracts. Preserve the return path and any state required by the exercise.'),
-        node('finish', 'Return and halt', 'completed experiment', 'After your routine returns, the wrapper deliberately halts. A stable display with expected text is normal completion, not an application window that should close.'),
+        node('finish', 'Return and halt', 'completed experiment', 'After your routine returns, the wrapper deliberately halts. The expected text remains on the stable display after completion.'),
       ], 'The bootloading chapter replaces the wrapper with setup code you can explain yourself.', undefined,
       [{ from: 'firmware', to: 'harness', label: 'boot entry' }, { from: 'harness', to: 'lesson', label: 'CALL' }, { from: 'lesson', to: 'finish', label: 'return' }]),
     'build-your-first-program': visual('compare', 'Three outcomes, three next actions',
       'A useful debugging decision starts with the observed failure layer. Do not change correct runtime logic to fix a syntax error.', [
         node('syntax', 'Does not assemble', 'No executable produced', 'Read the diagnostic file and line. Check spelling, legal operand widths, and unresolved names. No new machine run can prove this edited source until it builds.', [fact('Example', 'MOV AX, BL has mismatched widths')], 'mov ax, bl       ; Intentional invalid-width example'),
         node('behavior', 'Runs, wrong result', 'Executable behavior differs', 'Trace instruction order and input values. Assembly succeeded because the program was encodable, even if it expressed the wrong algorithm.', [fact('Example', 'Two MOVs before two output calls')]),
-        node('correct', 'Observed result matches', 'Evidence for this case', 'Record the prediction and tested input, then vary one input or order. A single expected output is a useful start, not universal correctness.', [fact('Next experiment', 'Change one character or one call')]),
+        node('correct', 'Observed result matches', 'Evidence for this case', 'Record the prediction and tested input, then vary one input or order. Each successful case gives evidence for that tested input.', [fact('Next experiment', 'Change one character or one call')]),
       ], 'Use the checkpoint’s exact contract to decide what success means before pressing Run.'),
     'evidence-and-transfer': visual('flow', 'Build an explanation that can be checked',
       'Connect a claim to an observation that could disprove it. This structure works for one register now and a memory allocator later.', [
-        node('claim', 'Claim', 'MOV makes an independent copy', 'State a mechanism rather than “the program works.” The claim predicts that a later AX write will not change BX.'),
+        node('claim', 'Claim', 'MOV makes an independent copy', 'State the mechanism that explains the observed result. The claim predicts that a later AX write will not change BX.'),
         node('experiment', 'Controlled change', 'Copy, then overwrite', 'Use known values, copy AX into BX, then replace AX. Avoid changing unrelated instructions so the result has one clear cause.', [], 'mov ax, 23\nmov bx, ax\nmov ax, 91'),
         node('observation', 'Observe BX', 'Read the preserved value', 'A preserving output helper can display BX after moving it into AX. Explain that instrumentation itself changes AX.', [], 'mov ax, bx\ncall print_hex16'),
-      ], 'The expected preserved value is 0017 in hexadecimal. Derive it from the input 23 rather than memorizing the output.', undefined,
+      ], 'The expected preserved value is 0017 in hexadecimal. Derive it from the input 23.', undefined,
       [{ from: 'claim', to: 'experiment', label: 'predict' }, { from: 'experiment', to: 'observation', label: 'test' }]),
   },
   'assembly-numbers': {
     'bits-have-positions': visual('bits', 'Reconstruct 0b01011010 from place values',
-      'Each selected bit contributes its power-of-two weight. Grouping bits changes how we write the number, not the stored pattern.', [
+      'Each selected bit contributes its power-of-two weight. Grouping bits gives us another way to write the same stored pattern.', [
         node('upper', '0101', 'bits 7…4', 'Only bit 6 and bit 4 are set in this nibble. Their weights add to 64 + 16 = 80.', [fact('Contribution', '80'), fact('Hex digit', '5')]),
         node('lower', '1010', 'bits 3…0', 'Bit 3 contributes 8 and bit 1 contributes 2. The low nibble therefore contributes 10.', [fact('Contribution', '10'), fact('Hex digit', 'A')]),
         node('whole', '0101 1010', '8-bit pattern', 'Combining the contributions gives 90. A byte does not carry a tag saying whether you wrote binary, decimal, or hexadecimal.', [fact('Decimal', '90'), fact('Hexadecimal', '0x5A')]),
@@ -118,7 +118,7 @@ export const assemblyReadingAids = {
         node('byte', '8 bits', '256 patterns', 'There are 2^8 different bit patterns. Interpreted as unsigned they span 0…255; interpreted as two’s-complement signed they span −128…127.', [fact('Maximum unsigned', '0xFF = 255')]),
         node('word', '16 bits', '65,536 patterns', 'The register has twice as many bit positions but 256 times as many possible patterns. Signed range is −32768…32767.', [fact('Maximum unsigned', '0xFFFF = 65535')]),
         node('truncate', 'Keep low bits', 'A deliberate narrowing policy', 'Narrowing can discard information. If a larger value must be rejected instead, test its range before narrowing; do not infer safety from a successful instruction.', [fact('0x0123 narrowed to 8 bits', '0x23')]),
-      ], 'Choose width from the required range and overflow policy, not from the size of the example input.'),
+      ], 'Choose width from the full required range and overflow policy.'),
     'modular-numbers': trace('Watch eight-bit addition wrap',
       'The mathematical sum is 258, but AL has room for only eight result bits. Flags preserve selected evidence of the discarded information.', [
         node('before', 'Before ADD', 'AL = 250', 'The initial pattern is FA. As an unsigned value, it lies five steps below the maximum 255.', [fact('AL', 'FA')]),
@@ -134,7 +134,7 @@ export const assemblyReadingAids = {
     'derive-negative-values': trace('Derive the byte representation of −6',
       'Two’s complement is a width-dependent construction. Keep the width fixed at eight bits throughout these steps.', [
         node('positive', 'Start with +6', '0000 0110', 'Write the positive magnitude at the intended width.', [fact('Hex', '06')]),
-        node('invert', 'Invert eight bits', '1111 1001', 'Flip each selected bit. This is a one’s-complement intermediate, not yet −6 in two’s complement.', [fact('Hex', 'F9')]),
+        node('invert', 'Invert eight bits', '1111 1001', 'Flip each selected bit. This gives the one’s-complement intermediate; adding one produces −6 in two’s complement.', [fact('Hex', 'F9')]),
         node('increment', 'Add one', '1111 1010', 'The pattern FA is the eight-bit representation of −6. Adding 6 to it yields zero modulo 256.', [fact('Hex', 'FA'), fact('Check', 'FA + 06 → 00, carry 1')]),
       ], 'At sixteen bits, −6 is FFFA. The leading ones preserve the signed value as the width grows.'),
     'widening-and-truncation': visual('compare', 'New upper bits need an explicit rule',
@@ -147,17 +147,17 @@ export const assemblyReadingAids = {
       'The output interface determines how the same input bits become visible text.', [
         node('raw', 'putc', 'One character code', 'With AL=0x39, putc asks the screen to display the character whose code is 0x39: the glyph 9.', [fact('Display', '9')], 'mov al, 0x39\ncall putc'),
         node('number', 'print_hex16', 'Four hexadecimal digits', 'With AX=0x0039, print_hex16 converts the number into the four characters 0, 0, 3, and 9.', [fact('Display', '0039')], 'mov ax, 0x0039\ncall print_hex16'),
-        node('buffer', 'Text in memory', 'An encoded sequence', 'The text “39” consists of two character bytes, 33 and 39 hex. It is not the single numeric byte 0x39.', [fact('Bytes', '33 39')], "digits: db '39'"),
+        node('buffer', 'Text in memory', 'An encoded sequence', 'The text “39” consists of two character bytes, 33 and 39 hex. Those two bytes together encode the two-character text.', [fact('Bytes', '33 39')], "digits: db '39'"),
       ], 'Always name the representation: numeric value, stored bit pattern, or sequence of character codes.'),
   },
   'assembly-registers': {
     'names-select-bits': visual('bits', 'EAX, AX, AH, and AL overlap',
       'These names select parts of one register. Writing an alias changes those selected bits in every wider view.', [
         node('upper', 'EAX upper half', 'bits 31…16', 'AX, AH, and AL do not select these bits. In the current real-mode exercises, a sixteen-bit AX write leaves this part of EAX unchanged.', [fact('Example contents', '0x89AB')]),
-        node('ah', 'AH', 'bits 15…8', 'AH names the upper byte of AX, not the upper byte of EAX. Updating AH changes AX and EAX in precisely these eight positions.', [fact('Example contents', '0xCD')]),
+        node('ah', 'AH', 'bits 15…8', 'AH names bits 15 through 8, the upper byte of AX. Updating AH changes AX and EAX in precisely these eight positions.', [fact('Example contents', '0xCD')]),
         node('al', 'AL', 'bits 7…0', 'AL names the lowest byte. With upper half 89AB, AH=CD, and AL=EF, the full register is EAX=89ABCDEF.', [fact('Example contents', '0xEF'), fact('AX', '0xCDEF')]),
-      ], 'A register diagram is a map of shared bit positions, not a collection of independent variables.'),
-    'trace-overlapping-writes': trace('Trace the write set, not only the assigned value',
+      ], 'A register diagram maps the bit positions shared by the overlapping register names.'),
+    'trace-overlapping-writes': trace('Trace which bits each write changes',
       'Follow a full initialization with two byte writes. Each later instruction replaces only one byte.', [
         node('initial', 'Initialize', 'mov eax, 0x89abcdef', 'All thirty-two bits now have known values, so each later preservation claim is testable.', [fact('EAX', '89ABCDEF'), fact('AX', 'CDEF')]),
         node('low', 'Replace low byte', 'mov al, 0x42', 'The low eight bits become 42. AH and the upper sixteen bits retain their earlier contents.', [fact('EAX', '89ABCD42'), fact('AX', 'CD42')]),
@@ -167,7 +167,7 @@ export const assemblyReadingAids = {
       'Assume EAX initially contains 0x89ABCDEF. Both statements contain the same immediate, but replace different portions of the register.', [
         node('word', 'Write AX', '16 selected bits', 'Writing AX replaces the low word. The upper word remains 89AB in these real-mode and legacy protected-mode examples.', [fact('EAX after', '89AB4567')], 'mov ax, 0x4567'),
         node('double', 'Write EAX', '32 selected bits', 'Writing EAX replaces the entire thirty-two-bit register with 00004567. The immediate’s small value does not make this a sixteen-bit write.', [fact('EAX after', '00004567')], 'mov eax, 0x4567'),
-      ], 'Operand width comes from the instruction and register name, not the number of nonzero digits in the constant.'),
+      ], 'The instruction and register name determine operand width.'),
     'bitness-is-not-mode': visual('flow', 'Encoding width and execution mode are separate controls',
       'A 386-or-later CPU in real mode can use 32-bit operands. A prefix selects a different operand size; it does not enable protection.', [
         node('default', 'Assembler default', 'BITS 16', 'NASM assumes sixteen-bit operand and address defaults and chooses prefixes when a source instruction requests another size.', [], 'bits 16\nmov eax, 0x11223344'),
@@ -180,7 +180,7 @@ export const assemblyReadingAids = {
         node('save', 'Preserve a copy', 'mov dx, ax', 'DX becomes the chosen storage for the original value. Your surrounding code must now honor that decision and avoid clobbering DX prematurely.', [fact('AX', '29'), fact('DX', '29')]),
         node('reuse', 'Reuse AX', 'add ax, 7', 'AX becomes the working result while DX retains the original input. Copying into DX after this ADD would preserve the wrong version.', [fact('AX', '36'), fact('DX', '29')]),
       ], 'Preservation is a program-level agreement. A register does not know which of its past values your algorithm still needs.', 'mov ax, 29\nmov dx, ax\nadd ax, 7'),
-    'explicit-widening': visual('compare', 'A byte write is not a word initialization',
+    'explicit-widening': visual('compare', 'A byte write changes eight bit positions',
       'Assume AX starts as 0x7A00 and the source byte is 0xE2. Decide whether the old upper byte should survive.', [
         node('partial', 'MOV AL, value', 'Preserve AH', 'AL becomes E2 while AH stays 7A. The whole word is 7AE2; neither unsigned nor signed byte widening happened.', [fact('AX', '7AE2')], 'mov al, 0xe2'),
         node('zero', 'MOVZX AX, AL', 'Unsigned byte → word', 'After loading AL, zero extension replaces AH with 00. The word represents unsigned 226.', [fact('AX', '00E2')], 'movzx ax, al'),
@@ -204,14 +204,14 @@ export const assemblyReadingAids = {
       'Use an eight-bit destination so the missing ninth bit is easy to see.', [
         node('before', 'Inputs', '0xF8 + 0x0C', 'Unsigned 248 plus 12 has mathematical result 260.', [fact('Destination width', '8 bits')]),
         node('wide', 'Full sum', '0x104', 'The ninth result bit lies outside AL. Separating that bit gives carry 1 and low byte 04.', [fact('Full binary', '1 00000100')]),
-        node('after', 'After ADD', 'AL = 04, CF = 1', 'CF reports the unsigned carry out. It is not an extra permanent bit of AL; instructions that modify CF can erase this evidence.', [fact('Retained value', '4'), fact('Carry', '1')]),
+        node('after', 'After ADD', 'AL = 04, CF = 1', 'CF reports the unsigned carry out. CF has separate flag storage; later flag-writing instructions can overwrite it.', [fact('Retained value', '4'), fact('Carry', '1')]),
       ], 'The destination wraps modulo 256. Read or capture CF before a later flag-writing instruction.', 'mov al, 0xf8\nadd al, 0x0c\nsetc bl          ; Preserve the carry as a byte 0 or 1.'),
     'unsigned-borrow': trace('SUB uses CF to report an unsigned borrow',
       'Subtraction keeps a finite-width result even when the left unsigned operand is smaller than the right.', [
         node('before', 'Inputs', '3 − 9', 'Unsigned subtraction needs to borrow across the eight-bit boundary because 3 is below 9.', [fact('Mathematical result', '−6')]),
         node('after', 'After SUB', 'AL = FA', 'Modulo 256, −6 becomes 250, encoded FA. CF=1 reports that the unsigned subtraction borrowed.', [fact('CF', '1'), fact('OF', '0')]),
         node('interpret', 'Interpret the evidence', 'Unsigned underflow, signed valid', 'The signed result −6 lies inside −128…127, so OF remains zero. A set sign bit alone does not mean signed overflow occurred.', [fact('Signed result', '−6')]),
-      ], 'For subtraction, CF=1 means an unsigned borrow was needed. It is not the opposite of the borrow condition.', 'mov al, 3\nsub al, 9'),
+      ], 'For subtraction, CF=1 means an unsigned borrow was needed. Thus CF directly records the borrow condition.', 'mov al, 3\nsub al, 9'),
     'signed-overflow': visual('compare', 'Separate signed overflow from unsigned carry',
       'These cases deliberately cross different boundaries. Derive the flag result from the range before memorizing any mnemonic.', [
         node('signed', '120 + 12', '84 hex retained', 'The unsigned sum 132 fits into a byte, so CF=0. The signed sum exceeds +127, so OF=1. The retained sign flipped despite two positive inputs.', [fact('CF', '0'), fact('OF', '1')]),
@@ -224,7 +224,7 @@ export const assemblyReadingAids = {
         node('capture', 'Capture carry', 'SETC BL', 'SETC copies the truth of CF into a byte without changing FLAGS. BL now records 1 even if subsequent code overwrites CF.', [fact('BL', '1'), fact('CF', '1')], 'setc bl'),
         node('clobber', 'Reuse flags', 'XOR DX, DX', 'XOR clears DX and also clears CF and OF. The original carry is no longer in FLAGS, but the captured BL value survives.', [fact('DX', '0000'), fact('CF', '0'), fact('BL', '1')], 'xor dx, dx'),
       ], 'Do not insert arbitrary setup between a flag-producing operation and the instruction that consumes its flags.'),
-    'increment-and-decrement': visual('compare', 'INC is not an ADD-with-identical-flags shortcut',
+    'increment-and-decrement': visual('compare', 'INC preserves CF while ADD updates it',
       'Both examples begin with CF=1 and AX=7. Their data result agrees, but their carry behavior differs.', [
         node('inc', 'INC AX', 'AX = 8, CF = 1', 'INC updates arithmetic status such as ZF and OF but deliberately leaves CF alone. This can preserve a carry chain across a counter update.', [fact('CF', 'Preserved')], 'stc\nmov ax, 7\ninc ax'),
         node('add', 'ADD AX, 1', 'AX = 8, CF = 0', 'ADD computes a fresh carry from the addition. Because 7 + 1 does not exceed 65535, it clears the previously set carry.', [fact('CF', 'Recomputed')], 'stc\nmov ax, 7\nadd ax, 1'),
@@ -246,11 +246,11 @@ export const assemblyReadingAids = {
     'declarations': visual('compare', 'Source can emit data without requesting a runtime store',
       'DB and DW ask the assembler to place bytes in the image. MOV is an instruction whose effect occurs when the CPU executes it.', [
         node('byte', 'DB', 'Emit chosen bytes', 'The assembler places 6D and 2A into consecutive file positions. It does not emit instructions that will calculate these values later.', [fact('Image bytes', '6D 2A')], 'sample: db 0x6d, 0x2a'),
-        node('word', 'DW', 'Emit a little-endian word', 'The word 2A6D produces the same two data bytes. The label names the position; it is not an extra stored field.', [fact('Image bytes', '6D 2A')], 'sample: dw 0x2a6d'),
+        node('word', 'DW', 'Emit a little-endian word', 'The word 2A6D produces the same two data bytes. The label gives this position a name without adding stored bytes.', [fact('Image bytes', '6D 2A')], 'sample: dw 0x2a6d'),
         node('store', 'MOV to memory', 'Execute a state change', 'When this instruction runs, it writes the specified word to the addressed memory. Its instruction bytes are different from the data it will store.', [fact('Runtime effect', 'Two memory bytes replaced')], 'mov word [sample], 0x2a6d'),
       ], 'Keep inline data out of the execution path. The CPU will decode data as instructions if control falls into it.'),
     'little-endian': visual('memory', 'Reconstruct a word from low byte and high byte',
-      'The least-significant byte goes at the lower address. This ordering concerns bytes in memory, not the written order of hexadecimal digits.', [
+      'The least-significant byte goes at the lower address. This ordering describes the placement of bytes in memory.', [
         node('low', '6D', 'sample + 0', 'The low byte contributes its unsigned value, 109, without shifting.', [fact('Contribution', '0x006D')]),
         node('high', '2A', 'sample + 1', 'The high byte contributes 42 × 256. Shifting it left eight positions gives 0x2A00.', [fact('Contribution', '0x2A00')]),
         node('word', '2A6D', 'Reconstructed AX', 'Combine disjoint low and high contributions: 0x2A00 OR 0x006D = 0x2A6D. A native word load performs this interpretation for you.', [fact('Decimal value', '10861')]),
@@ -264,7 +264,7 @@ export const assemblyReadingAids = {
     'load-store': visual('flow', 'Move information through an explicit temporary',
       'Ordinary MOV cannot copy directly from one memory operand to another. A register provides the intermediate value.', [
         node('source', 'Source memory', 'sample: 6D 2A', 'The source declaration owns two bytes. Reading them does not erase them.', [], 'sample: dw 0x2a6d'),
-        node('register', 'Temporary register', 'AX = 2A6D', 'The load brings the word into AX. A later store reads this register value, not a live connection to the original bytes.', [], 'mov ax, [sample]'),
+        node('register', 'Temporary register', 'AX = 2A6D', 'The load brings the word into AX. A later store reads the value currently held in this register.', [], 'mov ax, [sample]'),
         node('destination', 'Destination memory', 'copy: 6D 2A', 'The store replaces the destination’s two bytes. The original source remains unchanged.', [], 'mov [copy], ax'),
       ], 'Source-first and destination-first reading can be confusing: NASM always writes the MOV destination on the left.',
       '; sample and copy are word-sized owned locations.\nmov ax, [sample]\nmov [copy], ax',
@@ -275,7 +275,7 @@ export const assemblyReadingAids = {
         node('word', 'Word access', 'Two bytes', 'A word store of AABB replaces two consecutive bytes with BB AA, preserving the next two.', [fact('After word store', 'BB AA 33 44')], 'mov word [sample], 0xaabb'),
         node('ambiguous', 'Immediate store', 'State the width', 'When no register operand supplies a size, an immediate such as 1 does not tell NASM whether to write a byte, word, or doubleword. Supply an explicit size.', [], 'mov byte [sample], 1\n; MOV [sample],1 needs a size decision.'),
       ], 'Before each store, mark the full range it may overwrite. Neighboring bytes can belong to another object.'),
-    'owned-memory': visual('memory', 'Address arithmetic is not an ownership proof',
+    'owned-memory': visual('memory', 'Check ownership before using an address',
       'This conceptual layout shows why a valid encoding can still corrupt the program. Sizes and boundaries must come from your design.', [
         node('code', 'Executing code', 'Do not overwrite accidentally', 'A store into instruction bytes can change a later decode. Real mode does not automatically protect your lesson from writing its own code.'),
         node('data', 'Declared data', 'Your bounded object', 'A four-byte buffer owns exactly four bytes. A word store at its final byte extends one byte beyond the object.', [fact('Buffer size', '4 bytes'), fact('Last valid word start', 'Offset 2')]),
@@ -300,7 +300,7 @@ export const assemblyReadingAids = {
     'legal-forms': visual('compare', 'Sixteen-bit addressing has a specific encoding menu',
       'Register arithmetic can be more flexible than a memory operand. NASM must find an x86 addressing encoding for what appears inside brackets.', [
         node('single', 'One address register', '[BX], [BP], [SI], [DI]', 'These registers have sixteen-bit addressing encodings. AX and CX do not become legal address registers merely because they hold a plausible address.', [], 'mov ax, [si]\nmov ax, [bx + 6]'),
-        node('pair', 'Base plus index', 'BX/BP + SI/DI', 'The encodable pairs are BX+SI, BX+DI, BP+SI, and BP+DI, optionally with a displacement. BX+BP and SI+DI are not among these sixteen-bit forms.', [], 'mov ax, [bx + di + 4]'),
+        node('pair', 'Base plus index', 'BX/BP + SI/DI', 'The encodable pairs are BX+SI, BX+DI, BP+SI, and BP+DI, optionally with a displacement. NASM rejects BX+BP and SI+DI in these sixteen-bit addressing forms.', [], 'mov ax, [bx + di + 4]'),
         node('compute', 'Compute in a register first', 'Separate arithmetic from load', 'For other calculations, construct the offset in a legal address register, then dereference it. A 32-bit address-size form is a different encoding with different rules.', [], 'mov si, ax\nadd si, cx\nmov dx, [si]'),
       ], 'Do not silently import 32-bit scaled-index syntax into a lesson whose address-size default is sixteen bits.'),
     'default-segment': visual('compare', 'BP changes which segment supplies the base',
@@ -309,7 +309,7 @@ export const assemblyReadingAids = {
         node('ss', '[BP]', 'Default SS', 'A BP-based sixteen-bit access defaults to SS. The physical address is 20000 + 0030 = 20030.', [fact('Address', '0x20030')], 'mov ax, [bp]'),
         node('override', '[DS:BP]', 'Explicit DS override', 'The override chooses DS for this memory operand. It does not change BP, DS, or SS; it changes the base selection for the access.', [fact('Address', '0x12030')], 'mov ax, [ds:bp]'),
       ], 'The teaching harness initially makes DS and SS equal. That convenience can hide a segment-selection bug until the environment changes.'),
-    'origin-contract': visual('flow', 'ORG is a promise about loading, not a loader',
+    'origin-contract': visual('flow', 'ORG sets the assumed load origin',
       'Suppose the file is intended to begin at physical 0x7C00 with DS=0. The assembler and runtime must agree on that layout.', [
         node('file', 'File offset', 'message is 0x30 bytes in', 'The file contains bytes at positions counted from its own beginning. File offset 0030 does not itself say where RAM will hold those bytes.'),
         node('assembler', 'Assembler origin', 'ORG 0x7C00', 'NASM adds the assumed origin when evaluating an absolute label address. A label at file offset 0030 is represented as offset 7C30.', [fact('Label value', '0x7C30')]),
@@ -323,7 +323,7 @@ export const assemblyReadingAids = {
     'array-stride': visual('memory', 'Convert an element index into a byte displacement',
       'A word array uses two bytes per element. Here the fourth element has zero-based index 3 and starts six bytes from the base.', [
         node('first', 'Element 0', 'base + 0', 'The first word begins at the array base and owns byte offsets 0 and 1.', [fact('Value', '0x1357')]),
-        node('second', 'Element 1', 'base + 2', 'The next word begins two bytes later, not one. Index 1 maps to displacement 1 × 2.', [fact('Value', '0x2468')]),
+        node('second', 'Element 1', 'base + 2', 'The next word begins two bytes later. Index 1 maps to displacement 1 × 2.', [fact('Value', '0x2468')]),
         node('third', 'Element 2', 'base + 4', 'Index 2 maps to displacement 4. Starting at +3 instead would splice bytes from neighboring elements.', [fact('Value', '0x369A')]),
         node('fourth', 'Element 3', 'base + 6', 'The desired offset is base + index × element-size. In sixteen-bit address syntax, compute the scaling explicitly.', [fact('Value', '0x48BC')]),
       ], 'For N elements, valid indices satisfy 0 ≤ index < N. Scaling does not perform a bounds check.', 'mov bx, array\nmov si, 3\nshl si, 1        ; Word index becomes byte displacement.\nmov ax, [bx + si]'),
@@ -394,25 +394,25 @@ export const assemblyReadingAids = {
       'In these 16-bit-address-size lessons LOOP uses CX. Starting it at zero does not mean zero iterations.', [
         node('entry', 'Wrong entry state', 'CX = 0000', 'Assume execution reaches the body without a zero-count guard. The body has already run once before LOOP executes.', [fact('Body executions so far', '1')]),
         node('decrement', 'LOOP decrements', 'CX = FFFF', 'The decrement wraps zero to 65535. LOOP does not modify arithmetic flags, so it cannot be treated as DEC plus identical flag effects.', [fact('CX after decrement', '65535')]),
-        node('branch', 'Nonzero count branches', 'Back to body', 'The unexpected nonzero count requests many further iterations. The underlying problem is missing entry validation, not slow arithmetic.', [fact('Required guard', 'JCXZ before first body')]),
+        node('branch', 'Nonzero count branches', 'Back to body', 'The unexpected nonzero count requests many further iterations. An entry check must handle the empty input before the first iteration.', [fact('Required guard', 'JCXZ before first body')]),
       ], 'For this 16-bit loop, JCXZ can skip the body when the initial count is zero.', 'jcxz done\nrepeat_body:\n; Process one element here.\nloop repeat_body\ndone:'),
     'invariant': visual('flow', 'State what remains true at every loop header',
       'For a word-array sum, let k be the number of elements already consumed and N the initial count. These three claims must move together.', [
-        node('pointer', 'Pointer invariant', 'SI = base + 2k', 'SI points to the next unconsumed word. The factor two comes from the element width, not the count register width.'),
+        node('pointer', 'Pointer invariant', 'SI = base + 2k', 'SI points to the next unconsumed word. Each word occupies two bytes, which gives the factor of two.'),
         node('count', 'Count invariant', 'CX = N − k', 'CX describes remaining elements. If it is nonzero and the original range was valid, another owned word exists.'),
-        node('sum', 'Accumulator invariant', 'AX = sum of first k words mod 65536', 'The sum includes exactly the consumed prefix. If the required answer is a wider mathematical sum, AX alone is not a sufficient result representation.'),
+        node('sum', 'Accumulator invariant', 'AX = sum of first k words mod 65536', 'The sum includes exactly the consumed prefix. If the required answer is a wider mathematical sum, use a wider result representation.'),
       ], 'Initialization proves k=0; one iteration proves k→k+1; exit at CX=0 gives k=N. That is the structure of a loop proof.'),
     'worked-trace': trace('Advance count, pointer, and sum as one state',
       'Use the independent example words [3, 8, 2], initially SI=base, CX=3, AX=0. Each iteration consumes one word.', [
         node('zero', 'Before any element', 'k = 0', 'The empty consumed prefix has sum zero. The next element is at base.', [fact('AX', '0'), fact('CX', '3'), fact('SI', 'base')]),
         node('one', 'After consuming 3', 'k = 1', 'Adding the first word gives 3. Advance SI by two bytes and reduce the remaining count.', [fact('AX', '3'), fact('CX', '2'), fact('SI', 'base + 2')]),
         node('two', 'After consuming 8', 'k = 2', 'The sum now represents exactly the first two words. The pointer reaches the third word.', [fact('AX', '11'), fact('CX', '1'), fact('SI', 'base + 4')]),
-        node('three', 'After consuming 2', 'k = 3', 'CX=0 ends the loop before any next read. SI may point one past the array, but that position is not another valid element.', [fact('AX', '13'), fact('CX', '0'), fact('SI', 'base + 6')]),
+        node('three', 'After consuming 2', 'k = 3', 'CX=0 ends the loop before any next read. SI may point one past the array; dereferencing it would exceed the array bounds.', [fact('AX', '13'), fact('CX', '0'), fact('SI', 'base + 6')]),
       ], 'A one-past pointer can be an exit-state marker. Dereferencing it would still be out of bounds.'),
     'stride-bug': visual('memory', 'A one-byte stride splices neighboring words',
-      'Consider words 0x0102 and 0x0304, stored as bytes 02 01 04 03. The CPU follows your address, not your intended array type.', [
+      'Consider words 0x0102 and 0x0304, stored as bytes 02 01 04 03. The CPU loads bytes from the address you supply.', [
         node('first', 'Offset +0', '02 01 → 0102', 'The initial word load reads the first declared element correctly.', [fact('Address advance required', '+2 bytes')]),
-        node('wrong', 'Offset +1', '01 04 → 0401', 'Advancing by one byte mixes the high byte of the first word with the low byte of the second. The resulting word is valid machine data but not an array element.', [fact('Wrong loaded value', '0401')]),
+        node('wrong', 'Offset +1', '01 04 → 0401', 'Advancing by one byte mixes the high byte of the first word with the low byte of the second. The resulting word combines bytes from two adjacent array elements.', [fact('Wrong loaded value', '0401')]),
         node('right', 'Offset +2', '04 03 → 0304', 'Advancing by two reaches the next complete word. Array element size controls the stride.', [fact('Correct loaded value', '0304')]),
       ], 'Choose unequal, asymmetric bytes for tests. Arrays of repeated or zero bytes can conceal a stride bug.', 'add si, 2        ; Advance one 16-bit array element.'),
     'counted-or-terminated': visual('compare', 'Choose one explicit termination contract',
@@ -431,7 +431,7 @@ export const assemblyReadingAids = {
       ], 'Downward growth describes how pushes adjust SP. It does not mean each value’s byte order reverses.'),
     'push-bytes': trace('PUSH first reserves space, then writes the value',
       'Assume SS=0, SP=0x7BFE, and AX=0x5A3C. A 16-bit push consumes exactly two bytes.', [
-        node('before', 'Before PUSH', 'SP = 7BFE', 'The current top contains the caller’s return word. PUSH AX must place new data below it rather than replace it.', [fact('AX', '5A3C')]),
+        node('before', 'Before PUSH', 'SP = 7BFE', 'The current top contains the caller’s return word. PUSH AX places new data below the live return word.', [fact('AX', '5A3C')]),
         node('reserve', 'Adjust the pointer', 'SP = 7BFC', 'Subtract the operand width in bytes. The new top is two bytes below the previous one.', [fact('Change in SP', '−2')]),
         node('store', 'Write little-endian bytes', '[7BFC]=3C, [7BFD]=5A', 'The low byte goes at the lower address inside the new slot. The caller’s word at 7BFE…7BFF remains untouched.', [fact('New owned slot', '7BFC…7BFD'), fact('SP after', '7BFC')]),
       ], 'For these ordinary 16-bit stack examples, track both the SP change and the bytes claimed by the operation.', 'mov ax, 0x5a3c\npush ax'),
@@ -439,8 +439,8 @@ export const assemblyReadingAids = {
       'Continue with SP=0x7BFC and bytes 3C 5A at the top. POP BX reverses the logical ownership of that word.', [
         node('read', 'Read top word', 'BX receives 5A3C', 'The load uses SS:SP. Little-endian reconstruction produces the same word that was pushed.', [fact('BX', '5A3C'), fact('SP during read', '7BFC')]),
         node('release', 'Advance SP', 'SP = 7BFE', 'Adding two releases the slot to future stack activity. The caller’s continuation is again the current top.', [fact('Change in SP', '+2')]),
-        node('residue', 'Bytes remain', '3C 5A may still be present', 'POP does not erase the released bytes. Their old contents are not an ownership guarantee; another call can overwrite them immediately.'),
-      ], 'LIFO describes allocation order. Memory residue is not a safe way to keep a value after popping it.', 'pop bx          ; Recover the word, then release two bytes.'),
+        node('residue', 'Bytes remain', '3C 5A may still be present', 'POP does not erase the released bytes. Another call can reuse and overwrite these released bytes immediately.'),
+      ], 'LIFO describes allocation order. Preserve any value needed after POP in storage that remains owned.', 'pop bx          ; Recover the word, then release two bytes.'),
     'width': visual('compare', 'Stack balance is measured in bytes',
       'On the current 386-or-later real-mode machine, operand size can differ from the default. Match the total bytes pushed and popped.', [
         node('word', 'PUSH AX', '2 bytes', 'A sixteen-bit operand subtracts two from SP. A matching POP into a word register releases two.', [fact('From SP=7BFE', 'SP becomes 7BFC')]),
@@ -459,7 +459,7 @@ export const assemblyReadingAids = {
         node('save', 'Acquire state', 'PUSH BX', 'This changes SP by −2 and creates a preservation obligation. The obligation exists regardless of which branch later runs.'),
         node('left', 'Path A', 'Normal result', 'Compute a result without returning early past the cleanup. Temporary pushes made here must also be paired before joining.'),
         node('right', 'Path B', 'Alternate result', 'Error or boundary cases are still return paths. They must honor the same callee-preserved registers and stack balance.'),
-        node('restore', 'Common exit', 'POP BX, then return', 'The restore releases the saved word. At the return boundary SP must point to the original continuation, not a leftover temporary.'),
+        node('restore', 'Common exit', 'POP BX, then return', 'The restore releases the saved word. At the return boundary SP must point to the original continuation.'),
       ], 'Draw paths, then annotate net SP change along each. A single balanced happy path is insufficient.', undefined,
       [{ from: 'save', to: 'left', label: 'condition true' }, { from: 'save', to: 'right', label: 'condition false' }, { from: 'left', to: 'restore', label: 'join' }, { from: 'right', to: 'restore', label: 'join' }]),
     'observation': trace('Observation uses the stack too',
@@ -480,17 +480,17 @@ export const assemblyReadingAids = {
       'This separate example defines an input in AX and a result in AX. Its only purpose is to expose the call boundary.', [
         node('caller', 'Caller prepares input', 'AX = 12', 'The caller establishes the register required by the interface before transferring control.', [fact('Input', '12')], 'mov ax, 12\ncall add_five'),
         node('callee', 'Callee transforms it', 'AX += 5', 'The routine promises to return AX+5 modulo 65536. ADD also modifies arithmetic flags; the contract should not promise their preservation.', [fact('AX result', '17')], 'add_five:\nadd ax, 5\nret'),
-        node('resume', 'Caller resumes', 'AX = 17', 'Execution resumes after CALL. The caller may now use the result. A later print helper is an observation, not part of how ADD computed the answer.'),
-      ], 'Place helper routines outside fall-through execution. The excerpt illustrates an interface, not a complete bootable layout.'),
+        node('resume', 'Caller resumes', 'AX = 17', 'Execution resumes after CALL. The caller may now use the result. A later print helper makes the computed answer visible.'),
+      ], 'Place helper routines outside fall-through execution. The excerpt illustrates the interface; place it within the supplied bootable layout.'),
     'call-encoding': visual('flow', 'A relative call is measured from the next instruction',
       'For a three-byte near call at offset 0x8100 targeting 0x8140, distinguish source address, next IP, displacement, and saved continuation.', [
-        node('current', 'Instruction start', '0x8100', 'This is where the opcode byte is stored. It is not the base used for the relative displacement calculation.'),
+        node('current', 'Instruction start', '0x8100', 'This is where the opcode byte is stored. The displacement calculation uses the address following the complete instruction.'),
         node('next', 'Next IP', '0x8103', 'The CPU adds the encoded displacement to this address. The same next-IP value is saved for RET.', [fact('Saved return IP', '8103')]),
         node('delta', 'Displacement', '0x003D', 'Subtract next IP from the target: 8140 − 8103 = 003D. A 16-bit call encodes this displacement little-endian after opcode E8.', [fact('Bytes', 'E8 3D 00')]),
         node('target', 'Target', '0x8140', 'Adding 003D to 8103 produces the requested destination. Labels let the assembler maintain this calculation as surrounding code changes.'),
       ], 'Hand calculations are useful evidence. In normal source, labels are safer than hardcoded displacement bytes.'),
     'register-contract': visual('compare', 'A calling convention assigns preservation duties',
-      'CALL itself saves the continuation, not every general register. The following choices are agreements you impose on routines.', [
+      'CALL saves the continuation. Routines must explicitly save any required general registers. The following choices are agreements you impose on routines.', [
         node('caller', 'Caller-saved register', 'Caller keeps needed old values', 'If a register is scratch under the convention, the caller must preserve any live value before a call. The callee may reuse it freely within its documented result contract.'),
         node('callee', 'Callee-saved register', 'Callee restores before return', 'A callee that wants to reuse a preserved register saves the incoming value and restores it on every exit. Nested calls must obey compatible contracts.', [], 'push bx\n; ... temporary BX use ...\npop bx'),
         node('result', 'Result register', 'Deliberately changed', 'A return-value register is expected to carry a new value. “Preserve all registers” conflicts with returning a changed result unless the interface identifies an exception.'),
@@ -514,8 +514,8 @@ export const assemblyReadingAids = {
         node('return', 'Return EIP', '[EBP+4…7]', 'A 32-bit near CALL saved a four-byte continuation. This width change shifts the parameter offsets.'),
         node('arg1', 'First 32-bit argument', '[EBP+8…11]', 'The caller supplies arguments according to the ABI. For this simple stack-passed case the first argument begins eight bytes above EBP.'),
         node('arg2', 'Second 32-bit argument', '[EBP+12…15]', 'The next four-byte argument follows. Real ABI compatibility also requires alignment, preserved registers, and compiler options to agree.'),
-      ], 'This is a later 32-bit protected-mode interface diagram, not code to paste into the current 16-bit routine.', 'bits 32\npush ebp\nmov ebp, esp\nmov eax, [ebp + 8]\n; ... body ...\npop ebp\nret'),
-    'interrupts': visual('compare', 'An interrupt frame is not a normal call frame',
+      ], 'This interface diagram applies to the later 32-bit protected-mode environment. The current lesson uses a 16-bit routine.', 'bits 32\npush ebp\nmov ebp, esp\nmov eax, [ebp + 8]\n; ... body ...\npop ebp\nret'),
+    'interrupts': visual('compare', 'Interrupts save a different return frame',
       'Return instructions consume different saved state. Using the wrong one corrupts both control flow and the stack.', [
         node('near', '16-bit near CALL / RET', 'Saved IP', 'A near CALL keeps CS unchanged and saves a continuation IP. A plain near RET restores that IP.'),
         node('far', '16-bit far CALL / RETF', 'Saved CS and IP', 'A far call changes the code segment as well as the offset. RETF restores the far return context in the required order.'),
@@ -524,7 +524,7 @@ export const assemblyReadingAids = {
   },
   'assembly-bits': {
     'fields': visual('bits', 'One word can hold independent fields',
-      'Imagine a software-defined sixteen-bit status word. Its meaning comes from a documented layout, not a separate register for each property.', [
+      'Imagine a software-defined sixteen-bit status word. Its documented layout assigns meanings to individual bit positions.', [
         node('reserved', 'Reserved', 'bits 15…8', 'Keep these bits unchanged unless the contract assigns them a meaning. In real hardware, reserved-bit write rules must be read from the device specification.', [fact('Example', '0xA5 in upper byte')]),
         node('mode', 'Mode field', 'bits 7…4', 'Four bits encode sixteen possible values. Extracting this field requires both a mask and a shift into the low positions.', [fact('Mask', '0x00F0')]),
         node('flags', 'Flags', 'bits 3…0', 'These lower bits can represent independent yes/no properties. Bit 2, for example, has mask 0x0004.', [fact('Bit 2 mask', '0000 0000 0000 0100')]),
@@ -533,12 +533,12 @@ export const assemblyReadingAids = {
       'Use bit 2 as the target and call all other bits neighbors. Each mask answers a different question.', [
         node('set', 'OR with 0004', 'Force bit 2 to 1', 'The one bit in the mask forces the corresponding destination bit on. Zero mask bits preserve their neighbors.', [], 'or ax, 0x0004'),
         node('clear', 'AND with FFFB', 'Force bit 2 to 0', 'The zero in the mask clears the target. Every one in the mask preserves the corresponding neighboring bit.', [], 'and ax, 0xfffb'),
-        node('toggle', 'XOR with 0004', 'Invert bit 2', 'The one mask bit flips the target each time. Applying the operation twice restores the original value; it is not an idempotent “enable” operation.', [], 'xor ax, 0x0004'),
+        node('toggle', 'XOR with 0004', 'Invert bit 2', 'The one mask bit flips the target each time. Applying the operation twice restores the original value; repeated XOR toggles between the two states.', [], 'xor ax, 0x0004'),
       ], 'Test with neighboring bits already set. An all-zero input cannot reveal an accidental neighbor clear.'),
     'test': visual('compare', 'Inspect a bit without rewriting the packed word',
       'Both instructions compute an AND for flags. Only one stores that AND back into the destination.', [
         node('test', 'TEST AX, 0004', 'AX preserved', 'ZF=0 means at least one masked bit was set; with this one-bit mask, bit 2 was set. ZF=1 means that bit was clear. TEST clears CF and OF.', [fact('Input AX', 'A574'), fact('AX after', 'A574')], 'test ax, 0x0004\njnz enabled'),
-        node('and', 'AND AX, 0004', 'AX overwritten', 'The result retains only the target bit and clears every other destination bit. This is destructive extraction, not a preserving predicate.', [fact('Input AX', 'A574'), fact('AX after', '0004')], 'and ax, 0x0004'),
+        node('and', 'AND AX, 0004', 'AX overwritten', 'The result retains only the target bit and clears every other destination bit. This extraction overwrites AX.', [fact('Input AX', 'A574'), fact('AX after', '0004')], 'and ax, 0x0004'),
       ], 'With a multi-bit mask, nonzero means “any selected bit is set,” not “all selected bits are set.”'),
     'replace-field': trace('Replace a four-bit field while keeping its neighbors',
       'Change bits 7…4 of AX=0xA574 to the new field value 0xB. The upper byte and low nibble must survive.', [
@@ -557,15 +557,15 @@ export const assemblyReadingAids = {
       'These rules apply to the 386-or-later machine used by the course. Do not extrapolate single-bit flag behavior to every count.', [
         node('zero', 'Count zero', 'No shift, flags unchanged', 'A zero effective count performs no shift and does not establish new shift flags. Branching on old CF afterward is not evidence from a new shifted-out bit.'),
         node('one', 'Count one', 'Defined overflow rule', 'Single-bit shifts have specified OF behavior. For SAR by one, OF is cleared; other shift forms have their own rule. CF records the bit shifted out.'),
-        node('mask', 'Count masking', 'Low five count bits used', 'For these non-64-bit shifts, the processor masks the count to five bits. SHL AX,32 therefore has an effective count of zero, not an operation that clears AX.', [fact('32 & 31', '0')]),
-        node('rotate', 'Rotate', 'Wrap bits around', 'ROL and ROR recirculate bits instead of discarding them into zeros or sign fill. Rotates through carry use CF as part of a different rotation ring.'),
+        node('mask', 'Count masking', 'Low five count bits used', 'For these non-64-bit shifts, the processor masks the count to five bits. SHL AX,32 therefore has an effective count of zero and leaves AX unchanged.', [fact('32 & 31', '0')]),
+        node('rotate', 'Rotate', 'Wrap bits around', 'ROL and ROR recirculate bits around the operand. Rotates through carry use CF as part of a different rotation ring.'),
       ], 'For multi-bit shifts, some flags become undefined. Tests must not grade an architecturally undefined value as a required answer.'),
     'multiply': visual('bits', 'A word product has two result halves',
       'For unsigned MUL BX, the implicit first input is AX and the full result is DX:AX. The destination is wider than either input.', [
         node('inputs', 'AX × BX', '0x0123 × 0x0100', 'Multiplying unsigned 291 by 256 yields 74496, which does not fit into sixteen bits.', [fact('Mathematical product', '0x00012300')]),
         node('high', 'DX', 'Product bits 31…16', 'DX receives 0001. Ignoring this nonzero half would lose a carry worth 65536.', [fact('DX', '0001')]),
         node('low', 'AX', 'Product bits 15…0', 'AX receives 2300. For unsigned MUL, CF and OF are set when the high half is nonzero.', [fact('AX', '2300'), fact('CF / OF', '1 / 1')]),
-      ], 'Other arithmetic flags after MUL are not a result contract to rely on. Keep the full product if the algorithm needs it.', 'mov ax, 0x0123\nmov bx, 0x0100\nmul bx           ; DX:AX = 0001:2300'),
+      ], 'The other arithmetic flags after MUL are undefined. Keep the full product if the algorithm needs it.', 'mov ax, 0x0123\nmov bx, 0x0100\nmul bx           ; DX:AX = 0001:2300'),
     'divide': visual('flow', 'DIV consumes DX:AX and produces quotient plus remainder',
       'For unsigned word division, clearing DX is correct only when the intended dividend really is the unsigned value already in AX.', [
         node('dividend', 'Dividend', 'DX:AX = 0000:0384', 'This pair encodes unsigned 900. Leaving an old value in DX would instead add that value times 65536 to the dividend.', [fact('High half', 'DX = 0000')]),
@@ -597,7 +597,7 @@ export const assemblyReadingAids = {
     'bytes': visual('memory', 'The CPU does not label bytes as code or text',
       'Take bytes B0 5A followed by 63 61 74 00. Your layout and control flow determine which bytes are fetched as instructions.', [
         node('instruction', 'B0 5A', 'Instruction at known boundary', 'Starting here in the current mode decodes MOV AL,0x5A. The instruction consumes these two bytes.'),
-        node('string', '63 61 74 00', 'Intended string storage', 'As data, these bytes spell “cat” followed by a zero terminator. Falling through into them asks the CPU to decode opcodes instead of treating them as a string.'),
+        node('string', '63 61 74 00', 'Intended string storage', 'As data, these bytes spell “cat” followed by a zero terminator. Falling through into them makes the CPU decode those bytes as opcodes.'),
         node('routing', 'Explicit control flow', 'Jump around inline data', 'An unconditional jump can skip embedded data; a separate data section or the course data.inc placement can make the layout clearer. A data declaration does not insert an automatic skip.'),
       ], 'Never infer instruction boundaries by grouping a hex dump into equal-sized chunks.', "jmp after_text\ntext: db 'cat', 0\nafter_text:\n; Instruction execution resumes here."),
     'origin': visual('compare', 'A correct ORG can still meet an incorrect segment',
@@ -611,12 +611,12 @@ export const assemblyReadingAids = {
         node('next', 'Following instruction', '0x20 + 2 = 0x22', 'First compute where execution would continue if no branch were taken. This is the relative base.', [fact('Relative base', '22')]),
         node('difference', 'Target minus base', '0x19 − 0x22 = −9', 'The signed displacement must fit in eight bits for a short jump. −9 has the byte representation F7.', [fact('Displacement byte', 'F7')]),
         node('decode', 'Decode EB F7', '0x22 + (−9) = 0x19', 'EB identifies a short JMP; F7 is sign-extended as a negative displacement. The calculation lands on the target boundary.', [fact('Target', '19')]),
-      ], 'If your calculation uses the opcode address instead of the following address, the target will be off by the instruction length.'),
+      ], 'Using the opcode address as the displacement base shifts the target by the instruction length.'),
     'bios-service': visual('flow', 'A firmware interrupt dispatches an interface request',
       'INT 0x10 selects the BIOS video interface. AH chooses its service; the remaining registers supply that service’s arguments.', [
         node('service', 'Service selector', 'AH = 0x0E', 'The teletype service requests character output. A different AH value can select a query or mode operation without printing anything.', [fact('Role', 'Operation to perform')]),
         node('arguments', 'Arguments', 'AL character, BH page', 'For the known text-mode environment, set the intended character and display page. Firmware interfaces can use more inputs than the most obvious one.', [fact('AL example', '0x5A / Z'), fact('BH', '0')]),
-        node('interrupt', 'Interrupt transfer', 'INT 0x10', 'The CPU transfers through the interrupt mechanism to firmware, which interprets the register request. INT itself is not a built-in printing instruction.'),
+        node('interrupt', 'Interrupt transfer', 'INT 0x10', 'The CPU transfers through the interrupt mechanism to firmware, which interprets the register request. The firmware handler performs the requested printing operation.'),
         node('effect', 'Device effect', 'One glyph on the active page', 'The BIOS service updates the guest display state and returns. Do not extend the course helper’s preservation promise to arbitrary raw firmware calls.'),
       ], 'This excerpt assumes real mode, a working BIOS, a valid stack, and the initialized text mode used by the course.', "mov ah, 0x0e\nmov al, 'Z'\nmov bx, 0x0007  ; Page 0; conventional color input.\nint 0x10",
       [{ from: 'service', to: 'arguments', label: 'prepare inputs' }, { from: 'arguments', to: 'interrupt', label: 'invoke' }, { from: 'interrupt', to: 'effect', label: 'firmware performs request' }]),
@@ -626,15 +626,15 @@ export const assemblyReadingAids = {
         node('second', 'Second LODSB', "AL = 'a'", 'The next byte is read and the pointer advances again. LODSB itself does not print or test the byte.', [fact('AL', '61'), fact('SI after', 'text + 2')]),
         node('third', 'Third LODSB', "AL = 't'", 'The last nonzero character is read. The pointer now names the terminator.', [fact('AL', '74'), fact('SI after', 'text + 3')]),
         node('terminator', 'Fourth LODSB', 'AL = 0', 'The zero terminator is an actual loaded byte. A following TEST AL,AL establishes ZF=1 so the loop can stop before calling output.', [fact('AL', '00'), fact('SI after', 'text + 4')]),
-      ], 'With DF=1 the pointer decrements instead. Always establish the direction your traversal contract requires.', 'cld\nmov si, text\nlodsb\ntest al, al      ; This test, not LODSB, establishes ZF.'),
+      ], 'With DF=1 the pointer decrements instead. Always establish the direction your traversal contract requires.', 'cld\nmov si, text\nlodsb\ntest al, al      ; TEST establishes ZF; LODSB leaves it unchanged.'),
     'halt': visual('compare', 'Distinguish deliberate completion from a control-flow loop',
       'A stopped picture is not enough evidence to identify the CPU state. Name how execution reached it.', [
         node('halted', 'Deliberate HLT', 'Waiting for an eligible event', 'HLT stops normal instruction execution until an event that can resume it occurs. With ordinary maskable interrupts disabled, the course can keep the completed output stable; reset and other architectural events are separate concerns.'),
-        node('looping', 'Busy JMP loop', 'Instructions keep executing', 'JMP to the same address repeatedly can leave the display unchanged while the guest continues consuming execution work. It is not the same CPU condition as HLT.', [], 'again:\njmp again'),
+        node('looping', 'Busy JMP loop', 'Instructions keep executing', 'JMP to the same address repeatedly can leave the display unchanged while the guest continues consuming execution work. HLT suspends instruction execution until a qualifying event.', [], 'again:\njmp again'),
         node('unreached', 'Output never reached', 'Wrong path or service', 'A blank display can mean a valid program returned without printing, a loop did not terminate, or a request used the wrong interface. Inspect execution evidence before calling it an emulator hang.'),
       ], 'The harness intentionally halts after your routine returns. Judge success against the checkpoint’s requested final state.'),
     'handoff': visual('flow', 'Take over one boot responsibility at a time',
-      'The next chapter removes the teaching wrapper. Transfer its promises into explicit code and tests instead of copying an opaque bootloader.', [
+      'The next chapter removes the teaching wrapper. Implement its setup promises in your own code and verify them with tests.', [
         node('entry', 'Own entry state', 'Segments, stack, direction', 'Establish only the machine state you can prove your code needs. Firmware-provided state and your initialized state must be distinguished.'),
         node('disk', 'Own loading', 'Where bytes come from and go', 'Decide how stage 1 finds stage 2, where it places it, and which status indicates success. A label address alone cannot load a file.'),
         node('mode', 'Own the transition', 'Descriptors and control flow', 'Moving to protected mode requires the GDT and architectural transition steps. BITS 32 prepares encodings for the new state; it does not create that state.'),

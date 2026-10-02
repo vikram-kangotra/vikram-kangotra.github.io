@@ -146,7 +146,7 @@ export const assemblyBasics = [
         title: '1. From your first instruction to a running machine',
         paragraphs: [
           "Imagine a computer that has just started. There is no terminal window, no standard library, and no operating system to run a print function for us. Yet the processor can already follow instructions. Our first task is to understand that small beginning: put a value somewhere the processor can use it, then ask a supplied routine to show us that value.",
-          "At a coding checkpoint, the workspace opens beside the lesson so you can write x86 assembly, a readable notation for processor instructions. You can also choose Open workspace whenever you want to experiment. NASM, our assembler, translates that notation into machine-code bytes. A small setup program packages your instructions into a bootable image. The browser then runs those bytes on an emulated x86 computer. This is why editing, building, and running are separate actions: the machine runs the bytes from the most recent build, not the text currently under your cursor.",
+          "At a coding checkpoint, the workspace opens beside the lesson so you can write x86 assembly, a readable notation for processor instructions. You can also choose Open workspace whenever you want to experiment. NASM, our assembler, translates that notation into machine-code bytes. A small setup program packages your instructions into a bootable image. The browser then runs those bytes on an emulated x86 computer. This is why editing, building, and running are separate actions: the machine runs the bytes from the most recent build. Building and running again transfers subsequent editor changes into execution.",
           "You do not need to write the setup program yet. The early lessons provide it so that each new idea has a small, understandable experiment. We will first learn where a value lives, then how an instruction changes it, and finally how to print it. At a checkpoint you will assemble those pieces yourself. If the result surprises you, a short trace of the changes will help explain why."
         ],
         teaching: {
@@ -185,8 +185,8 @@ export const assemblyBasics = [
         title: '3. Text is for us; bytes are for the CPU',
         paragraphs: [
           "The processor does not read the word mov. It reads bytes whose bit patterns identify an operation and its inputs. For example, in this lesson’s environment, mov al, 0x43 becomes B0 43. The first byte selects the operation “put an immediate byte into AL”; the second supplies the value. Immediate means that the value is carried inside the instruction itself.",
-          "NASM turns the readable line into those bytes before execution begins. Changing 0x43 to 0x44 changes the second byte in this example. Changing the comment changes neither byte, because a comment is an explanation for the reader rather than an instruction for the processor. Labels are names that the assembler resolves into positions or values; their spelling is not copied into the instruction stream as a command.",
-          "The Bytes view contains more than your short routine. It also includes setup code, helper routines, data, padding, and the boot signature. A 512-byte image therefore does not mean that your two source lines expanded into hundreds of instructions. Also, x86 instructions have different lengths. To interpret an image correctly, we need a starting address and the correct decoding mode; splitting all the bytes into pairs would not work."
+          "NASM turns the readable line into those bytes before execution begins. Changing 0x43 to 0x44 changes the second byte in this example. Changing the comment changes neither byte, because comments provide explanations for the reader and emit no instruction bytes. Labels are names that the assembler resolves into positions or values; their spelling is not copied into the instruction stream as a command.",
+          "The Bytes view includes your routine, setup code, helper routines, data, padding, and the boot signature. A 512-byte image therefore does not mean that your two source lines expanded into hundreds of instructions. Also, x86 instructions have different lengths. To interpret an image correctly, we need a starting address and the correct decoding mode; splitting all the bytes into pairs would not work."
         ],
         teaching: {
           "goal": "Connect a simple assembly instruction to its encoded bytes.",
@@ -205,15 +205,15 @@ export const assemblyBasics = [
         title: '4. Fetch, decode, execute, repeat',
         paragraphs: [
           "Imagine a bookmark placed at the next instruction. The processor fetches bytes at that position, decodes which operation they describe, reads its inputs, and performs the specified change. It then establishes where the next instruction begins. This fetch–decode–execute model is a useful way to reason about a program without needing to know the internal circuit design of a particular processor.",
-          "For an ordinary register copy, the next instruction follows the bytes just decoded. For a jump, the next instruction is at the jump’s destination. For a call, the processor also remembers where it should continue when the called routine finishes. Thus program order is not simply “move to the next source line”: labels and comments have no execution step, and branches can choose a different position entirely.",
-          "Real processors overlap work and may execute internal operations out of order while preserving the architectural results that software is promised. That does not make our trace useless: it tells us what the programmer must observe after the instructions take effect. It does mean that one trace row is not one clock tick. At this stage we ask what a program computes, not how many nanoseconds it takes."
+          "For an ordinary register copy, the next instruction follows the bytes just decoded. For a jump, the next instruction is at the jump’s destination. For a call, the processor also remembers where it should continue when the called routine finishes. Program order follows the decoded instructions: labels and comments have no execution step, and branches can choose a different position entirely.",
+          "Real processors overlap work and may execute internal operations out of order while preserving the architectural results that software is promised. Our architectural trace specifies the observable result after the instructions take effect. A separate timing model would need to account for that overlapping work. At this stage, use the trace to explain what the program computes."
         ],
         teaching: {
           "goal": "Trace how the processor chooses and executes successive instructions.",
           "bridge": "Once source becomes bytes, the instruction pointer gives those bytes an execution order.",
           "check": {
             "prompt": "A two-byte instruction begins at offset 0x0100 and does not branch. Where does the next instruction begin, and does that tell you how long the first took?",
-            "answer": "It begins at 0x0102, immediately after the two encoded bytes. The length determines the next sequential address, not the execution time. Timing depends on the instruction and the implementation."
+            "answer": "It begins at 0x0102, immediately after the two encoded bytes. The encoded length determines the next sequential address. Timing depends on the instruction and the implementation."
           },
           "takeaway": "Instruction length explains sequential addresses; it does not measure execution time.",
           "diagramAfter": 2
@@ -264,7 +264,7 @@ export const assemblyBasics = [
         title: '7. An output routine is an interface',
         paragraphs: [
           "A character on a screen requires more work than a register copy. Something must interpret a character code and ask the display system to draw it. The early lessons supply a routine named putc for that purpose. Its input is the byte in AL. When you execute call putc, control enters that routine, it prints the character, and it returns to the instruction after the call.",
-          "ASCII is a character encoding: an agreement that assigns a number to each supported character. For this first exercise, a small lookup is enough: A has decimal code 65, H has code 72, and I has code 73. NASM translates a quoted character such as 'H' into its code, so AL receives 72 rather than a picture of the letter. The register holds that number; putc interprets it to draw H. You do not need to memorize the lookup. The next chapter explains character encodings and number notation in more detail.",
+          "ASCII is a character encoding: an agreement that assigns a number to each supported character. For this first exercise, a small lookup is enough: A has decimal code 65, H has code 72, and I has code 73. NASM translates a quoted character such as 'H' into its code, so AL receives the numerical code 72. The register holds that number; putc interprets it to draw H. You do not need to memorize the lookup. The next chapter explains character encodings and number notation in more detail.",
           "Think through printing two different letters. First AL must contain the first character when putc reads it. Then AL must contain the second character when putc reads it again. If you prepare both values before making either call, the second preparation overwrites the first. Both calls then see the latest value. The calls do not remember an earlier assignment that has already been replaced.",
           "This arrangement is an interface: an agreement about how to ask a routine to do a job. Our helpers specify their input registers and preserve the general registers and flags used by these lessons. The newline helper moves the output position without requiring a character argument from you. You can now build a small routine from understood pieces: prepare one character, request its output, and repeat when the task needs another character."
         ],
@@ -285,7 +285,7 @@ export const assemblyBasics = [
         title: '8. What is ready before your first instruction?',
         paragraphs: [
           "Your routine begins in an environment prepared by the course. The BIOS has loaded a boot sector, and setup code has selected usable segment registers and stack storage before calling your lesson. This support code is often called a harness: it supplies the surrounding machinery needed to run a focused piece of code. It lets us study MOV without first writing a disk loader.",
-          "In this harness, DS, ES, and SS are zero, the direction flag is clear, and lesson entry has SP = 0x7bfe because the call into the lesson has already saved a return address. These names will gain a detailed meaning in later chapters. For now, the practical point is that your routine has usable memory addressing, a working stack, and the documented output helpers. Those are deliberate setup choices, not guarantees about every newly started PC.",
+          "In this harness, DS, ES, and SS are zero, the direction flag is clear, and lesson entry has SP = 0x7bfe because the call into the lesson has already saved a return address. These names will gain a detailed meaning in later chapters. For now, the practical point is that your routine has usable memory addressing, a working stack, and the documented output helpers. These conditions come from the harness’s explicit setup instructions; a new bootloader must establish the conditions its own routines require.",
           "When your code finishes, the surrounding program must be able to resume. A balanced stack and intact return address make that possible. The lesson body belongs in lesson.asm; the build inserts it into the prepared image. You are not expected to paste BITS, ORG, a boot signature, or another complete boot sector into that body. Later we will build those missing layers and explain each initial condition ourselves."
         ],
         teaching: {
@@ -304,8 +304,8 @@ export const assemblyBasics = [
         title: '9. Put the pieces together in your first routine',
         paragraphs: [
           "A two-character message is a useful first program because every instruction has an observable purpose. The register writes prepare the characters; the calls print them; a newline finishes the line. Before typing the entire sequence, write a tiny trace with one row per instruction. A row that prepares a character should change AL. A row that calls putc should add exactly that character to the output so far.",
-          "Build the routine in the checkpoint’s file, using the exact message requested there. The short examples in the reading explain the pieces; the problem statement tells you which pieces to combine for this task. Once the source is complete, Run builds and boots a fresh image. An assembler error points to a problem in the source notation. A successful build with the wrong message points instead to the meaning or order of otherwise valid instructions.",
-          "Compare the observed characters with your trace before editing again. If the first character is wrong, inspect the last assignment to AL before the first output call. If the second repeats the first, inspect whether AL changed between calls. This method gives each fix a reason. The checkpoint tests then confirm the required behavior; they complement your explanation rather than replace it."
+          "Build the routine in the checkpoint’s file, using the exact message requested there. The short examples in the reading explain the pieces; the problem statement tells you which pieces to combine for this task. Once the source is complete, Run builds and boots a fresh image. An assembler error points to a problem in the source notation. A successful build with the wrong message points to the meaning or order of otherwise valid instructions.",
+          "Compare the observed characters with your trace before editing again. If the first character is wrong, inspect the last assignment to AL before the first output call. If the second repeats the first, inspect whether AL changed between calls. This method gives each fix a reason. The checkpoint tests then confirm the required behavior; combine their results with the trace that explains each observed character."
         ],
         teaching: {
           "goal": "Build a short output routine by tracing one character at a time.",
@@ -351,13 +351,13 @@ export const assemblyBasics = [
       brief: 'Repair the valid but misordered program to print OK. Then create a second version that prints the first character twice without writing its literal twice. Explain why the copied source is not consumed.',
       language: 'asm', starter: firstStarter, solution: firstSolution,
       tasks: ['Predict the starter output before running it.', 'Repair the order and boot the result in the Workspace.', 'Remove one MOV and predict what the next printing call observes.', 'Write a three-row AX/BX trace for the independent copy question.'],
-      hints: ['Compilation proves encoding validity, not intended order.', 'A register keeps its value until something changes that register or an overlapping part of it.', 'The provided putc preserves registers, so a second call with no new input repeats the character.'],
+      hints: ['Compilation checks encoding validity. Trace the call arguments to verify the intended output order.', 'A register keeps its value until something changes that register or an overlapping part of it.', 'The provided putc preserves registers, so a second call with no new input repeats the character.'],
       explanation: 'Each printing call consumes its input logically but does not erase AL. The repaired program loads O, prints it, loads K, and prints it. The machine check observes the actual emulated display; the written explanation establishes whether you can transfer the idea to a new sequence.',
       checks: ['The starter’s KO is explained before the repair.', 'The emulated display shows OK after compiling your current source.', 'The trace keeps BX=65 after AX becomes 66.', 'The explanation distinguishes MOV from the output helper.']
     },
     reflection: {
       prompt: 'A teammate writes mov al,65, boots successfully, sees no character, and concludes that the CPU is stuck. Explain two different reasons for an unchanged screen, then design an experiment that distinguishes them without changing the boot scaffold.',
-      rubric: ['Separates a register write from an output side effect', 'Explains the deliberate halt after a finished lesson', 'Proposes an observation before and after the suspicious instruction', 'States what the helper preserves instead of assuming all calls are harmless'],
+      rubric: ['Separates a register write from an output side effect', 'Explains the deliberate halt after a finished lesson', 'Proposes an observation before and after the suspicious instruction', 'States the helper’s preservation contract and checks every live value against it'],
       modelAnswer: 'MOV changes AL and has no screen effect. The lesson may execute it and return into the deliberate halt loop, or control flow may fail to reach it. I would print a known character before the suspicious point and then call putc after setting AL=65. A preceding marker alone narrows the failure to the later path; both characters show the path executed. The provided helper preserves general-purpose registers and flags, so this instrumentation has a stated contract. A successful print still does not prove unrelated code paths.'
     },
     sources: [intel, nasmLanguage, nasmBits],
@@ -367,7 +367,7 @@ export const assemblyBasics = [
     id: 'A02',
     slug: 'assembly-numbers',
     title: 'Bits, numbers, and their interpretations',
-    subtitle: 'Derive binary, hexadecimal, width, ASCII, and two’s complement instead of memorizing conversions.',
+    subtitle: 'Derive binary, hexadecimal, width, ASCII, and two’s complement through worked conversions.',
     phase: 'x86 Assembly',
     minutes: 110,
     prerequisites: ['A01: MOV, explicit output, and the boot scaffold', 'Whole-number addition and subtraction'],
@@ -378,7 +378,7 @@ export const assemblyBasics = [
         title: '1. A bit pattern begins with positions',
         paragraphs: [
           "A bit has two possible states, written 0 and 1. A byte contains eight bits. To represent numbers, we assign each position a weight. Starting at the right, the weights are 1, 2, 4, 8, 16, 32, 64, and 128. Each move left doubles the weight, just as each move left in decimal multiplies a position’s weight by ten.",
-          "For the byte 00101100, the set positions contribute 32, 8, and 4. Their sum is 44. The leading zeros contribute nothing, but writing them makes the eight-bit width visible. Bit numbering starts at zero on the right: bit 0 has weight 1, and bit 7 has weight 128. A bit number identifies a position, not the value stored in that position.",
+          "For the byte 00101100, the set positions contribute 32, 8, and 4. Their sum is 44. The leading zeros contribute nothing, but writing them makes the eight-bit width visible. Bit numbering starts at zero on the right: bit 0 has weight 1, and bit 7 has weight 128. A bit number identifies a position; that position’s contents are either zero or one.",
           "The representation becomes easier to reason about when you work in both directions. To write 44 in binary, choose the largest fitting weight, 32, leaving 12; then choose 8, leaving 4; then 4, leaving zero. The same weights reconstruct the original number. Later, individual bits will also represent permissions and hardware options, so being able to name one position precisely matters as much as converting the whole value."
         ],
         teaching: {
@@ -418,7 +418,7 @@ export const assemblyBasics = [
         title: '3. Three source spellings, one machine value',
         paragraphs: [
           "A source literal is the written form of a value in a program. In NASM, 44, 0x2c, and 0b00101100 are three literals for the same integer. The prefixes tell the assembler how to read the digits. After assembly, the CPU receives the resulting bits; it does not remember whether you originally preferred decimal, hexadecimal, or binary.",
-          "This explains a common surprise with the printing helpers. If each of those values is placed in AX and sent to print_hex16, all three print as 002C. The helper chooses hexadecimal output. It does not reproduce the original source spelling. Four output digits also describe the helper’s sixteen-bit display width, not the number of significant digits in your source literal.",
+          "This explains a common surprise with the printing helpers. If each of those values is placed in AX and sent to print_hex16, all three print as 002C. The helper chooses hexadecimal output. It does not reproduce the original source spelling. Its four output digits cover the full sixteen-bit input, including leading zeros required by that display format.",
           "When a result looks wrong, identify which conversion you are judging. The source notation is converted into a value by NASM. The value is stored in a register as bits. A later helper converts those bits into display characters. Mistaking the last stage for the first can make a correctly stored decimal value seem incorrect merely because it is displayed in hex."
         ],
         teaching: {
@@ -426,9 +426,9 @@ export const assemblyBasics = [
           "bridge": "Now we can separate the way a number is written from the bits it represents.",
           "check": {
             "prompt": "Would mov ax, 52 and mov ax, 0x34 produce different AX values? What would print_hex16 display for either?",
-            "answer": "Both set AX to the same value, decimal 52. The hexadecimal helper displays 0034 for either source spelling because it formats the stored bits, not the original text."
+            "answer": "Both set AX to the same value, decimal 52. The hexadecimal helper displays 0034 for either source spelling because both source spellings produce the same stored bits for the helper to format."
           },
-          "takeaway": "Radix belongs to the written representation, not to a register’s stored value.",
+          "takeaway": "The source radix determines how digits become a value; the output format determines how its stored bits become display characters.",
           "diagramAfter": 2
         }
       },
@@ -438,7 +438,7 @@ export const assemblyBasics = [
         paragraphs: [
           "One bit gives two patterns. Adding another bit doubles that number, because every existing pattern can now end in either 0 or 1. After eight bits there are 2⁸ = 256 patterns. If we interpret them as unsigned integers starting at zero, the range is 0 through 255. Sixteen bits provide 65,536 patterns and the unsigned range 0 through 65,535.",
           "The largest value and the number of possible values differ by one because zero occupies a pattern. This matters when you choose a register for a counter. An eight-bit register can represent a count of 255, but the next increment cannot leave the mathematical value 256 in the same eight bits. A wider destination is needed if that value must be retained.",
-          "Width also limits instruction operands. AL selects eight bits, AX sixteen, and EAX thirty-two. A large immediate written into a smaller destination cannot magically enlarge it; an assembler may warn about truncation or reject a particular form. Treat that feedback as a prompt to decide what result you intended. Width should follow the problem’s possible values, not just whichever register name is easiest to type."
+          "Width also limits instruction operands. AL selects eight bits, AX sixteen, and EAX thirty-two. A large immediate written into a smaller destination cannot magically enlarge it; an assembler may warn about truncation or reject a particular form. Treat that feedback as a prompt to decide what result you intended. Choose the register width from the full range of values the problem requires."
         ],
         teaching: {
           "goal": "Derive the range that fits in a fixed number of bits.",
@@ -457,7 +457,7 @@ export const assemblyBasics = [
         paragraphs: [
           "Imagine an eight-bit counter containing 250. Adding 10 gives the mathematical result 260, which needs nine bits. The eight-bit destination can retain only the low eight bits, leaving 4. This is wraparound: the stored value behaves like the remainder after division by 256. In symbols, an eight-bit result is calculated modulo 2⁸.",
           "The same idea explains subtraction past zero. With an eight-bit result, 2 − 5 leaves the pattern 253, or 0xFD. That pattern can later be interpreted as unsigned 253 or signed −3. The stored bits alone do not announce which interpretation was intended. Status flags, which we will study soon, preserve additional information about certain arithmetic results.",
-          "Wraparound can be useful in a deliberately bounded counter, but it is not an automatic substitute for a larger result. If a program must count 260 objects accurately, storing 4 is a loss of information. Write down the full mathematical answer first, then the retained pattern. Seeing both makes it clear whether the reduced result meets the problem’s needs."
+          "Wraparound can be useful in a deliberately bounded counter. An exact result requires enough storage for its full range. If a program must count 260 objects accurately, storing 4 is a loss of information. Write down the full mathematical answer first, then the retained pattern. Seeing both makes it clear whether the reduced result meets the problem’s needs."
         ],
         teaching: {
           "goal": "Predict the low bits retained when a result exceeds its width.",
@@ -474,7 +474,7 @@ export const assemblyBasics = [
         id: 'signedness-is-an-interpretation',
         title: '6. The same bits can answer different questions',
         paragraphs: [
-          "A register does not carry a permanent label saying positive, negative, character, or address. It holds bits. For an unsigned byte, all eight positions contribute positive powers of two. For a two’s-complement signed byte, the highest position instead has weight −128. The remaining positions keep their usual weights. This gives the signed range −128 through 127.",
+          "A register holds bits whose interpretation comes from the surrounding data format and operations. For an unsigned byte, all eight positions contribute positive powers of two. For a two’s-complement signed byte, the highest position has weight −128. The remaining positions keep their usual weights. This gives the signed range −128 through 127.",
           "Consider 11110110, or 0xF6. Unsigned, it is 246. Signed, its highest bit contributes −128 and the remaining set bits contribute 118, so its value is −10. Nothing in the register changes when we explain the pattern differently. The interpretation matters when we choose operations such as comparisons, sign extension, and signed division.",
           "Equality is the same under either interpretation: identical patterns are equal. Ordering need not be. The byte 0xF6 is above 0x05 as an unsigned number but below it as a signed number. This is why assembly provides different conditional jumps for signed and unsigned comparisons. We will learn those instructions after we understand how arithmetic supplies their flags."
         ],
@@ -483,7 +483,7 @@ export const assemblyBasics = [
           "bridge": "Wraparound gave us a pattern for a negative result; we can now explain its signed meaning.",
           "check": {
             "prompt": "Interpret 0xE8 as an unsigned byte and as a signed byte. Explain the signed result from the range size.",
-            "answer": "Unsigned 0xE8 is 232. Because its sign bit is set, the signed interpretation is 232 − 256 = −24. Subtracting 256 is another way to give bit 7 the negative weight instead of the unsigned positive weight."
+            "answer": "Unsigned 0xE8 is 232. Because its sign bit is set, the signed interpretation is 232 − 256 = −24. Subtracting 256 is another way to apply the signed interpretation’s negative weight to bit 7."
           },
           "takeaway": "Signedness is a chosen interpretation of bits, reflected in the instructions that use them.",
           "diagramAfter": 2
@@ -495,12 +495,12 @@ export const assemblyBasics = [
         title: '7. Derive a negative representation',
         paragraphs: [
           "To represent −k in n bits, choose the pattern that adds to k and leaves zero after wraparound. That pattern has unsigned value 2ⁿ − k. For example, in eight bits, −6 is 256 − 6 = 250, or 0xFA. Adding the patterns for 6 and −6 gives 256, whose low eight bits are zero.",
-          "The familiar “invert and add one” method gives the same result. Start with 00000110 for 6, invert all eight bits to obtain 11111001, then add one to obtain 11111010. The width is essential: inversion must happen over the bits of the intended representation. In sixteen bits, −6 is 0xFFFA rather than 0x00FA.",
+          "The familiar “invert and add one” method gives the same result. Start with 00000110 for 6, invert all eight bits to obtain 11111001, then add one to obtain 11111010. The width is essential: inversion must happen over the bits of the intended representation. In sixteen bits, −6 is 0xFFFA. The pattern 0x00FA represents positive 250 at that width.",
           "There is one more useful boundary to understand. The most negative signed byte is −128, whose pattern is 0x80. Its positive counterpart, +128, does not fit in a signed byte. Negating that pattern cannot produce a representable positive answer at the same width. This asymmetry comes from using one of the available patterns for zero; later it will explain an important signed-overflow case."
         ],
         teaching: {
           "goal": "Construct a negative two’s-complement value at a specified width.",
-          "bridge": "Knowing the signed interpretation lets us derive negative encodings instead of memorizing them.",
+          "bridge": "Use the signed interpretation to derive and check each negative encoding.",
           "check": {
             "prompt": "Derive the eight-bit and sixteen-bit representations of −12. Why is 0x00F4 not the sixteen-bit answer?",
             "answer": "Eight bits give 256 − 12 = 244 = 0xF4. Sixteen bits give 65536 − 12 = 65524 = 0xFFF4. The sixteen-bit pattern 0x00F4 has a clear sign bit and represents positive 244."
@@ -573,7 +573,7 @@ export const assemblyBasics = [
       example: numbersExample, starter: numbersStarter, solution: numbersSolution,
       title: 'Repair three number interpretations', expectedOutput: '0041\nFFFF\nFF80',
       instructions: 'Build a routine that prints decimal 65, sixteen-bit negative one, and sixteen-bit negative 128 with print_hex16, one per line. Add and test one value at a time. Keep the formatter unchanged so each difference comes from the representation you chose.',
-      hints: ['An unprefixed 41 is decimal, not hexadecimal.', 'The sixteen-bit pattern for −1 has all sixteen bits set.', 'For a negative sixteen-bit value −x, use the pattern whose unsigned value is 65536−x.'],
+      hints: ['An unprefixed 41 is decimal; hexadecimal forty-one requires an explicit radix such as 0x41.', 'The sixteen-bit pattern for −1 has all sixteen bits set.', 'For a negative sixteen-bit value −x, use the pattern whose unsigned value is 65536−x.'],
       question: { prompt: 'What unsigned decimal value has the same eight-bit pattern as signed −2?', answer: 254, explanation: 'The eight-bit pattern is FE. Its unsigned value is 256−2=254; the signed interpretation subtracts 256 again.' }
     },
     challenge: {
@@ -583,7 +583,7 @@ export const assemblyBasics = [
       tasks: ['Predict all three wrong starter lines.', 'Repair the program to print 0041, FFFF, and FF80.', 'For −5, derive the eight-bit and sixteen-bit patterns independently.', 'Explain why putc with AL=5 does not format the numeral 5.'],
       hints: ['The original starter prints 0029, 00FF, and 0080.', 'Two’s-complement conversion needs a specified width.', 'The output helper chooses hexadecimal text; it does not choose the signedness of the underlying bits.'],
       explanation: 'The repair writes 65, −1, and −128 to AX. Their sixteen-bit patterns are 0041, FFFF, and FF80. These results separate source notation from stored representation and output formatting. For −5 the corresponding patterns are FB and FFFB, because preserving a negative signed value while widening requires sign extension.',
-      checks: ['The current source produces all three expected output lines.', 'The explanation states sixteen bits for each AX value.', 'The learner derives FB and FFFB rather than copying them without a calculation.', 'The difference between a digit value and an ASCII digit code is explicit.']
+      checks: ['The current source produces all three expected output lines.', 'The explanation states sixteen bits for each AX value.', 'The learner shows the calculations that produce FB and FFFB.', 'The difference between a digit value and an ASCII digit code is explicit.']
     },
     reflection: {
       prompt: 'A file contains the byte FF. One developer calls it 255 and another calls it −1. Decide whether either must be wrong, then describe the two different sixteen-bit values a loader might construct and the information needed to choose between them.',
@@ -629,7 +629,7 @@ export const assemblyBasics = [
         paragraphs: [
           "Start with AX = 0x6A2D. Executing mov al, 0x90 replaces the low byte and leaves the high byte alone, so AX becomes 0x6A90. Executing mov ah, 0x13 afterward replaces the high byte, producing 0x1390. The easiest trace writes AX as two byte columns: AH on the left and AL on the right.",
           "Read the destination carefully on every line. The immediate’s spelling does not choose the width; the register name does. A small value such as 1 can replace all of AX when the destination is AX, or only its low byte when the destination is AL. Thus mov ax, 1 gives 0x0001, whereas mov al, 1 can leave a nonzero AH from earlier work.",
-          "As the trace gets longer, keep unchanged bytes visible instead of replacing the whole row from memory. This turns a vague feeling about “the register value” into a precise update rule. When the program later prints AX, the helper observes both bytes, including any high byte you forgot to initialize. An unexpected prefix in hexadecimal output often points directly to that oversight."
+          "As the trace gets longer, carry every unchanged byte into the next row explicitly. This turns a vague feeling about “the register value” into a precise update rule. When the program later prints AX, the helper observes both bytes, including any high byte you forgot to initialize. An unexpected prefix in hexadecimal output often points directly to that oversight."
         ],
         teaching: {
           "goal": "Update a register trace correctly after byte-sized writes.",
@@ -647,7 +647,7 @@ export const assemblyBasics = [
         title: '3. Sixteen-bit writes do not clear EAX’s upper half',
         paragraphs: [
           "Imagine EAX contains two separate sixteen-bit quantities: 0x2468 in the upper half and 0x1357 in the lower half. If the task asks us to replace only the lower quantity with 0x9ACE, mov ax, 0x9ace does exactly that. EAX becomes 0x24689ACE. The destination AX selects only the low sixteen bits.",
-          "Using mov eax, 0x9ace instead replaces all thirty-two bits. EAX then becomes 0x00009ACE, and the old upper half is lost. The numerical size of the immediate does not restrict the write to its nonzero digits. The instruction’s operand width determines the whole destination region, including positions filled with zeros.",
+          "Using mov eax, 0x9ace replaces all thirty-two bits. EAX then becomes 0x00009ACE, and the old upper half is lost. The numerical size of the immediate does not restrict the write to its nonzero digits. The instruction’s operand width determines the whole destination region, including positions filled with zeros.",
           "This is a useful habit for later hardware work: translate the requirement into the set of bits that may change. Then choose an instruction that writes those bits while preserving the others. It is more reliable than first choosing a register name and hoping that an observation of its low half reveals whether the whole operation was correct."
         ],
         teaching: {
@@ -668,7 +668,7 @@ export const assemblyBasics = [
         paragraphs: [
           "Our early machine is in real mode, but the emulated processor supports 32-bit registers and instructions. A 16-bit code environment chooses default sizes for many instruction encodings. It does not mean that every instruction must manipulate only sixteen bits. NASM can encode a 32-bit operand such as EAX using the appropriate operand-size override.",
           "There are several separate ideas here. Operand size says how much data an operation reads or writes. Address size says how an effective address is calculated. Execution mode determines broader rules, including protection and address interpretation. Changing one instruction’s operand size does not create a protected-mode environment, page tables, or access to operating-system services.",
-          "BITS 16 tells NASM which defaults to assume when it chooses encodings; it is not an instruction sent to the CPU. The assembler’s assumptions and the CPU’s actual decoding state need to agree. Later, our bootloader will perform a real mode transition and only then enter code assembled for its new defaults. For now, wider registers are simply available tools inside the real-mode environment we already have."
+          "BITS 16 directs NASM’s encoding defaults during assembly. Runtime setup establishes the CPU’s decoding environment. The assembler’s assumptions and the CPU’s actual decoding state need to agree. Later, our bootloader will perform a real mode transition and only then enter code assembled for its new defaults. For now, wider registers are simply available tools inside the real-mode environment we already have."
         ],
         teaching: {
           "goal": "Distinguish operand width from the processor’s execution mode.",
@@ -686,7 +686,7 @@ export const assemblyBasics = [
         title: '5. General-purpose does not mean interchangeable in every instruction',
         paragraphs: [
           "AX, BX, CX, DX, SI, DI, BP, and SP are the familiar sixteen-bit general-purpose registers in this part of x86. They often store ordinary values, addresses, or temporary results. The names come with historical roles, but a register such as BX is not permanently typed as an address and CX is not permanently typed as a count.",
-          "Some instructions nevertheless use particular registers implicitly. LOOP uses a count register selected by address size; sixteen-bit MUL and DIV use AX and DX in prescribed ways; string instructions use pointer registers such as SI or DI. SP is the stack pointer, and BP commonly provides a stable reference to a stack frame. Those uses are properties of the instruction, not guesses we should make from a variable’s purpose.",
+          "Some instructions nevertheless use particular registers implicitly. LOOP uses a count register selected by address size; sixteen-bit MUL and DIV use AX and DX in prescribed ways; string instructions use pointer registers such as SI or DI. SP is the stack pointer, and BP commonly provides a stable reference to a stack frame. Identify those implicit uses from the instruction definition before assigning software roles to the registers.",
           "For each new instruction, ask both which operands are written explicitly and which registers are read or changed implicitly. This becomes especially important for operations that produce a result wider than one register. A calculation can corrupt a useful value even if that value’s register name never appeared in the source line. We will derive the implicit inputs and outputs when we reach those operations."
         ],
         teaching: {
@@ -713,7 +713,7 @@ export const assemblyBasics = [
           "bridge": "Knowing which registers change lets us plan where values should live during a calculation.",
           "check": {
             "prompt": "AX contains a total you need after a call. The called routine documents that AX is overwritten and BX is preserved. When should you copy AX to BX, and why?",
-            "answer": "Copy it before the call. That saves the live total in a location the callee promises to preserve. A copy after the call would save the callee’s replacement value instead."
+            "answer": "Copy it before the call. That saves the live total in a location the callee promises to preserve. A copy after the call would save the callee’s replacement value."
           },
           "takeaway": "A value needs a safe home until its last use, including across calls.",
           "diagramAfter": 2
@@ -764,8 +764,8 @@ export const assemblyBasics = [
         title: '9. Keep the 64-bit zero-extension rule in its own mode',
         paragraphs: [
           "In 64-bit mode, RAX names a sixty-four-bit register and EAX names its low thirty-two bits. There is an additional architectural rule: writing a 32-bit general-purpose destination clears the upper thirty-two bits of the corresponding 64-bit register. Thus a write to EAX in that mode also determines the high half of RAX.",
-          "That rule does not apply to all smaller views. A write to AX still changes only sixteen bits, and a write to AL still changes only eight. If RAX contains 0x1122334455667788, writing AX = 0xABCD produces 0x112233445566ABCD. Writing EAX = 0xABCD instead produces 0x000000000000ABCD in 64-bit mode.",
-          "Our current real-mode exercises do not use RAX, so this is a preview rather than a new requirement for the checkpoint. Its purpose is to prevent a tempting but false generalization: “writing a smaller register clears the larger one.” The reliable habit is to state the exact width and execution mode. That habit will transfer directly when we eventually bring up a 64-bit kernel."
+          "That rule does not apply to all smaller views. A write to AX still changes only sixteen bits, and a write to AL still changes only eight. If RAX contains 0x1122334455667788, writing AX = 0xABCD produces 0x112233445566ABCD. Writing EAX = 0xABCD produces 0x000000000000ABCD in 64-bit mode.",
+          "This 64-bit example is a paper preview. The current checkpoint continues to use the real-mode register environment. Its purpose is to prevent a tempting but false generalization: “writing a smaller register clears the larger one.” The reliable habit is to state the exact width and execution mode. That habit will transfer directly when we eventually bring up a 64-bit kernel."
         ],
         teaching: {
           "goal": "Apply the 64-bit register zero-extension rule only where it belongs.",
@@ -784,7 +784,7 @@ export const assemblyBasics = [
         title: '10. Repair the write set, then test another initial value',
         paragraphs: [
           "A partial-register bug often looks like a simple wrong constant, but the real issue is the size or position of the write. Begin by drawing the initial register as bytes. Mark which bytes the task asks you to replace and which must survive. The destination register should select exactly the intended region, or the calculation must explicitly preserve the neighboring bits.",
-          "After the edit, derive the entire register value on paper, not just the part that the output helper first displays. Then consider another initial upper half. If the method preserves only one memorized pattern rather than the original bits, this second example exposes it. The checkpoint tests use multiple machine states for the same reason: a correct operation should follow the input, not merely reproduce one familiar display.",
+          "After the edit, derive the entire register value on paper, including the high bits outside the first printer observation. Then repeat the calculation with another initial upper half. That second input exposes a hard-coded reconstruction. The checkpoint tests use multiple machine states to verify that the preserved output region follows the actual input.",
           "The result is a general way of thinking about machine instructions: identify the inputs, identify the exact destination bits, and keep track of values that still matter. Arithmetic adds a new dimension to that model. Its instructions can update both a numerical result and a set of status flags, so the next chapter will teach us to trace those two outputs together."
         ],
         teaching: {
@@ -813,13 +813,13 @@ export const assemblyBasics = [
       language: 'asm', starter: registersStarter, solution: registersSolution,
       tasks: ['Trace the starter’s entire EAX value before inspecting it.', 'Repair the low-word write and both byte assignments.', 'Run again with a different initial upper word as a transfer experiment.', 'Demonstrate why MOV AL,BL is not zero extension when AH starts nonzero.'],
       hints: ['The starter initially shows a plausible BEEF but loses the upper word.', 'A partial write preserves the unselected bits, even if their old value is inconvenient.', 'Initialize AX to A500 and BL to 80 before comparing MOV AL,BL with MOVZX AX,BL.'],
-      explanation: 'MOV AX,BEEF preserves EAX bits 31:16. The printer exposes BEEF before SHR moves 1234 into AX. The byte writes then assign 34 to AH and 12 to AL. The same preservation should work for another high word; the fixed output check is a fixture, not proof of every possible input.',
+      explanation: 'MOV AX,BEEF preserves EAX bits 31:16. The printer exposes BEEF before SHR moves 1234 into AX. The byte writes then assign 34 to AH and 12 to AL. The same preservation should work for another high word; the fixed output check covers one fixture, while the preservation requirement applies across the permitted input states.',
       checks: ['The current source produces BEEF, 1234, and 3412.', 'The whole-register trace identifies exactly when the starter loses 1234.', 'A second initial high word survives without a new hardcoded constant.', 'Zero extension, sign extension, and partial writes are explained as different operations.']
     },
     reflection: {
       prompt: 'A routine writes AL and then returns AX as a result. It passes every test when AX starts at zero. Explain the hidden assumption, construct a counterexample, and propose two different repairs depending on whether the byte is signed or unsigned.',
       rubric: ['Identifies AH as stale state', 'Chooses a nonzero initial high byte to expose the bug', 'Uses explicit zero extension for unsigned values', 'Uses explicit sign extension for signed values and states the intended input width'],
-      modelAnswer: 'Writing AL preserves AH, so an initially zero AX hides the bug. With AX=A500 and AL replaced by 80, the returned AX is A580. If AL is an unsigned byte, MOVZX AX,AL returns 0080. If AL is a signed eight-bit value, MOVSX AX,AL returns FF80. The interface must choose one interpretation; clearing arbitrary bits is not a substitute for that contract.'
+      modelAnswer: 'Writing AL preserves AH, so an initially zero AX hides the bug. With AX=A500 and AL replaced by 80, the returned AX is A580. If AL is an unsigned byte, MOVZX AX,AL returns 0080. If AL is a signed eight-bit value, MOVSX AX,AL returns FF80. The interface must state which interpretation to preserve so the routine can choose the correct conversion.'
     },
     sources: [intel, nasmBits, nasmLanguage],
     nextBuild: 'Keep the register ledger. Next add flags to it and distinguish unsigned carry from signed overflow with deliberately chosen boundary values.'
@@ -838,7 +838,7 @@ export const assemblyBasics = [
         id: 'two-results-of-arithmetic',
         title: '1. Arithmetic gives us a value and a set of flags',
         paragraphs: [
-          "An ADD instruction produces more than the bits stored in its destination. It also updates status flags, small pieces of processor state that describe selected properties of the result. These flags let later instructions ask questions such as “was the result zero?” or “did an unsigned sum need another bit?” without repeating the calculation.",
+          "An ADD instruction updates both its numerical destination and status flags, small pieces of processor state that describe selected properties of the result. These flags let later instructions ask questions such as “was the result zero?” or “did an unsigned sum need another bit?” without repeating the calculation.",
           "For an eight-bit example, 250 + 10 has the mathematical result 260 but leaves 4 in the destination. The carry flag records that the unsigned result exceeded the byte’s capacity. A different flag, overflow, reports whether the signed interpretation fits. The stored result and the flags belong to the same operation, but they answer different questions.",
           "We will study carry, overflow, zero, and sign one at a time. For each example, write the full mathematical result, the retained pattern, and the relevant flags in separate columns. This avoids treating one flag as a universal “something went wrong” signal. Whether wraparound is a problem depends on the calculation the program intended to perform."
         ],
@@ -879,7 +879,7 @@ export const assemblyBasics = [
         paragraphs: [
           "When subtracting unsigned values, CF is one if the subtrahend is larger than the starting value. For a byte calculation, 7 − 12 needs a borrow and leaves the low-byte pattern 251, or 0xFB. The mathematical answer is −5, but unsigned byte arithmetic cannot store that number directly. CF reports the borrow while the destination keeps the wrapped pattern.",
           "Compare 12 − 7: the result is 5 and CF is zero. This makes subtraction useful for unsigned ordering. A comparison can perform the same flag calculation without keeping the numeric difference, allowing a conditional jump to ask whether the first operand was below the second. We will return to that idea in the branching chapter.",
-          "The terminology can be confusing because the same flag is called carry even after subtraction. On x86, remember the actual rule: SUB sets CF when an unsigned borrow is needed. It is not the opposite of the addition rule, and it is not a signed-negative flag. Writing the mathematical subtraction first makes the correct interpretation straightforward."
+          "The terminology can be confusing because the same flag is called carry even after subtraction. On x86, remember the actual rule: SUB sets CF when an unsigned borrow is needed. For a signed-result question, use the signed interpretation and its corresponding flags. Writing the mathematical subtraction first makes the correct interpretation straightforward."
         ],
         teaching: {
           "goal": "Use CF to recognize an unsigned subtraction that borrows past the top bit.",
@@ -902,7 +902,7 @@ export const assemblyBasics = [
           "For addition, signed overflow occurs when operands with the same sign produce a retained result with the opposite sign. For subtraction, it occurs when operands of different signs produce a result whose sign differs from the first operand. These bit rules follow from the signed range; deriving a few examples numerically is more useful than memorizing them without understanding why."
         ],
         teaching: {
-          "goal": "Determine OF from the signed range rather than from the carry flag.",
+          "goal": "Determine OF by checking whether the signed mathematical result fits its destination range.",
           "bridge": "Unsigned capacity does not answer whether the same operation makes sense as signed arithmetic.",
           "check": {
             "prompt": "For an eight-bit signed calculation, add 90 and 60. Predict the retained pattern, CF, and OF.",
@@ -918,8 +918,8 @@ export const assemblyBasics = [
         title: '5. ZF and SF describe the retained result',
         paragraphs: [
           "The zero flag ZF is one when the retained result is all zeros. The sign flag SF copies the most significant bit of that result. For a byte result 0x80, ZF is zero and SF is one. For a result 0x00, ZF is one and SF is zero. These rules refer to the operand width used by the instruction.",
-          "SF is useful for interpreting a representable signed result, but it is not a complete signed comparison by itself. If signed overflow occurred, the retained sign can disagree with the sign of the full mathematical answer. For example, an out-of-range positive sum may wrap into a pattern with its top bit set. That is why signed conditional jumps combine SF with OF.",
-          "ZF also describes the retained value rather than the unlimited mathematical answer. An eight-bit sum of 255 and 1 leaves zero, so both ZF and CF become one. There is no contradiction: the low byte is zero and an unsigned carry occurred. Reading each flag as its own precise statement makes combinations like this easy to explain."
+          "SF identifies the sign of a representable signed result. A general signed comparison combines it with OF to account for overflow. If signed overflow occurred, the retained sign can disagree with the sign of the full mathematical answer. For example, an out-of-range positive sum may wrap into a pattern with its top bit set. That is why signed conditional jumps combine SF with OF.",
+          "ZF describes whether the retained value is zero. An eight-bit sum of 255 and 1 leaves zero, so both ZF and CF become one. There is no contradiction: the low byte is zero and an unsigned carry occurred. Reading each flag as its own precise statement makes combinations like this easy to explain."
         ],
         teaching: {
           "goal": "Read ZF and SF from the retained result without overinterpreting them.",
@@ -937,7 +937,7 @@ export const assemblyBasics = [
         id: 'capture-flags-before-clobbering',
         title: '6. Save a flag result before another operation replaces it',
         paragraphs: [
-          "Flags are shared processor state, not a separate historical record for each instruction. If ADD produces a carry and a later SUB updates the flags, a subsequent carry test sees the SUB result. The earlier carry is no longer available merely because its ADD remains visible in the source. A trace should name which instruction last produced the flags being used.",
+          "Flags are shared processor state updated by instructions as execution proceeds. If ADD produces a carry and a later SUB updates the flags, a subsequent carry test sees the SUB result. The earlier carry is no longer available merely because its ADD remains visible in the source. A trace should name which instruction last produced the flags being used.",
           "SETcc instructions let us capture a condition as an ordinary byte. For example, SETC stores one or zero according to CF, and SETO does the same for OF. These instructions do not change the arithmetic flags, so several conditions from one calculation can be saved in succession. Once captured, the bytes can survive later flag-changing arithmetic if their registers are preserved.",
           "MOV also leaves the arithmetic flags unchanged, which can make it suitable for rearranging values between a calculation and its flag consumer. A general function call, however, preserves flags only if its documented interface says so. Our supplied print helpers make that promise for these lessons. In your own routines, capturing the needed condition close to its producing instruction keeps the reasoning local."
         ],
@@ -965,7 +965,7 @@ export const assemblyBasics = [
           "bridge": "Instructions can produce the same value while differing in their flag effects.",
           "check": {
             "prompt": "AX is 0xFFFF and CF is one. After INC AX, what are AX and CF, and why is CF not proof that this particular increment carried?",
-            "answer": "AX becomes zero and CF remains one. INC preserves the old carry flag, so the one may have come from an earlier operation rather than this increment."
+            "answer": "AX becomes zero and CF remains one. INC preserves the old carry flag, so the one retains the value established before this increment."
           },
           "takeaway": "Equivalent destination values do not imply equivalent flag behavior.",
           "diagramAfter": 2
@@ -1013,11 +1013,11 @@ export const assemblyBasics = [
       },
       {
         id: 'boundary-tests-and-explanations',
-        title: '10. Test the boundary, not just a friendly number',
+        title: '10. Test the transitions where carry and overflow matter',
         paragraphs: [
           "A multiword increment can appear correct for many inputs even if it never transfers carry. Starting with a low word of 3 does not test the transition into the high word. Starting with 0xFFFF does. A useful test deliberately places the machine at the point where the mechanism under study becomes necessary.",
           "Build a small set of cases around that point: a low word just below the boundary, exactly at it, and zero. For signed flags, choose cases around the positive and negative limits separately. For subtraction, include both a low-word borrow that the high word can satisfy and a borrow from an all-zero complete value. Work out the mathematical answer before deriving the retained pieces.",
-          "At the checkpoint, explain why the repaired instruction works for these different states, not just why the displayed sample looks right. That explanation is a bridge to memory programming: a pointer, an array index, or a byte count is also a finite-width value. Understanding wraparound and flags now will help us reason about addresses and bounds rather than treating them as special magic numbers."
+          "At the checkpoint, explain the repaired instruction’s behavior for each boundary state and connect that behavior to the observed output. That explanation is a bridge to memory programming: a pointer, an array index, or a byte count is also a finite-width value. Understanding wraparound and flags now will help us derive address calculations and bounds from their actual widths and ranges."
         ],
         teaching: {
           "goal": "Choose arithmetic examples that distinguish a correct carry chain from a plausible wrong one.",
@@ -1050,7 +1050,7 @@ export const assemblyBasics = [
     },
     reflection: {
       prompt: 'A reviewer replaces ADD AX,1 with INC AX in a multiword counter because both produce the same low word. Write a counterexample with explicit initial CF, and explain why checking only the displayed low word failed to catch the regression.',
-      rubric: ['Establishes the incoming CF rather than assuming it', 'Uses a low-word boundary such as FFFF', 'Explains INC preserves CF while ADD updates it', 'Checks the high word and final carry as well as the low word'],
+      rubric: ['Establishes the incoming CF explicitly', 'Uses a low-word boundary such as FFFF', 'Explains INC preserves CF while ADD updates it', 'Checks the high word and final carry as well as the low word'],
       modelAnswer: 'Let CF=0, DX=0001, and AX=FFFF. ADD AX,1 produces AX=0000 and CF=1, so ADC DX,0 produces DX=0002. INC AX also produces AX=0000, but leaves CF=0, so the following ADC leaves DX=0001. A low-word-only display is identical in both programs. The test must inspect both words and relevant carry boundaries; the replacement changed the flag contract even though one visible value was unchanged.'
     },
     sources: [intel, nasmLanguage],

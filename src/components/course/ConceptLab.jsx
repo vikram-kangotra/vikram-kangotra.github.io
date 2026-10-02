@@ -130,7 +130,7 @@ function InterruptLab({ onSolved }) {
     <div className={styles.toggles}><Toggle label="PIC IRQ0 masked" checked={masked} onChange={setMasked} /><Toggle label="CPU EFLAGS.IF enabled" checked={iflag} onChange={setIflag} /></div>
     <div className={styles.pipeline}><span>PIT pulse</span><span>IRR: {pending ? 'pending' : 'clear'}</span><span>IMR: {masked ? 'masked' : 'open'}</span><span>ISR: {service ? 'in service' : 'clear'}</span><span>CPU IF: {iflag ? '1' : '0'}</span></div>
     <div className={styles.actions}>
-      <button type="button" onClick={() => { setPending(true); setMessage(pending ? 'A request is already pending. The PIC stores a request bit, not an unbounded tick counter.' : 'PIT edge latched as pending IRQ0.'); }}>Pulse PIT</button>
+      <button type="button" onClick={() => { setPending(true); setMessage(pending ? 'A request is already pending. The PIC records the pending request in a single bit, so further pulses can coalesce.' : 'PIT edge latched as pending IRQ0.'); }}>Pulse PIT</button>
       <button type="button" onClick={deliver}>Attempt delivery</button>
       <button type="button" onClick={returnInterrupt}>Send EOI + IRETD</button>
     </div>
@@ -207,7 +207,7 @@ function PagingLab({ onSolved }) {
       <fieldset><legend>Requested access</legend><Toggle label="Write (off = read)" checked={write} onChange={value => { setWrite(value); setChanged(true); }} /><Toggle label="Ring 3 (off = supervisor)" checked={user} onChange={value => { setUser(value); setChanged(true); }} /></fieldset>
     </div>
     {!valid ? <Result>Enter valid 32-bit addresses and align the physical frame to 0x1000.</Result> : fault ? <Result>Page fault (#PF), CR2={hex(va)}. {!present ? `${!directory.present ? 'PDE' : 'PTE'} is not present.` : user && !(directory.user && table.user) ? 'A user access needs U/S=1 at both levels.' : 'A write needs R/W=1 at both levels; supervisor writes also obey permissions with CR0.WP=1.'} Error bits: P={present ? 1 : 0}, W/R={write ? 1 : 0}, U/S={user ? 1 : 0}. RSVD=0; this legacy configuration has no NX bit.</Result> : <Result success>Translation succeeds. Take the aligned PTE frame base and add the 12-bit byte offset. Permissions are the intersection of both levels.</Result>}
-    <Prediction question={fault ? 'What numeric page-fault error code does this access produce?' : 'What physical byte address does this access reach?'} expected={!valid ? null : fault ? error : pa + offset} ready={valid && changed} prerequisite="Change an address, permission, or access type; use valid aligned addresses." explanation={fault ? 'Encode P in bit 0, W/R in bit 1, and U/S in bit 2. P means protection violation, not the value of the PTE present bit alone.' : `Physical address = ${hex(pa || 0)} + offset ${offset}. Changing a live mapping also requires an appropriate TLB invalidation in a real kernel.`} onSolved={onSolved} />
+    <Prediction question={fault ? 'What numeric page-fault error code does this access produce?' : 'What physical byte address does this access reach?'} expected={!valid ? null : fault ? error : pa + offset} ready={valid && changed} prerequisite="Change an address, permission, or access type; use valid aligned addresses." explanation={fault ? 'Encode P in bit 0, W/R in bit 1, and U/S in bit 2. P identifies whether the fault was a protection violation.' : `Physical address = ${hex(pa || 0)} + offset ${offset}. Changing a live mapping also requires an appropriate TLB invalidation in a real kernel.`} onSolved={onSolved} />
   </>;
 }
 
@@ -233,7 +233,7 @@ function HeapLab({ onSolved }) {
     setMessage(`Allocation #${serial}: payload ${hex(0xC1000000 + block.start + 16)}. ${needed - 16 - bytes} alignment bytes. ${split ? 'Split the remaining free block.' : 'Remainder too small for a header plus 16-byte payload; keep it in this allocation.'}`);
   };
   const free = index => {
-    if (blocks[index].free) return setMessage('This block is already free; a real allocator must detect invalid frees rather than corrupt metadata.');
+    if (blocks[index].free) return setMessage('This block is already free; a real allocator must reject the invalid free before changing metadata.');
     const next = blocks.map((block, i) => i === index ? { start: block.start, size: block.size, free: true } : { ...block });
     const merged = [];
     next.forEach(block => {
@@ -342,7 +342,7 @@ function walkFat(entries, format) {
   const visited = new Set(), path = [];
   let cluster = 2;
   for (let steps = 0; steps <= entries.length; steps += 1) {
-    if (visited.has(cluster)) return { path, valid: false, message: `Cycle detected: cluster ${cluster} was already visited. Stop instead of hanging the kernel.` };
+    if (visited.has(cluster)) return { path, valid: false, message: `Cycle detected: cluster ${cluster} was already visited. Stop traversal and report the cycle.` };
     if (cluster < 2 || cluster >= entries.length + 2) return { path, valid: false, message: `Cluster ${cluster} is outside this eight-cluster data region.` };
     visited.add(cluster); path.push(cluster);
     const raw = parse(entries[cluster - 2], max);
@@ -350,7 +350,7 @@ function walkFat(entries, format) {
     const value = raw & mask;
     if (value >= eoc) return { path, valid: true, message: `End-of-chain at cluster ${cluster}. ${path.length} data clusters visited.` };
     if (value === bad) return { path, valid: false, message: `Bad-cluster marker at cluster ${cluster}; report an I/O/corruption error.` };
-    if (value >= reserved || value === 1) return { path, valid: false, message: `Reserved FAT value ${hex(value)} at cluster ${cluster}; this is not a data-cluster link.` };
+    if (value >= reserved || value === 1) return { path, valid: false, message: `Reserved FAT value ${hex(value)} at cluster ${cluster}; reject this reserved link value.` };
     if (value === 0) return { path, valid: false, message: `Cluster ${cluster} is marked free inside a live file chain. The filesystem is inconsistent.` };
     cluster = value;
   }
@@ -367,7 +367,7 @@ function FatLab({ onSolved }) {
   return <>
     <p>A directory entry describes a 3000-byte file starting at cluster 2. Each cluster holds 1024 bytes. Its current FAT chain contains a cycle. Repair the entries and prove that a bounded traversal ends correctly.</p>
     <label className={styles.field}><span>Entry encoding (resets this small model)</span><select value={format} onChange={event => { setFormat(event.target.value); setEntries(initialFat()); setWalked(false); }}><option value="12">FAT12: 12-bit entries</option><option value="32">FAT32: low 28 bits of a 32-bit entry</option></select></label>
-    <p className={styles.note}>{format === '12' ? 'EOC: 0xFF8–0xFFF. Bad: 0xFF7. Reserved: 0xFF0–0xFF6 and 1. Free: 0. Packed byte offset for cluster n is n + floor(n / 2); adjacent entries share a byte.' : 'EOC: 0x0FFFFFF8–0x0FFFFFFF. Bad: 0x0FFFFFF7. Mask off the high four bits when reading; preserve them when writing. This tiny graph demonstrates FAT32 entry semantics, not a valid full FAT32 volume.'}</p>
+    <p className={styles.note}>{format === '12' ? 'EOC: 0xFF8–0xFFF. Bad: 0xFF7. Reserved: 0xFF0–0xFF6 and 1. Free: 0. Packed byte offset for cluster n is n + floor(n / 2); adjacent entries share a byte.' : 'EOC: 0x0FFFFFF8–0x0FFFFFFF. Bad: 0x0FFFFFF7. Mask off the high four bits when reading; preserve them when writing. This graph models FAT32 entries. A complete FAT32 volume also requires valid geometry and metadata.'}</p>
     <div className={styles.fatEntries}>{entries.map((value, index) => <Field key={index} label={`FAT[${index + 2}] →`} value={value} onChange={next => { setEntries(entries.map((entry, i) => i === index ? next : entry)); setWalked(false); }} />)}</div>
     <div className={styles.actions}><button type="button" onClick={() => setWalked(true)}>Walk from cluster 2</button><button type="button" onClick={() => { setEntries(initialFat()); setWalked(false); }}>Restore broken chain</button></div>
     {walked && <><div className={styles.pipeline} aria-label="Visited cluster chain">{result.path.map(cluster => <span key={cluster}>Cluster {cluster}</span>)}<span>{result.valid ? 'EOC' : 'STOP'}</span></div><Result success={enough}>{result.message} {result.valid && (enough ? 'Chain length matches the file’s required cluster count.' : `This file needs exactly ${required} clusters in this repair exercise; the chain has ${result.path.length}.`)}</Result></>}
@@ -395,7 +395,7 @@ function validateElf(segments) {
     if (segment.memsz === 0) return { valid: false, message: `PT_LOAD ${index}: this exercise requires nonempty segments. ELF can contain zero-sized loadable segments; a real loader may skip those.` };
     if (segment.align > 1 && (!Number.isInteger(Math.log2(segment.align)) || segment.vaddr % segment.align !== segment.offset % segment.align)) return { valid: false, message: `PT_LOAD ${index}: p_align must be 0, 1, or a power of two, and p_vaddr ≡ p_offset (mod p_align).` };
     if (segment.vaddr % PAGE !== segment.offset % PAGE) return { valid: false, message: `PT_LOAD ${index}: this page-based loader requires p_vaddr and p_offset to have the same 4 KiB page offset.` };
-    if (segment.flags === 'RWX') return { valid: false, message: `PT_LOAD ${index}: this loader’s W^X policy rejects writable-and-executable segments. This is a security policy, not an ELF format requirement.` };
+    if (segment.flags === 'RWX') return { valid: false, message: `PT_LOAD ${index}: this loader’s W^X policy rejects writable-and-executable segments. The loader chooses this security policy; ELF itself permits RWX segments.` };
     parsed.push(segment);
   }
   const [a, b] = parsed;
@@ -436,7 +436,7 @@ const LABS = {
 export default function ConceptLab({ type = 'gdt', onSolved }) {
   const [title, Lab] = LABS[type] || LABS.gdt;
   return <section className={styles.lab} aria-label={`${title} interactive concept lab`}>
-    <div className={styles.labHeader}><span className={styles.eyebrow}>Interactive concept lab</span><span className={styles.badge}>Simulation · not a CPU emulator</span></div>
+    <div className={styles.labHeader}><span className={styles.eyebrow}>Interactive concept lab</span><span className={styles.badge}>Interactive concept simulation</span></div>
     <h3>{title}</h3>
     <Lab key={type} onSolved={onSolved} />
   </section>;

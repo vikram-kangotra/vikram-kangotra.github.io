@@ -51,7 +51,7 @@ const projects = [
     description:
       'Learning machine learning from the inside out. An educational, PyTorch-inspired library written in Rust.',
     detail:
-      'Lamp is an attempt to build a PyTorch-like library in Rust for educational purposes. The goal is to learn how these libraries work by implementing the ideas, rather than competing with production frameworks.',
+      'Lamp is an attempt to build a PyTorch-like library in Rust for educational purposes. I am building it to understand how tensor operations and automatic differentiation work.',
     href: 'https://github.com/vikram-kangotra/lamp',
     imageSrc: projectImages.lamp,
     visual: 'library',

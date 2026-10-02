@@ -13,11 +13,15 @@ import { getCExerciseTests } from '@/course/cExerciseTests';
 import { makeCheckpointBrief } from '@/course/checkpointBriefs';
 import { assemblyReadingAids } from '@/course/assemblyReadingAids';
 import { systemsReadingAids } from '@/course/systemsReadingAids';
-import { getLessonGate, isCheckpointSkipped } from '@/course/lessonAccess';
+import { getCheckpointLessonIndex, getLessonGate, isCheckpointSkipped } from '@/course/lessonAccess';
+import { resolveLessonProgress, lessonProgressPatch, isChapterComplete } from '@/course/lessonProgress';
 import CourseShell from '@/components/course/CourseShell';
 import ChapterOutline from '@/components/course/ChapterOutline';
 import CodeBlock from '@/components/course/CodeBlock';
 import LessonVisual from '@/components/course/LessonVisual';
+import LessonDepth from '@/components/course/LessonDepth';
+import DetailedGuide, { TopicExercises } from '@/components/course/DetailedGuide';
+import ChapterStudyPlan from '@/components/course/ChapterStudyPlan';
 import CheckpointBrief from '@/components/course/CheckpointBrief';
 import { LessonIntroduction, LessonReasoning } from '@/components/course/LessonTeaching';
 import useCourseProgress from '@/components/course/useCourseProgress';
@@ -44,12 +48,18 @@ Chapter.coursePage = true;
 function ChapterWorkspace({ chapter, roadmap, previous, next }) {
   const router = useRouter();
   const { progress, update: updateProgress, loaded, storageAvailable } = useCourseProgress();
-  const state = progress[chapter.slug] || {};
-  const update = (patch) => updateProgress(chapter.slug, patch);
+  const savedState = progress[chapter.slug] || {};
+  const state = resolveLessonProgress(chapter, savedState);
+  const update = (patch) => updateProgress(chapter.slug, { ...patch, ...(patch.lessons ? lessonProgressPatch(chapter, patch.lessons) : {}) });
+  const progressStateRef = useRef(state);
+  progressStateRef.current = state;
+  const updateRef = useRef(update);
+  updateRef.current = update;
   const machinePractice = chapter.lab === 'boot';
   const chapterNumber = String(roadmap.findIndex((item) => item.slug === chapter.slug) + 1).padStart(2, '0');
   const [lessonIndex, setLessonIndex] = useState(0);
   const [readerTab, setReaderTab] = useState('lesson');
+  const [furtherPractice, setFurtherPractice] = useState(false);
   const [practiceTab, setPracticeTab] = useState('machine');
   const [mobilePane, setMobilePane] = useState('reading');
   const [focusMode, setFocusMode] = useState(false);
@@ -76,6 +86,7 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
   const practiceScroll = useRef(null);
   const practicePositions = useRef({});
   const lessonHeading = useRef(null);
+  const problemHeading = useRef(null);
   const readerPositions = useRef({});
   const section = chapter.sections[lessonIndex];
   const workspaceKey = `vk-os-workspace-v2:${chapter.slug}`;
@@ -88,16 +99,19 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
   const blockedLesson = loaded && gate && lessonIndex > gate.lessonIndex;
   const lessonLocked = (index) => !!gate && index > gate.lessonIndex;
   const lockReason = (index) => lessonLocked(index) ? `Pass or skip the checkpoint in lesson ${gate.lessonIndex + 1} to unlock this lesson.` : '';
-  const upcomingStep = guide.steps.findIndex(step => chapter.sections.findIndex(item => item.id === step.sectionId) >= lessonIndex);
+  const upcomingStep = guide.steps.findIndex(step => getCheckpointLessonIndex(chapter, step) >= lessonIndex);
   const buildIndex = upcomingStep < 0 ? guide.steps.length - 1 : upcomingStep;
   const buildStep = guide.steps[buildIndex];
-  const atCheckpoint = buildStep.sectionId === section.id;
-  const checkpointReady = atCheckpoint && (state.openBuilds || []).includes(buildIndex);
+  const nextProblemLesson = guide.steps[buildIndex + 1] ? chapter.sections.findIndex(item => item.id === guide.steps[buildIndex + 1].sectionId) : -1;
+  const checkpointReadingEnd = getCheckpointLessonIndex(chapter, buildStep);
+  const atCheckpoint = readerTab === 'problem' ? buildStep.sectionId === section.id : checkpointReadingEnd === lessonIndex;
+  const readingCheckpointGroup = section.id === buildStep.sectionId || section.parentSectionId === buildStep.sectionId;
+  const checkpointReady = atCheckpoint && (readerTab === 'problem' || (state.openBuilds || []).includes(buildIndex));
   const checkpointPassed = (buildStep.tests ? state.behaviorChecks || [] : state.buildSteps || []).includes(buildIndex);
   const checkpointSkipped = !checkpointPassed && isCheckpointSkipped(buildIndex, state);
   const skippedBuilds = guide.steps.filter((step, index) => isCheckpointSkipped(index, state) && !(step.tests ? state.behaviorChecks || [] : state.buildSteps || []).includes(index)).length;
   const allBuildsPassed = guide.steps.every((step, index) => (step.tests ? state.behaviorChecks || [] : state.buildSteps || []).includes(index));
-  const lessonSkipped = (index) => guide.steps.some((step, stepIndex) => step.sectionId === chapter.sections[index].id && isCheckpointSkipped(stepIndex, state) && !(step.tests ? state.behaviorChecks || [] : state.buildSteps || []).includes(stepIndex));
+  const lessonSkipped = (index) => guide.steps.some((step, stepIndex) => getCheckpointLessonIndex(chapter, step) === index && isCheckpointSkipped(stepIndex, state) && !(step.tests ? state.behaviorChecks || [] : state.buildSteps || []).includes(stepIndex));
   const chapterAttempted = (state.buildAttempts || []).includes(guide.steps.length - 1);
   const longCode = section.code && /^(asm|c|cpp)$/i.test(section.code.language) && (section.code.source.split('\n').length > 12 || section.code.source.includes('; --- Your lesson program starts here ---'));
   const diagramAfter = Math.min(section.paragraphs.length, Math.max(1, section.teaching?.diagramAfter || 2));
@@ -119,7 +133,7 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
     { label: 'Pass the coding checkpoints', detail: `${passedBuilds} of ${guide.steps.length} passed`, done: allBuildsPassed, action: () => openCheckpoint(firstUnpassed < 0 ? guide.steps.length - 1 : firstUnpassed) },
     ...(!machinePractice ? [{ label: 'Solve the visual model', detail: state.lab ? 'Prediction checked' : 'Explore the model and test your prediction', done: state.lab, action: () => openPractice('explore', 'experiment') }] : []),
   ];
-  const readerTabs = [{ id: 'lesson', label: 'Lesson', icon: <FiBookOpen /> }, { id: 'overview', label: 'Outline', icon: <FiList /> }, { id: 'review', label: 'Progress', icon: <FiCheckCircle /> }];
+  const readerTabs = [{ id: 'lesson', label: 'Lesson', icon: <FiBookOpen /> }, { id: 'problem', label: 'Problem', icon: <FiCode /> }, { id: 'overview', label: 'Outline', icon: <FiList /> }, { id: 'review', label: 'Progress', icon: <FiCheckCircle /> }];
   const practiceTabs = [{ id: 'machine', label: 'Workspace', icon: <FiTerminal /> }, ...(!machinePractice ? [{ id: 'explore', label: 'Visualize', icon: <FiGrid /> }] : [])];
   const labContext = { '12': 'Connect the block layer to its first client: repair the FAT chain, then explain which cluster reads become sector requests.', '15': 'Trace what happens before a shell executes a program: repair its ELF load description and account for the memory the loader creates.', '16': 'This model revisits legacy 32-bit, two-level paging. Compare it with the four-level x86-64 walk in the lesson; test long mode using QEMU.', '17': 'This model uses one CPU. Compare its accounting with multiple run queues; it does not simulate APIC delivery or SMP.' }[chapter.id];
 
@@ -135,31 +149,50 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
   }, [practiceScroller]);
 
   useEffect(() => {
+    if (loaded && !Array.isArray(savedState.lessonIds)) updateRef.current({ ...lessonProgressPatch(chapter, state.lessons), complete: state.complete });
+  }, [loaded, savedState.lessonIds, chapter, state.lessons, state.complete]);
+  useEffect(() => {
     if (!loaded) return;
     let saved = {};
     try { saved = JSON.parse(localStorage.getItem(workspaceKey) || '{}') || {}; setSplit(clampSplit(localStorage.getItem('vk-os-pane-split'))); localStorage.setItem('vk-os-last-chapter', chapter.slug); } catch { /* Keep a usable default workspace. */ }
     const savedIndex = chapter.sections.findIndex((item) => item.id === saved.lesson);
+    let restoredIndex = Math.max(0, savedIndex);
     if (savedIndex >= 0) {
       const prerequisite = gateRef.current;
       const blocked = prerequisite && savedIndex > prerequisite.lessonIndex;
-      setLessonIndex(blocked ? prerequisite.lessonIndex : savedIndex);
+      restoredIndex = blocked ? prerequisite.lessonIndex : savedIndex;
       if (blocked) setNavigationNotice({ requested: savedIndex, ...prerequisite });
     }
-    if (['lesson', 'overview', 'review'].includes(saved.readerTab)) setReaderTab(saved.readerTab);
+    // A saved Problem view always belongs to the original checkpoint anchor.
+    // Newly inserted supporting lessons can now be the group's reading gate.
+    if (saved.readerTab === 'problem') {
+      const step = guide.steps.find(item => getCheckpointLessonIndex(chapter, item) >= restoredIndex) || guide.steps.at(-1);
+      restoredIndex = Math.max(0, chapter.sections.findIndex(item => item.id === step?.sectionId));
+    }
+    setLessonIndex(restoredIndex);
+    if (['lesson', 'problem', 'overview', 'review'].includes(saved.readerTab)) setReaderTab(saved.readerTab);
     if (['machine', ...(!machinePractice ? ['explore'] : [])].includes(saved.practiceTab)) setPracticeTab(saved.practiceTab);
     if (saved.practiceTab === 'code') setReaderTab('review');
     if (saved.workspaceOpen && saved.practiceTab !== 'code') { setWorkspaceOpen(true); setWorkspaceMounted(true); }
     setWorkspacePinned(!!saved.workspacePinned);
     function followHash() {
+      setFurtherPractice(false);
       const hash = window.location.hash.slice(1);
-      const index = chapter.sections.findIndex((item) => `lesson-${item.id}` === hash);
+      const problem = guide.steps.find(step => `problem-${step.sectionId}` === hash);
+      const index = chapter.sections.findIndex((item) => problem ? item.id === problem.sectionId : `lesson-${item.id}` === hash);
       if (index >= 0) {
         const prerequisite = gateRef.current;
         const blocked = prerequisite && index > prerequisite.lessonIndex;
-        const destination = blocked ? prerequisite.lessonIndex : index;
-        setLessonIndex(destination); setReaderTab('lesson'); setMobilePane('reading'); setFocusMode(false);
+        const destination = blocked ? (problem ? chapter.sections.findIndex(item => item.id === guide.steps[prerequisite.stepIndex].sectionId) : prerequisite.lessonIndex) : index;
+        setLessonIndex(destination); setReaderTab(problem ? 'problem' : 'lesson'); setMobilePane('reading'); setFocusMode(false);
+        if (problem) {
+          const openedIndex = guide.steps.findIndex(step => step.sectionId === chapter.sections[destination].id);
+          const openBuilds = progressStateRef.current.openBuilds || [];
+          if (!openBuilds.includes(openedIndex)) updateRef.current({ openBuilds: [...openBuilds, openedIndex] });
+          setPracticeTab('machine'); setWorkspaceMounted(true); setWorkspaceOpen(true);
+        }
         setNavigationNotice(blocked ? { requested: index, ...prerequisite } : null);
-        if (blocked) replaceHash(`lesson-${chapter.sections[destination].id}`);
+        if (blocked) replaceHash(`${problem ? 'problem' : 'lesson'}-${chapter.sections[destination].id}`);
         requestAnimationFrame(() => readerScroll.current?.scrollTo({ top: 0 }));
       }
       else if (['machine-lab', 'experiment'].includes(hash)) {
@@ -171,7 +204,7 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
     followHash(); setRestored(true);
     window.addEventListener('hashchange', followHash);
     return () => window.removeEventListener('hashchange', followHash);
-  }, [loaded, chapter.sections, chapter.slug, focusPracticeTarget, machinePractice, workspaceKey]);
+  }, [loaded, chapter, focusPracticeTarget, machinePractice, workspaceKey, guide.steps]);
   useEffect(() => {
     if (!loaded || !restored || blockedLesson) return;
     try { localStorage.setItem(workspaceKey, JSON.stringify({ lesson: section.id, readerTab, practiceTab, workspaceOpen, workspacePinned })); } catch { /* Draft and navigation persistence is optional. */ }
@@ -192,13 +225,16 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
   }, [gateLessonIndex, navigationNotice]);
   function replaceHash(hash) { window.history.replaceState(window.history.state, '', `#${hash}`); }
   function selectReaderTab(tab) {
-    readerPositions.current[readerTab] = readerScroll.current?.scrollTop || 0;
+    setFurtherPractice(false);
+    readerPositions.current[`${section.id}:${readerTab}`] = readerScroll.current?.scrollTop || 0;
+    if (tab === 'problem') { openCheckpoint(buildIndex, false); return; }
     setReaderTab(tab); setMobilePane('reading'); setFocusMode(false);
     if (!workspacePinned) setWorkspaceOpen(false);
     replaceHash(tab === 'lesson' ? `lesson-${section.id}` : tab === 'overview' ? 'chapter-guide' : 'checkpoint');
-    requestAnimationFrame(() => { if (readerScroll.current) readerScroll.current.scrollTop = readerPositions.current[tab] || 0; });
+    requestAnimationFrame(() => { if (readerScroll.current) readerScroll.current.scrollTop = readerPositions.current[`${section.id}:${tab}`] || 0; });
   }
   function goLesson(index, moveFocus = true) {
+    setFurtherPractice(false);
     if (!loaded) return false;
     const prerequisite = gateRef.current;
     if (prerequisite && index > prerequisite.lessonIndex) {
@@ -221,19 +257,32 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
     else { selectReaderTab('review'); requestAnimationFrame(() => document.getElementById('checkpoint-heading')?.focus()); }
   }
   function completeLesson() {
+    if (!loaded || blockedLesson) return;
     if (atCheckpoint && !checkpointPassed && !checkpointSkipped) {
+      // Only the Lesson footer acknowledges reading. Direct Problem navigation
+      // and successful submissions keep reading and coding progress separate.
+      if (readerTab === 'lesson') {
+        const lessons = [...new Set([...readLessons, lessonIndex])];
+        update({ lessons, read: lessons.length === chapter.sections.length || !!state.read });
+      }
       openCheckpoint(buildIndex); return;
+    }
+    if (readerTab !== 'lesson') {
+      if (checkpointReadingEnd + 1 < chapter.sections.length) goLesson(checkpointReadingEnd + 1);
+      else selectReaderTab('review');
+      return;
     }
     advanceLesson();
   }
   function skipCheckpoint() {
     if (!loaded || blockedLesson || !atCheckpoint || checkpointPassed || checkpointBusyRef.current) return;
-    const lessons = [...new Set([...readLessons, lessonIndex])];
+    const lessons = readerTab === 'lesson' ? [...new Set([...readLessons, lessonIndex])] : readLessons;
     const patch = { skippedCheckpoints: [...new Set([...(state.skippedCheckpoints || []), buildIndex])], lessons, read: lessons.length === chapter.sections.length || !!state.read, complete: false };
     update(patch);
     // Allow this deliberate navigation immediately, before React publishes progress.
     gateRef.current = getLessonGate(chapter, { ...state, ...patch });
-    if (lessonIndex + 1 < chapter.sections.length) goLesson(lessonIndex + 1);
+    const nextLesson = readerTab === 'problem' ? checkpointReadingEnd + 1 : lessonIndex + 1;
+    if (nextLesson < chapter.sections.length) goLesson(nextLesson);
     else { setNavigationNotice(null); selectReaderTab('review'); requestAnimationFrame(() => document.getElementById('checkpoint-heading')?.focus()); }
   }
   function recordAttempt() { update({ buildAttempts: [...new Set([...(state.buildAttempts || []), buildIndex])] }); }
@@ -248,10 +297,15 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
   }
   function closeWorkspace() {
     setWorkspaceOpen(false); setWorkspacePinned(false); setFocusMode(false); setMobilePane('reading');
-    replaceHash(readerTab === 'lesson' ? `lesson-${section.id}` : readerTab === 'overview' ? 'chapter-guide' : 'checkpoint');
+    replaceHash(readerTab === 'lesson' || readerTab === 'problem' ? `${readerTab}-${section.id}` : readerTab === 'overview' ? 'chapter-guide' : 'checkpoint');
     requestAnimationFrame(() => workspaceTrigger.current?.focus());
   }
-  function openCheckpoint(index) {
+  function writeSolution() {
+    openPractice('machine');
+    requestAnimationFrame(() => focusPracticeTarget('machine-lab'));
+  }
+  function openCheckpoint(index, moveFocus = true) {
+    setFurtherPractice(false);
     if (!loaded) return;
     const requested = chapter.sections.findIndex(item => item.id === guide.steps[index].sectionId);
     const prerequisite = gateRef.current;
@@ -261,8 +315,11 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
     if (!goLesson(sectionIndex, false)) return;
     if (blocked) setNavigationNotice({ requested, ...prerequisite });
     update({ openBuilds: [...new Set([...(state.openBuilds || []), index])] });
-    openPractice('machine', 'machine-lab');
-    requestAnimationFrame(() => document.getElementById('section-checkpoint')?.scrollIntoView({ block: 'start' }));
+    setReaderTab('problem');
+    openPractice('machine');
+    setMobilePane('reading');
+    replaceHash(`problem-${chapter.sections[sectionIndex].id}`);
+    requestAnimationFrame(() => { readerScroll.current?.scrollTo({ top: 0 }); if (moveFocus) problemHeading.current?.focus({ preventScroll: true }); });
   }
   function resize(value) { const nextSplit = clampSplit(value); setSplit(nextSplit); try { localStorage.setItem('vk-os-pane-split', String(nextSplit)); } catch { /* Keep the current layout. */ } }
   function drag(event) { if (!dragging || !columns.current) return; const rect = columns.current.getBoundingClientRect(); resize((event.clientX - rect.left) / rect.width * 100); }
@@ -280,7 +337,7 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
       <div className={styles.chapterArrows}>{previous ? <Link prefetch={false} href={`/learn/os/${previous.slug}`} aria-label={`Previous chapter: ${previous.title}`} title={previous.title}><FiChevronLeft /></Link> : <span aria-hidden="true"><FiChevronLeft /></span>}{next ? <Link prefetch={false} href={`/learn/os/${next.slug}`} aria-label={`Next chapter: ${next.title}`} title={next.title}><FiChevronRight /></Link> : <span aria-hidden="true"><FiChevronRight /></span>}</div>
       <span className={styles.chapterState}>{completed ? <><FiCheckCircle /> Completed</> : <><span className={styles.statusDot} /> In progress</>}</span>
     </nav>
-    {workspaceOpen && <div className={styles.mobileTabs} aria-label="Workspace view"><button aria-pressed={mobilePane === 'reading'} onClick={() => setMobilePane('reading')}><FiBookOpen /> Lesson</button><button aria-pressed={mobilePane === 'practice'} onClick={() => setMobilePane('practice')}><FiTerminal /> {practiceTab === 'explore' ? 'Visual model' : 'Workspace'}</button></div>}
+    {workspaceOpen && <div className={styles.mobileTabs} aria-label="Workspace view"><button aria-pressed={mobilePane === 'reading'} onClick={() => setMobilePane('reading')}><FiBookOpen /> {readerTab === 'problem' ? 'Problem' : 'Lesson'}</button><button aria-pressed={mobilePane === 'practice'} onClick={() => setMobilePane('practice')}><FiTerminal /> {practiceTab === 'explore' ? 'Visual model' : 'Workspace'}</button></div>}
     <div ref={columns} className={styles.columns} data-mobile-pane={mobilePane} data-workspace={workspaceOpen} data-focus={focusMode} data-dragging={dragging} style={{ '--reading-width': `${split}fr`, '--practice-width': `${100 - split}fr` }}>
       <aside className={styles.chapterRail} hidden={workspaceOpen}>
         <ChapterOutline chapter={chapter} lessonIndex={lessonIndex} readLessons={readLessons} guide={guide} state={state} gate={gate} onSelectLesson={goLesson} />
@@ -291,27 +348,42 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
         <div ref={readerScroll} className={styles.readerScroll}>
           <div id="reader-panel-lesson" role="tabpanel" aria-labelledby="reader-tab-lesson" hidden={readerTab !== 'lesson' || blockedLesson} tabIndex={0}>
             <article id={`lesson-${section.id}`} className={styles.lesson}>
-              <div className={styles.lessonMeta}><span>{chapter.phase}</span><span>Lesson {lessonIndex + 1} of {chapter.sections.length}</span>{readLessons.includes(lessonIndex) && <span className={styles.readBadge}><FiCheck /> Read</span>}</div>
+              <div className={styles.lessonMeta}><span>{chapter.phase}</span><span>Lesson {lessonIndex + 1} of {chapter.sections.length}</span><span>About {section.studyMinutes} min to read & trace</span>{readLessons.includes(lessonIndex) && <span className={styles.readBadge}><FiCheck /> Read</span>}</div>
               <h2 ref={lessonHeading} tabIndex={-1}>{section.title.replace(/^\s*\d+(?:\.\d+)*\s*[.)\-–\u2014:]\s*/, '')}</h2>
               <LessonIntroduction teaching={section.teaching} />
+              {!atCheckpoint && readingCheckpointGroup && (state.openBuilds || []).includes(buildIndex) && <div className={styles.problemActions}><button type="button" onClick={() => openCheckpoint(buildIndex)}>Return to coding checkpoint</button></div>}
               <div className={styles.prose}>{section.paragraphs.slice(0, diagramAfter).map((text, i) => <p key={i}><Inline text={text} /></p>)}</div>
               {section.aid && <LessonVisual aid={section.aid} />}
               <div className={styles.prose}>{section.paragraphs.slice(diagramAfter).map((text, i) => <p key={i}><Inline text={text} /></p>)}</div>
               {section.code && !longCode && <CodeBlock code={section.code} />}
               {section.code && longCode && <aside className={styles.callout}><FiCode /><div><strong>Build this part step by step.</strong><p>{guide.kind === 'assembly' ? <>Practice this idea in <code>lesson.asm</code>; put any data declarations in <code>data.inc</code>. The coding checkpoint specifies which part to write and which inputs the lab supplies.</> : <>Use the explanation to implement <code>{section.code.filename}</code> in your growing project.</>} Open the checkpoint’s hints or peek at an answer whenever you need help.</p>{guide.kind === 'project' && <details><summary>Peek at this section’s reference</summary><CodeBlock code={section.code.source.includes('; --- Your lesson program starts here ---') ? { ...section.code, source: section.code.source.split('lesson:\n')[1].split('; --- End of lesson program ---')[0] } : section.code} /></details>}</div></aside>}
               {section.callout && <aside className={styles.callout}><FiBookOpen /><div><strong>{section.callout.title}</strong><p><Inline text={section.callout.text} /></p></div></aside>}
+              <LessonDepth key={`depth:${section.id}`} depth={section.deepDive} />
+              <DetailedGuide key={`topics:${section.id}`} topics={section.topics} lessonTopic={!!section.parentSectionId} onPractice={() => { setFurtherPractice(true); setReaderTab('problem'); setMobilePane('reading'); if (!workspacePinned) setWorkspaceOpen(false); requestAnimationFrame(() => { readerScroll.current?.scrollTo({ top: 0 }); problemHeading.current?.focus({ preventScroll: true }); }); }} />
               <LessonReasoning key={`${chapter.slug}:${section.id}`} teaching={section.teaching} chapterSlug={chapter.slug} sectionId={section.id} />
-              {atCheckpoint && <div id="section-checkpoint"><CheckpointBrief brief={buildStep.brief} interfaceCode={buildStep.interface ? { language: 'c', filename: guide.file, source: buildStep.interface } : undefined} /></div>}
-              {atCheckpoint && <div className={styles.tryCard}><span className={styles.tryIcon}><FiTerminal /></span><div><strong>{checkpointPassed ? 'Checkpoint passed.' : checkpointSkipped ? 'Checkpoint skipped.' : checkpointReady ? 'Your coding checkpoint is ready.' : 'Put this lesson into practice.'}</strong><p>{checkpointPassed ? 'Continue when you are ready, or reopen your code to experiment.' : checkpointSkipped ? 'You can continue reading. Reopen this task whenever you want to submit it; skipping does not count as a pass.' : 'Open the editor. Use Run to try your code and Submit to check this checkpoint. Hints and an optional answer are available in Check.'}</p></div><button onClick={() => openCheckpoint(buildIndex)} aria-label="Open this section’s coding checkpoint"><FiArrowRight /></button></div>}
+              {atCheckpoint && <div className={styles.tryCard}><span className={styles.tryIcon}><FiTerminal /></span><div><strong>{checkpointPassed ? 'Checkpoint passed.' : checkpointSkipped ? 'Checkpoint skipped.' : checkpointReady ? 'Your coding checkpoint is ready.' : 'Put this lesson into practice.'}</strong><p>{checkpointPassed ? 'Continue when you are ready, or reopen the problem and your code to experiment.' : checkpointSkipped ? 'You can continue reading. Reopen this task whenever you want to submit it; skipping does not count as a pass.' : 'Open the Problem tab for the requirements, given inputs, and expected result. Your workspace opens beside it so you can write and submit your solution.'}</p></div><button onClick={() => openCheckpoint(buildIndex)} aria-label="Open this section’s coding checkpoint"><FiArrowRight /></button></div>}
               {atCheckpoint && !checkpointPassed && !checkpointSkipped && !workspaceOpen && <div className={styles.skipCheckpoint}><button type="button" disabled={checkpointBusy} onClick={skipCheckpoint}>Skip checkpoint</button><span>{checkpointBusy ? 'Wait for the current run or submission to finish, or stop it in the workspace.' : 'Continue reading and return to this task later. It will be marked Skipped.'}</span></div>}
 
             </article>
           </div>
+          <div id="reader-panel-problem" role="tabpanel" aria-labelledby="reader-tab-problem" hidden={readerTab !== 'problem' || blockedLesson} tabIndex={0} className={styles.problem}>
+            {furtherPractice ? <><h2 ref={problemHeading} tabIndex={-1}>Further practice: {section.title}</h2><div className={styles.problemActions}><button type="button" onClick={() => selectReaderTab('lesson')}>Back to supporting lesson</button><button type="button" onClick={() => { setFurtherPractice(false); openCheckpoint(buildIndex); }}>Open coding checkpoint</button></div><TopicExercises key={section.id} topics={section.topics} /></> : <>
+            <div className={styles.problemTop}><span className={styles.eyebrow}>CHECKPOINT {buildIndex + 1} OF {guide.steps.length}</span><span className={styles.problemStatus}>{checkpointPassed ? 'Passed' : checkpointSkipped ? 'Skipped' : 'Ready to solve'}</span></div>
+            <nav className={styles.problemNavigation} aria-label="Coding problems"><button type="button" disabled={buildIndex === 0 || checkpointBusy} onClick={() => openCheckpoint(buildIndex - 1)}><FiChevronLeft aria-hidden="true" /> Previous problem</button><button type="button" disabled={nextProblemLesson < 0 || lessonLocked(nextProblemLesson) || checkpointBusy} title={nextProblemLesson < 0 ? 'This is the last problem in this chapter.' : lockReason(nextProblemLesson) || undefined} onClick={() => openCheckpoint(buildIndex + 1)}>Next problem <FiChevronRight aria-hidden="true" /></button></nav>
+            <h2 ref={problemHeading} tabIndex={-1}>Coding checkpoint</h2>
+            <p className={styles.lead}>Use the requirements below to build your solution. Run lets you experiment; Submit checks the checkpoint.</p>
+            <div className={styles.problemActions}><button type="button" onClick={() => selectReaderTab('lesson')}><FiBookOpen aria-hidden="true" /> Read the supporting lesson</button><button type="button" onClick={writeSolution}><FiTerminal aria-hidden="true" /> Write your solution</button></div>
+            <CheckpointBrief brief={buildStep.brief} interfaceCode={buildStep.interface ? { language: 'c', filename: guide.file, source: buildStep.interface } : undefined} />
+            {!checkpointPassed && !checkpointSkipped && <div className={styles.skipCheckpoint}><button type="button" disabled={checkpointBusy} onClick={skipCheckpoint}>Skip checkpoint</button><span>{checkpointBusy ? 'Wait for the current run or submission to finish, or stop it in the workspace.' : 'Continue reading and return to this problem later. Skipping does not count as a pass.'}</span></div>}
+            <TopicExercises key={section.id} topics={section.topics} />
+            </>}
+          </div>
           <div id="reader-panel-overview" role="tabpanel" aria-labelledby="reader-tab-overview" hidden={readerTab !== 'overview'} tabIndex={0} className={styles.guide}>
             <span className={styles.eyebrow}>CHAPTER {chapterNumber} · {chapter.phase}</span><h2>{chapter.title}</h2><p className={styles.lead}>{chapter.subtitle}</p><div className={styles.guideMeta}><span><FiClock /> {chapter.minutes} min guided work</span><span><FiBookOpen /> {chapter.sections.length} lessons</span></div>
+            <ChapterStudyPlan plan={chapter.studyPlan} />
             <h3>What you’ll build and understand</h3><ul className={styles.outcomes}>{chapter.outcomes.map((item) => <li key={item}><FiCheck /><span>{item}</span></li>)}</ul>
             <details className={styles.prerequisites}><summary>Before you begin</summary><ul>{chapter.prerequisites.map((item) => <li key={item}>{item}</li>)}</ul></details>
-            <h3>Your route through this chapter</h3><ol className={styles.lessonList}>{chapter.sections.map((item, i) => <li key={item.id}><button onClick={() => goLesson(i)} data-lesson-index={i} data-locked={lessonLocked(i)} aria-disabled={lessonLocked(i) || undefined} aria-describedby={lessonLocked(i) || lessonSkipped(i) ? `outline-status-${item.id}` : undefined} title={lockReason(i) || undefined} aria-current={lessonIndex === i ? 'step' : undefined}><span className={readLessons.includes(i) ? styles.lessonDone : ''}>{readLessons.includes(i) ? <FiCheck /> : String(i + 1).padStart(2, '0')}</span><span>{item.title}</span>{lessonLocked(i) ? <><small>Finish lesson {gate.lessonIndex + 1}</small><FiLock aria-hidden="true" /></> : <>{lessonSkipped(i) ? <small>Skipped</small> : lessonIndex === i && <small>Current</small>}<FiChevronRight /></>}</button>{(lessonLocked(i) || lessonSkipped(i)) && <span id={`outline-status-${item.id}`} hidden>{lessonLocked(i) ? `Locked. ${lockReason(i)}` : 'Checkpoint skipped, not passed.'}</span>}</li>)}</ol>
+            <p><Link href="/learn/os/reference">Search the detailed topic reference</Link> for table layouts, algorithms, and worked traces.</p><h3>Your route through this chapter</h3><ol className={styles.lessonList}>{chapter.sections.map((item, i) => <li key={item.id}><button onClick={() => goLesson(i)} data-lesson-index={i} data-locked={lessonLocked(i)} aria-disabled={lessonLocked(i) || undefined} aria-describedby={lessonLocked(i) || lessonSkipped(i) ? `outline-status-${item.id}` : undefined} title={lockReason(i) || undefined} aria-current={lessonIndex === i ? 'step' : undefined}><span className={readLessons.includes(i) ? styles.lessonDone : ''}>{readLessons.includes(i) ? <FiCheck /> : String(i + 1).padStart(2, '0')}</span><span>{item.title}</span>{lessonLocked(i) ? <><small>Finish lesson {gate.lessonIndex + 1}</small><FiLock aria-hidden="true" /></> : <>{lessonSkipped(i) ? <small>Skipped</small> : lessonIndex === i && <small>Current</small>}<FiChevronRight /></>}</button>{(lessonLocked(i) || lessonSkipped(i)) && <span id={`outline-status-${item.id}`} hidden>{lessonLocked(i) ? `Locked. ${lockReason(i)}` : 'Checkpoint skipped; submission pending.'}</span>}</li>)}</ol>
             <div className={styles.resources}><h3>Continue with the sources</h3>{chapter.sources.filter(source => !source.url.startsWith('/course/') || (state.read && chapterAttempted)).map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer">{source.title}<FiExternalLink /></a>)}{state.read && chapterAttempted && <a href="/course/module-1-source.tar.gz" download><span><FiDownload /> Module 1 reference project: compare after your build</span><FiArrowRight /></a>}</div>
           </div>
           <div id="reader-panel-review" role="tabpanel" aria-labelledby="reader-tab-review" hidden={readerTab !== 'review'} tabIndex={0} className={styles.checkpoint}>
@@ -328,7 +400,7 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
             {next && <Link prefetch={false} className={styles.nextChapter} href={`/learn/os/${next.slug}`}><div><small>UP NEXT · CHAPTER {next.id}</small><strong>{next.title}</strong></div><FiArrowRight /></Link>}
           </div>
         </div>
-        <footer className={styles.lessonFooter}><button className={styles.previousLesson} disabled={readerTab === 'lesson' && lessonIndex === 0} onClick={() => readerTab !== 'lesson' ? selectReaderTab('lesson') : goLesson(lessonIndex - 1)}><FiChevronLeft /><span>{readerTab === 'lesson' ? 'Previous' : 'Back to lesson'}</span></button><span className={styles.lessonCount}>{lessonIndex + 1} / {chapter.sections.length}</span><button className={styles.nextLesson} onClick={readerTab === 'lesson' ? completeLesson : () => selectReaderTab('lesson')}>{readerTab === 'lesson' ? atCheckpoint && !checkpointPassed && !checkpointSkipped ? checkpointReady ? 'Return to coding checkpoint' : 'Open coding checkpoint' : lessonIndex + 1 === chapter.sections.length ? 'Finish chapter reading' : 'Read & continue' : 'Continue reading'}<FiArrowRight /></button></footer>
+        <footer className={styles.lessonFooter}><button className={styles.previousLesson} disabled={readerTab === 'lesson' && lessonIndex === 0} onClick={() => readerTab !== 'lesson' ? selectReaderTab('lesson') : goLesson(lessonIndex - 1)}><FiChevronLeft /><span>{readerTab === 'lesson' ? 'Previous' : 'Back to lesson'}</span></button><span className={styles.lessonCount}>{readerTab === 'problem' ? `${buildIndex + 1} / ${guide.steps.length}` : `${lessonIndex + 1} / ${chapter.sections.length}`}</span><button className={styles.nextLesson} onClick={furtherPractice && readerTab === 'problem' ? () => selectReaderTab('lesson') : readerTab === 'lesson' ? completeLesson : readerTab === 'problem' ? checkpointPassed || checkpointSkipped ? completeLesson : writeSolution : () => selectReaderTab('lesson')}>{furtherPractice && readerTab === 'problem' ? 'Back to lesson' : readerTab === 'problem' ? checkpointPassed || checkpointSkipped ? 'Continue reading' : 'Write solution' : readerTab === 'lesson' ? atCheckpoint && !checkpointPassed && !checkpointSkipped ? checkpointReady ? 'Return to coding checkpoint' : 'Open coding checkpoint' : lessonIndex + 1 === chapter.sections.length ? 'Finish chapter reading' : 'Read & continue' : 'Continue reading'}<FiArrowRight /></button></footer>
       </section>
       <div hidden={!workspaceOpen} role="separator" aria-label="Resize reading and coding panes" aria-controls="chapter-reading" aria-orientation="vertical" aria-valuemin={35} aria-valuemax={60} aria-valuenow={Math.round(split)} tabIndex={0} className={styles.divider} onPointerDown={(event) => { event.preventDefault(); event.currentTarget.setPointerCapture(event.pointerId); setDragging(true); }} onPointerMove={drag} onPointerUp={(event) => { setDragging(false); event.currentTarget.releasePointerCapture(event.pointerId); }} onPointerCancel={() => setDragging(false)} onKeyDown={resizeKey} onDoubleClick={() => resize(45)} title="Drag to resize; arrow keys adjust; double-click to reset"><span /></div>
       <section id="chapter-practice" hidden={!workspaceOpen} className={styles.practice} aria-label="Interactive workspace">
@@ -346,7 +418,7 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
       </section>
     </div>
     <dialog ref={dialog} className={styles.curriculumDialog} aria-labelledby="curriculum-heading" onKeyDownCapture={(event) => { if (event.key === 'Escape') { event.preventDefault(); closeCurriculum(); } }} onClose={() => curriculumTrigger.current?.focus()} onClick={(event) => { if (event.target === dialog.current) closeCurriculum(); }}>
-      <div className={styles.dialogInner}><header><div><span className={styles.eyebrow}>YOUR LEARNING PATH</span><h2 id="curriculum-heading">One layer at a time.</h2></div><button onClick={closeCurriculum} aria-label="Close curriculum"><FiX /></button></header><label className={styles.chapterSearch}><span className={styles.srOnly}>Search chapters</span><input type="search" value={chapterQuery} onChange={(event) => setChapterQuery(event.target.value)} placeholder="Find a chapter or concept…" autoComplete="off" /></label><nav aria-label="Course curriculum">{matchingChapters.map((item, i) => <div key={item.slug}>{(i === 0 || matchingChapters[i - 1].phase !== item.phase) && <h3>{item.phase}</h3>}<button aria-current={item.slug === chapter.slug ? 'page' : undefined} onClick={() => chooseChapter(item.slug)}><span>{progress[item.slug]?.complete ? <FiCheck /> : item.id}</span><span>{item.title}<small>{item.minutes} min guided work</small></span><FiChevronRight /></button></div>)}{!matchingChapters.length && <p className={styles.empty}>No matching chapters. Try “memory” or “boot”.</p>}</nav><footer><Link prefetch={false} href="/learn/os"><FiArrowLeft /> Course overview</Link><span>{roadmap.filter((item) => progress[item.slug]?.complete).length} / {roadmap.length} completed</span></footer></div>
+      <div className={styles.dialogInner}><header><div><span className={styles.eyebrow}>YOUR LEARNING PATH</span><h2 id="curriculum-heading">One layer at a time.</h2></div><button onClick={closeCurriculum} aria-label="Close curriculum"><FiX /></button></header><label className={styles.chapterSearch}><span className={styles.srOnly}>Search chapters</span><input type="search" value={chapterQuery} onChange={(event) => setChapterQuery(event.target.value)} placeholder="Find a chapter or concept…" autoComplete="off" /></label><nav aria-label="Course curriculum">{matchingChapters.map((item, i) => <div key={item.slug}>{(i === 0 || matchingChapters[i - 1].phase !== item.phase) && <h3>{item.phase}</h3>}<button aria-current={item.slug === chapter.slug ? 'page' : undefined} onClick={() => chooseChapter(item.slug)}><span>{isChapterComplete(item, progress[item.slug]) ? <FiCheck /> : item.id}</span><span>{item.title}<small>{item.minutes} min guided work</small></span><FiChevronRight /></button></div>)}{!matchingChapters.length && <p className={styles.empty}>No matching chapters. Try “memory” or “boot”.</p>}</nav><footer><Link prefetch={false} href="/learn/os"><FiArrowLeft /> Course overview</Link><span>{roadmap.filter((item) => isChapterComplete(item, progress[item.slug])).length} / {roadmap.length} completed</span></footer></div>
     </dialog>
   </>;
 }

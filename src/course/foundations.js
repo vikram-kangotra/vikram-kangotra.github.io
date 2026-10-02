@@ -49,7 +49,7 @@ export const foundations = [
         "paragraphs": [
           "The CPU can execute an instruction only after interpreting its bytes in an execution mode. That mode affects instruction sizes, address calculation, and permission checks. A source line such as mov ax, 7 describes an intended operation; the assembler chooses bytes, and the processor interprets those bytes using its current state. Changing the source directive to bits 32 changes the assembler's output. It does not change the running processor's mode. The bootloader must make the two agree.",
           "Our BIOS boot begins in real mode. An ordinary segment:offset address is calculated as segment × 16 + offset. For example, 1200:0030 names physical address 0x12030 when the address is not affected by A20 wrapping. Many pairs can name the same place: 0000:7C00 and 07C0:0000 both locate the boot sector. A far jump sets both CS and the instruction offset, giving our code one predictable representation. We also set DS for data accesses, ES for destinations, and SS:SP for the stack. CLD clears the direction flag so string operations move toward increasing addresses.",
-          "In protected mode a segment register instead holds a selector. The selector identifies a table entry describing the segment's base, limit, and permissions. We choose a flat layout: a base of zero and a range covering the 32-bit address space. An offset then has the same numerical value as its linear address. This is convenient, but it is not paging and does not yet isolate programs. Setting CR0.PE changes mode; the following far jump loads the protected-mode code descriptor into CS, and explicit register loads establish the data segments.",
+          "In protected mode a segment register instead holds a selector. The selector identifies a table entry describing the segment's base, limit, and permissions. We choose a flat layout: a base of zero and a range covering the 32-bit address space. An offset then has the same numerical value as its linear address. This flat segmentation setup provides convenient addresses. Program isolation requires additional protection and paging work. Setting CR0.PE changes mode; the following far jump loads the protected-mode code descriptor into CS, and explicit register loads establish the data segments.",
           "Long mode is a further transition for 64-bit kernels. It needs suitable CPU features and paging tables as well as control-register and model-specific-register changes. We will reach it later, after paging makes sense. For now, annotate each bootloader jump with two facts: the address it targets and the mode in which the target bytes must be decoded. This simple habit catches many failures that otherwise look like random instructions."
         ],
         "teaching": {
@@ -57,7 +57,7 @@ export const foundations = [
           "bridge": "We know the stages of the journey. Now we need to understand the machine state each stage inherits.",
           "check": {
             "prompt": "Calculate the address named by 1500:0024. Would writing bits 32 above the target label make a real-mode CPU execute it as protected-mode code?",
-            "answer": "0x1500 × 16 + 0x24 = 0x15024. The bits directive controls assembly, not processor state. The loader must install descriptors and perform the architectural mode transition before entering code assembled for that environment."
+            "answer": "0x1500 × 16 + 0x24 = 0x15024. The bits directive controls emitted instruction encoding; processor state changes through runtime instructions. The loader must install descriptors and perform the architectural mode transition before entering code assembled for that environment."
           },
           "takeaway": "An instruction is meaningful only when its encoding, addressing environment, and CPU mode agree.",
           "diagramAfter": 2
@@ -89,7 +89,7 @@ export const foundations = [
         "paragraphs": [
           "Your host is the computer running your editor and build tools. The target is the machine whose instructions and calling conventions the tools produce. They may both use x86, but that does not make their environments interchangeable: a Linux executable expects services that your kernel has not created. A cross-compiler explicitly targets a different environment. The optional native route uses i686-elf tools to produce 32-bit x86 code without assuming a Linux userspace runtime.",
           "Follow one C function through the browser build. Clang compiles it into an object file containing instructions and references to symbols such as vga_write. NASM produces another object for the assembly entry. LLD, the linker, joins those objects, resolves symbol references, and assigns addresses using linker.ld. The image builder places the boot-stage binaries and raw kernel bytes into disk sectors. Finally v86 emulates the machine that fetches those bytes. No single tool performs all these jobs, which is why an error's stage is an important clue.",
-          "The commands below are for the optional native route on a Debian-family host. There, NASM still assembles the boot stages, GCC compiles C, GNU binutils links and inspects files, and QEMU system emulation provides the PC. QEMU user-mode emulation serves a different purpose and cannot replace a whole booting machine. If you stay in the browser, read this as a map of the tools rather than an installation task.",
+          "The commands below are for the optional native route on a Debian-family host. There, NASM still assembles the boot stages, GCC compiles C, GNU binutils links and inspects files, and QEMU system emulation provides the PC. QEMU user-mode emulation serves a different purpose and cannot replace a whole booting machine. If you stay in the browser, use this as a guide to the role of each tool.",
           "When building native tools, first install the host compiler and the mathematical libraries needed to build GCC. Then build target binutils before target GCC. A freestanding C compiler does not supply a normal libc, though it may need compiler-support routines from libgcc. Keep the toolchain in a user-owned directory and record its versions. You will find debugging much easier when you can say which tool produced each artifact."
         ],
         "code": {
@@ -161,8 +161,8 @@ export const foundations = [
         "id": "disk-read",
         "title": "A bounded firmware disk request",
         "paragraphs": [
-          "Create boot/disk.inc. An include file is source text inserted by NASM when it assembles a stage; it is not another program loaded by BIOS. Both boot stages can reuse the same disk routine while supplying different LOAD_SECTORS, LOAD_SEGMENT, and LOAD_LBA constants. This keeps the read mechanism in one place while leaving each caller responsible for choosing a destination that will not overwrite its own code or stack.",
-          "The Disk Address Packet is a small record in memory. It contains a size field, the number of sectors, a destination segment:offset, and a 64-bit starting LBA. BIOS receives a pointer to this record rather than squeezing every value into registers. Work through a sample request: four 512-byte sectors occupy 2048 bytes, so loading them at 0x9000 uses the half-open range [0x9000, 0x9800). Writing ranges this way makes the last byte and the first byte after a transfer unambiguous.",
+          "Create boot/disk.inc. NASM inserts an include file’s source text while assembling a stage, incorporating its instructions into that stage’s binary. Both boot stages can reuse the same disk routine while supplying different LOAD_SECTORS, LOAD_SEGMENT, and LOAD_LBA constants. This keeps the read mechanism in one place while leaving each caller responsible for choosing a destination that will not overwrite its own code or stack.",
+          "The Disk Address Packet is a small record in memory. It contains a size field, the number of sectors, a destination segment:offset, and a 64-bit starting LBA. BIOS receives a pointer to this record and reads the request fields from memory. Work through a sample request: four 512-byte sectors occupy 2048 bytes, so loading them at 0x9000 uses the half-open range [0x9000, 0x9800). Writing ranges this way makes the last byte and the first byte after a transfer unambiguous.",
           "Firmware reports success or failure through the carry flag. On failure our routine resets the disk, restores the requested sector count, and retries, allowing three attempts in total. Restoring the count matters because firmware may modify the packet. If all attempts fail, the caller prints E and stops; jumping to the destination anyway would treat unknown memory as instructions. This is an early example of a general kernel pattern: check the result before publishing or using the resource you requested.",
           "Trace one successful read and one read that fails twice before succeeding. Keep the retry counter separate from the sector count in your notes. This helper deliberately performs one fixed, bounded transfer; partition discovery, filesystem paths, and larger split transfers belong to later loaders. For this checkpoint, a clearly explained source range, destination range, and error path are the parts you are learning to build."
         ],
@@ -201,7 +201,7 @@ export const foundations = [
           "bridge": "Stage 1 can now load a larger program. Stage 2 uses that space to prepare the environment that C will need.",
           "check": {
             "prompt": "A GDT has its code descriptor at entry 3. With a GDT selector using ring 0 and TI=0, what selector identifies it? Would LGDT alone switch execution to that code segment?",
-            "answer": "The selector is 3 × 8 = 0x18. LGDT loads the table register, not the active code-segment descriptor. A suitable control transfer is needed to load CS after the required mode setup."
+            "answer": "The selector is 3 × 8 = 0x18. LGDT loads the table register. Loading the active code-segment descriptor requires the following control transfer. A suitable control transfer is needed to load CS after the required mode setup."
           },
           "takeaway": "The mode transition is an ordered handoff: tables, control bit, far jump, data segments, stack, and kernel entry.",
           "diagramAfter": 2
@@ -287,8 +287,8 @@ export const foundations = [
         "title": "One build graph, several useful artifacts",
         "paragraphs": [
           "A build is a graph of dependencies. Editing a C file requires recompiling that translation unit, relinking the kernel, converting the result to raw bytes, and rebuilding the disk image. It does not require rewriting the unchanged stage-1 source. The browser's build.json names the sources and layout for its NASM/Clang/LLD pipeline. The optional Makefile below expresses a comparable graph for the native i686-elf and QEMU route. You do not need to translate this Makefile into the browser editor.",
-          "Read compiler options in terms of the environment they promise. -ffreestanding says the program runs outside a hosted C environment; it does not create an entry stub or provide every helper a compiler might emit. Position-independent defaults and stack-protector support are disabled in this initial kernel because their supporting runtime has not been built. Floating-point and SIMD code are kept out until the kernel can preserve their processor state. These are choices for this small execution environment, not general advice for application builds.",
-          "Now follow kernel.o into kernel.elf and then kernel.bin. The ELF file carries addresses, sections, and symbols. The binary carries the bytes the fixed loader understands. kernel.map records where linked pieces landed, while os.img includes both boot stages and the kernel in their sector slots. Retaining the ELF and map means a numerical crash address can lead you back to a symbol or source line rather than leaving you with only an opaque disk image.",
+          "Read compiler options in terms of the environment they promise. -ffreestanding says the program runs outside a hosted C environment; it does not create an entry stub or provide every helper a compiler might emit. Position-independent defaults and stack-protector support are disabled in this initial kernel because their supporting runtime has not been built. Floating-point and SIMD code are kept out until the kernel can preserve their processor state. These choices support the requirements of this small execution environment.",
+          "Now follow kernel.o into kernel.elf and then kernel.bin. The ELF file carries addresses, sections, and symbols. The binary carries the bytes the fixed loader understands. kernel.map records where linked pieces landed, while os.img includes both boot stages and the kernel in their sector slots. Retaining the ELF and map means a numerical crash address can lead you back to a symbol or source line while preserving the disk image for booting.",
           "If the linker reports an unresolved helper, use that report as a question: which operation caused the compiler to require a runtime function? Supply the appropriate target implementation or adjust the code intentionally. A host libc expects an operating system that your kernel has not provided. To practice reading the graph, choose one header and list the object files whose behavior can depend on it, then compare your prediction with the build output after an edit."
         ],
         "code": {
@@ -337,7 +337,7 @@ export const foundations = [
         "paragraphs": [
           "Before executing your code, write a short prediction: which message should appear, which mode should the CPU be in, and where should control go after kernel_main returns? In the browser project, the screen begins with C KERNEL READY and the two further lines named in the checkpoint. Use Run to experiment with the machine display, registers, and build output. Choose Submit when you want to check the checkpoint: it builds, boots, and runs the behavior tests automatically, even if you have not used Run. The visible message and the test report answer related questions, but your explanation should connect them to the actual code path.",
           "If the screen is blank, divide the path into stages instead of changing several files at once. Could firmware recognize the first sector? Did stage 1 read the correct sectors? Did stage 2 reach its protected-mode target? Was the entry address linked where the loader jumped? Did C write the expected device memory? A diagnostic marker before and after one boundary can narrow the failure. Serial output with a blank display points toward display setup; silence on serial alone cannot prove that C was never reached.",
-          "The optional native bundle uses make test for its serial smoke check and make run for its VGA window. Its reference text is Module 1: protected-mode C kernel OK, rather than the browser checkpoint text. make debug starts QEMU stopped with a GDB listener on loopback. Load kernel.elf in a GDB with i386 support, connect, set a hardware breakpoint at _start, and continue through firmware. At the kernel entry, inspect CR0, segment registers, and ESP before stepping toward C.",
+          "The optional native bundle uses make test for its serial smoke check and make run for its VGA window. Its reference text is Module 1: protected-mode C kernel OK. make debug starts QEMU stopped with a GDB listener on loopback. Load kernel.elf in a GDB with i386 support, connect, set a hardware breakpoint at _start, and continue through firmware. At the kernel entry, inspect CR0, segment registers, and ESP before stepping toward C.",
           "A reset often deserves a fault-path investigation. With no usable protected-mode exception handlers yet, an early fault can escalate until the machine resets. The native debug flags shown here preserve a stopped machine and can record interrupt and reset events. Begin with the narrowest question you can answer, such as whether the loaded first instruction matches the disassembly. Debugging a bootloader becomes much more manageable when each experiment separates two possible explanations."
         ],
         "code": {
@@ -360,7 +360,7 @@ export const foundations = [
         "id": "validation-scope",
         "title": "Read a passing test as evidence",
         "paragraphs": [
-          "Consider three observations: the project compiled, a message appeared, and the machine tests passed. Compilation shows that the tools accepted the source and could resolve the required pieces. A message shows that some execution path produced visible output. A machine test can inspect additional facts, such as the selected mode, expected memory contents, or return from C. These observations become stronger when they are tied to a particular claim rather than collected as a single green badge.",
+          "Consider three observations: the project compiled, a message appeared, and the machine tests passed. Compilation shows that the tools accepted the source and could resolve the required pieces. A message shows that some execution path produced visible output. A machine test can inspect additional facts, such as the selected mode, expected memory contents, or return from C. Tie each observation to a particular claim so the result explains which behavior was verified.",
           "The native reference bundle has a smoke check for the expected serial message and small initialized-data and zero-initialized-data probes. The browser checkpoint follows its own multi-file project and checks the defined C-entry and output behavior. Passing either path is evidence about that image in that environment. It does not mean that an interrupt subsystem, allocator, or scheduler from a later chapter has already been integrated. Those chapters introduce focused function tests and separate kernel experiments because the two exercise different boundaries.",
           "There is a useful distinction between a test that can pass and a test that would catch your suspected mistake. If memory happens to begin at zero, omitting .bss clearing may still leave the right value. Fill that region with a nonzero pattern before the intended clearing step and the same check becomes more informative. This is how you improve tests while learning: invent a plausible broken implementation, predict whether the current observation distinguishes it, and add an experiment when it does not."
         ],
@@ -369,7 +369,7 @@ export const foundations = [
           "bridge": "A successful run is encouraging. The next learning step is to say precisely which parts of your explanation it supports.",
           "check": {
             "prompt": "Two kernels print the same line. One initializes a global correctly; the other hardcodes the line without reading it. Does comparing the line distinguish them, and what extra observation would?",
-            "answer": "The line comparison accepts both. An independent check of the relevant memory or a controlled change to the initial value and expected behavior can distinguish them. A test needs to observe the property being claimed, not only a convenient consequence that can be imitated."
+            "answer": "The line comparison accepts both. An independent check of the relevant memory or a controlled change to the initial value and expected behavior can distinguish them. A test needs to observe the claimed property directly and distinguish plausible broken implementations."
           },
           "takeaway": "A useful test distinguishes your intended mechanism from a plausible wrong implementation.",
           "diagramAfter": 2
@@ -414,7 +414,7 @@ export const foundations = [
         "Either 0000:8000 or 0800:0000 denotes the intended destination. Normalize the rest of the stage around one convention."
       ],
       "solution": "bits 16\norg 0x7c00\njmp 0x0000:start\nstart:\n    cli\n    xor ax, ax\n    mov ds, ax\n    mov es, ax\n    mov ss, ax\n    mov sp, 0x7c00\n    cld\n    ; Preserve DL before any firmware calls in a full loader.\n    ; Assumption for this focused snippet: stage 2 is already loaded.\n    jmp 0x0000:0x8000\n",
-      "explanation": "The original jump resolves to 0x10000, because 0x0800 × 16 + 0x8000 = 0x10000. The corrected snippet establishes the CPU state needed to interpret its own data and stack. It is a focused repair, not a complete disk loader: the full reference stage performs and checks the EDD read. A 55 AA suffix cannot prove the load address, initialized registers, or executable contents are correct.",
+      "explanation": "The original jump resolves to 0x10000, because 0x0800 × 16 + 0x8000 = 0x10000. The corrected snippet establishes the CPU state needed to interpret its own data and stack. This focused repair covers the modeled address calculation. The full reference stage performs and checks the EDD read. A 55 AA suffix cannot prove the load address, initialized registers, or executable contents are correct.",
       "checks": [
         "Show the original and repaired physical jump addresses.",
         "Explain why SS must be initialized before the stack is used.",
@@ -426,7 +426,7 @@ export const foundations = [
       "prompt": "Your kernel prints correctly on one laptop’s emulator. A teammate claims the bootloader is now portable to every x86 PC and to UEFI. Write a technical review that identifies five unproven assumptions and proposes one discriminating experiment for each.",
       "rubric": [
         "Separates firmware interface, disk layout, execution mode, and ABI",
-        "Names concrete assumptions rather than saying “hardware varies”",
+        "Names the concrete hardware and firmware assumptions",
         "Proposes observable outcomes and controls",
         "Acknowledges missing IDT, A20/high-memory work, and the fixed image layout"
       ],
@@ -496,7 +496,7 @@ export const foundations = [
           "bridge": "The bootloader used working GDT constants. We will now unpack them so you can reason about permissions and faults.",
           "check": {
             "prompt": "A GDT contains five entries. What limit belongs in GDTR? Which table entry is selected by 0x20 when its low three bits are zero?",
-            "answer": "Five eight-byte entries occupy 40 bytes, so the inclusive byte limit is 39, or 0x27. Selector 0x20 identifies entry 4 because 0x20 ÷ 8 = 4. The selector names an entry; it is not the address of that entry."
+            "answer": "Five eight-byte entries occupy 40 bytes, so the inclusive byte limit is 39, or 0x27. Selector 0x20 identifies entry 4 because 0x20 ÷ 8 = 4. The selector identifies the entry by index and associated selector fields."
           },
           "takeaway": "A selector chooses a descriptor; loading the segment register makes that descriptor active.",
           "diagramAfter": 2
@@ -520,7 +520,7 @@ export const foundations = [
           "bridge": "The GDT describes executable segments. The IDT tells the CPU which entry point to use when an event interrupts execution.",
           "check": {
             "prompt": "A 32-bit handler offset is 0x23456789. What belongs in the gate’s low and high offset fields? Why can the gate not simply point at a C function that uses RET?",
-            "answer": "The low field is 0x6789 and the high field is 0x2345. Interrupt entry has a hardware return frame rather than an ordinary CALL frame. An assembly stub must preserve the interrupted state and ultimately use the interrupt-return sequence, so a plain C RET is insufficient."
+            "answer": "The low field is 0x6789 and the high field is 0x2345. Interrupt entry creates the hardware return frame required by the interrupt mechanism. An assembly stub must preserve the interrupted state and ultimately use the interrupt-return sequence, so a plain C RET is insufficient."
           },
           "takeaway": "An IDT gate connects a numbered event to an assembly entry with a precisely encoded address and entry policy.",
           "diagramAfter": 2
@@ -531,7 +531,7 @@ export const foundations = [
         "title": "One shape for exceptions with different hardware frames",
         "paragraphs": [
           "An interrupt can arrive while registers hold unfinished work. If the handler overwrites them without saving them, the interrupted program resumes with different inputs. The CPU saves part of the state automatically, and the entry stub saves the rest. For a same-privilege 32-bit entry, the hardware frame includes EFLAGS, CS, and EIP, with EIP nearest the new stack top. Some exceptions additionally supply an error code. A privilege change adds the old stack state after the CPU selects the kernel stack; that extra state is absent from an ordinary ring-0-to-ring-0 frame.",
-          "We want the C dispatcher to see one predictable structure. For an exception that does not push an error code, its assembly stub pushes a synthetic zero. Every stub then pushes its vector number. The common entry saves the general registers, clears DF for C, and passes a pointer to the frame. These software additions normalize the differences between hardware entries. Draw each push as a new box toward lower addresses rather than trying to memorize the final structure all at once.",
+          "We want the C dispatcher to see one predictable structure. For an exception that does not push an error code, its assembly stub pushes a synthetic zero. Every stub then pushes its vector number. The common entry saves the general registers, clears DF for C, and passes a pointer to the frame. These software additions normalize the differences between hardware entries. Draw each push as a new box toward lower addresses to derive the final structure.",
           "PUSHAD needs special care when reading that drawing. At the final ESP, the saved words appear as EDI, ESI, EBP, the old ESP snapshot, EBX, EDX, ECX, and EAX. POPAD skips the saved ESP field; it does not use it as a new stack pointer. Our focused stubs cover divide error, general protection, and page fault under the existing ring-0 flat-segment setup. Other supported exceptions must be classified according to whether they supply an error code, and user-mode entry will need additional segment handling. The important practice is to account for every word before designing the matching restore path."
         ],
         "code": {
@@ -574,7 +574,7 @@ export const foundations = [
         "title": "Exercise the boundary before exposing devices",
         "paragraphs": [
           "Begin with a controlled INT3 breakpoint and a handler intended to return. Put a recognizable operation immediately after INT3 and predict the register or output it should produce. If it executes, you have evidence for both delivery and the restore path. Compare this with a deliberate divide error created using an assembly DIV with a zero divisor. That second experiment should produce a fault report and stop; using undefined C division behavior would let the compiler change the experiment before the CPU sees it.",
-          "Next load a deliberately invalid data selector in a disposable run and inspect the general-protection report. The error code can carry selector-related information, so decode it according to the event rather than treating every error code as a generic status number. Change only one stimulus per boot. If the handler prints and the machine then resets, focus on the frame restoration: the reporting code may have worked while IRETD received the wrong words.",
+          "Next load a deliberately invalid data selector in a disposable run and inspect the general-protection report. The error code can carry selector-related information, so decode its fields according to the event that produced it. Change only one stimulus per boot. If the handler prints and the machine then resets, focus on the frame restoration: the reporting code may have worked while IRETD received the wrong words.",
           "At the chapter checkpoint you implement and test the gate-encoding function as a focused C exercise. Those byte-level tests check the layout independently of a running interrupt subsystem. In your kernel, the breakpoint and fault experiments check the integration with actual CPU entry and exit. Both are useful. Before enabling hardware IRQs in the next chapter, install the relevant IDT entries and keep unsupported sources masked, so an arriving device event has a defined destination."
         ],
         "teaching": {
@@ -661,9 +661,9 @@ export const foundations = [
     "sections": [
       {
         "id": "ownership",
-        "title": "A RAM size is not a memory map",
+        "title": "Describe usable memory as ranges",
         "paragraphs": [
-          "Suppose the emulator is configured with 32 MiB of RAM. It is tempting to allocate every address below that number. A PC's physical address space, however, is a map of different uses: ordinary RAM, firmware data, reserved regions, and device windows. The number of installed bytes does not describe all those boundaries. Firmware supplies a memory map so the loader can pass the kernel a description of ranges rather than one misleading top address.",
+          "Suppose the emulator is configured with 32 MiB of RAM. It is tempting to allocate every address below that number. A PC's physical address space, however, is a map of different uses: ordinary RAM, firmware data, reserved regions, and device windows. The number of installed bytes does not describe all those boundaries. Firmware supplies a memory map so the loader can pass the kernel a description of individual ranges and their classifications.",
           "In the BIOS path we collect this information using E820 before leaving real mode. We need a buffer at a known location with a known capacity, and we must keep it intact until the kernel has copied or reserved it. Even a range firmware calls usable can contain our own loader, kernel, stack, page tables, or map buffer by the time C starts. Firmware describes the platform; our reservation list accounts for what this boot has placed inside it. The free-frame list will be built from both.",
           "Represent ranges as [base, end), including base and excluding end. Then length is simply end minus base, and two adjacent ranges can share an endpoint without overlapping. Compute end only after checking that base + length cannot overflow. Keep firmware values in 64-bit integers even while the kernel uses only addresses below 4 GiB: truncating a high physical address could turn it into an apparently available low one. Start your notes with three columns (firmware type, current contents, allocation decision) and use them to explain each range before marking it free."
         ],
@@ -684,7 +684,7 @@ export const foundations = [
         "paragraphs": [
           "E820 is an iterative interface: one call returns one memory-range record and a value used to ask for the next record. Start with EBX=0. For each call, supply the E820 operation number in EAX, the SMAP signature in EDX, the buffer size in ECX, and the destination pointer in ES:DI. After a successful call, validate the returned signature and record length before interpreting its fields. A register-level interface becomes easier to follow when you label each value as input, output, or both.",
           "The returned EBX is an opaque continuation token. Opaque means we preserve and return it exactly; we do not add one or infer an array index from it. A zero token means the record just returned was the final record, so that record still belongs in the result. Our bounded loader asks for 24-byte records while accepting the older 20-byte form, initializing the extended-attribute area before each request. The later normalization pass can then account for disabled extended records and other unsuitable entries.",
-          "Capacity is part of the algorithm. The example reserves 0x5000–0x5BFF for collected records, below our loader stack. Before advancing the destination, make sure the next record fits. If firmware fails according to this loader's interface or the buffer fills before the map finishes, report that failure rather than presenting a partial map as complete. A partial map could omit the very reserved range that keeps the allocator safe. Trace two successful calls and a final returned zero token on paper, tracking buffer position separately from the continuation token."
+          "Capacity is part of the algorithm. The example reserves 0x5000–0x5BFF for collected records, below our loader stack. Before advancing the destination, make sure the next record fits. If firmware fails according to this loader's interface or the buffer fills before the map finishes, report failure and mark the partial map as incomplete. A partial map could omit the very reserved range that keeps the allocator safe. Trace two successful calls and a final returned zero token on paper, tracking buffer position separately from the continuation token."
         ],
         "code": {
           "language": "asm",
@@ -707,7 +707,7 @@ export const foundations = [
         "title": "Prove that high addresses do not alias",
         "paragraphs": [
           "Early PC compatibility introduced a way to mask address bit 20. With that bit masked, two addresses differing only in bit 20 can refer to the same underlying byte. That behavior mattered for software expecting older wraparound addressing. For an allocator, it would be disastrous: two apparently different frames could actually overlap. Entering protected mode does not by itself prove that the masking has been removed. Our first boot avoided the issue by keeping its addresses below 1 MiB.",
-          "To understand an A20 test, choose two suitable probe locations separated by 0x100000. Save their original bytes, write distinguishable patterns, and observe whether changing one location changes the other. The probe must temporarily control interrupts and avoid live code, stacks, and firmware data. Restore the original contents afterward. If the addresses alias, both saved reads came from the same underlying storage, so the restore sequence must account for that case rather than assuming two independent bytes.",
+          "To understand an A20 test, choose two suitable probe locations separated by 0x100000. Save their original bytes, write distinguishable patterns, and observe whether changing one location changes the other. The probe must temporarily control interrupts and avoid live code, stacks, and firmware data. Restore the original contents afterward. If the addresses alias, both saved reads came from the same underlying storage, so the restore sequence must handle their shared underlying byte.",
           "Test before trying to enable the gate; firmware may already have done it. If a change is needed, use a supported firmware method or a platform-appropriate fallback, then perform the test again. The fast gate at port 0x92 has other bits, including reset-related behavior, and the keyboard-controller method requires bounded waits and command sequencing. The educational point is the readback: an output instruction expresses a request, while the aliasing test observes whether the needed address behavior is actually present."
         ],
         "teaching": {
@@ -725,9 +725,9 @@ export const foundations = [
         "id": "normalize",
         "title": "Reserve conservatively, then reclaim deliberately",
         "paragraphs": [
-          "Firmware records describe byte ranges, while our first physical allocator hands out 4096-byte frames. A frame must be entirely safe to use. Start with every frame unavailable, then identify fully covered usable frames and subtract reservations. This direction of construction makes an omitted record reduce available memory rather than expose unknown memory as free. Keep the original records for diagnosis while building a normalized map the allocator can consume.",
+          "Firmware records describe byte ranges, while our first physical allocator hands out 4096-byte frames. A frame must be entirely safe to use. Start with every frame unavailable, then identify fully covered usable frames and subtract reservations. This direction of construction keeps memory covered by an omitted record unavailable. Keep the original records for diagnosis while building a normalized map the allocator can consume.",
           "For a usable range, round the beginning upward to a page boundary and the end downward. Consider [0x6005, 0xA900): complete frames begin at 0x7000, 0x8000, and 0x9000. The partial bytes near either endpoint are insufficient to offer the whole neighboring frame. For a reservation, do the opposite: every touched frame is unavailable. A reservation [0x8FF0, 0x9010) excludes both frames beginning at 0x8000 and 0x9000. Sketch these two ranges on a separate address ruler, then compare their rounding with the different worked interval in the diagram.",
-          "Maps can be unordered or overlapping. If a reserved record overlaps a usable one, process the overlap conservatively rather than allowing the last record to win by accident. Reclaimable memory also has a time dimension: loader storage becomes free only after the kernel stops executing or referencing it; ACPI reclaimable data becomes reusable after needed information is consumed or copied, while ACPI NVS has a different preservation role. A normalized map is therefore a description of what may be allocated now, not merely a tidier copy of firmware labels."
+          "Maps can be unordered or overlapping. If a reserved record overlaps a usable one, reserve the overlapping region consistently. Reclaimable memory also has a time dimension: loader storage becomes free only after the kernel stops executing or referencing it; ACPI reclaimable data becomes reusable after needed information is consumed or copied, while ACPI NVS has a different preservation role. The normalized map describes which complete frames may be allocated in the current boot state."
         ],
         "teaching": {
           "goal": "Convert byte ranges into allocatable pages using inward rounding for usable memory and outward rounding for reservations.",
@@ -794,7 +794,7 @@ export const foundations = [
         "Reserves before exposing allocation",
         "Preserves map data until normalization is complete"
       ],
-      "modelAnswer": "The bitmap was placed inside firmware-usable RAM, but no reservation removed its pages from the final free pool. I would begin with all frames unavailable, identify space for the bitmap from a validated usable interval, record that reservation, reserve the kernel, loader data, stacks, and page tables, then expose only remaining fully usable pages. Allocation starts only after the final reservation pass. The firmware map is evidence about hardware, not ownership of the live kernel’s data."
+      "modelAnswer": "The bitmap was placed inside firmware-usable RAM, but no reservation removed its pages from the final free pool. I would begin with all frames unavailable, identify space for the bitmap from a validated usable interval, record that reservation, reserve the kernel, loader data, stacks, and page tables, then expose only remaining fully usable pages. Allocation starts only after the final reservation pass. The firmware map describes hardware ranges. Track the live kernel’s ownership separately."
     },
     "sources": [
       {
@@ -876,11 +876,11 @@ export const foundations = [
       },
       {
         "id": "pit",
-        "title": "Time is a measurement, not just a counter",
+        "title": "Relate timer counts to elapsed time",
         "paragraphs": [
           "The Programmable Interval Timer, or PIT, divides an input clock of approximately 1.193182 MHz. Channel 0 can produce periodic IRQ0 events. To request a rate, choose an integer divisor; the actual nominal event frequency is the input frequency divided by that integer. This introduces rounding even before emulator timing enters the picture. For a divisor of 10000, for example, the nominal frequency is about 119.3182 Hz, so one period is about 8.38 milliseconds.",
           "The control word selects the channel, access sequence, and operating mode. For the mode-2 setup here, send the divisor's low byte first and then its high byte. The 16-bit encoded value zero represents a divisor of 65536, so distinguish a register encoding from its mathematical meaning. Decide how to reject or bound requested rates that cannot be represented. In the interrupt handler, update a tick count and request later scheduling work; keep the potentially expensive policy decision outside the smallest device-service path.",
-          "A tick count tells you how many events your software handled. It is not automatically a perfect stopwatch. Emulator pauses, long interrupt masking, and pending-event behavior can change when you observe ticks. On a 32-bit CPU even reading a 64-bit software counter needs care: the handler could update it between the reader's two word loads. Use the selected interrupt discipline to take a consistent snapshot. Practice with a divisor calculation, then compare the predicted nominal interval with observed counts while keeping the distinction between event accounting and calibrated time explicit."
+          "A tick count tells you how many events your software handled. Relating that count to elapsed time requires assumptions about event delivery and clock behavior. Emulator pauses, long interrupt masking, and pending-event behavior can change when you observe ticks. On a 32-bit CPU even reading a 64-bit software counter needs care: the handler could update it between the reader's two word loads. Use the selected interrupt discipline to take a consistent snapshot. Practice with a divisor calculation, then compare the predicted nominal interval with observed counts while keeping the distinction between event accounting and calibrated time explicit."
         ],
         "teaching": {
           "goal": "Derive a timer rate from the PIT divisor and distinguish timer events from measured elapsed time.",
@@ -898,7 +898,7 @@ export const foundations = [
         "title": "Bytes become keys only after a state machine",
         "paragraphs": [
           "The PS/2 controller exposes status and data ports. A handler first checks whether output data is available, then reads it according to the controller protocol. The byte might be a keyboard scan code, a command response, or data associated with another controller device. That is why sending a command and treating the next byte as a character is unreliable. Commands need their own acknowledgment, resend, and timeout handling so their responses do not enter the text stream by mistake.",
-          "A scan code describes a key event under a chosen scan-code set and translation policy. It is not ASCII. Press and release events differ; prefix bytes can change the interpretation of later bytes; modifiers such as Shift remain active across multiple events. A decoder therefore remembers state. One useful layering is raw bytes, then key events, then a layout-dependent conversion to text. Backspace becomes an editing action at the appropriate layer rather than an ordinary printable character.",
+          "A scan code describes a key event under a chosen scan-code set and translation policy. Converting the event into text requires decoding and a keyboard layout. Press and release events differ; prefix bytes can change the interpretation of later bytes; modifiers such as Shift remain active across multiple events. A decoder therefore remembers state. One useful layering is raw bytes, then key events, then a layout-dependent conversion to text. The text-editing layer handles Backspace as an editing action.",
           "Start by queueing raw bytes in a fixed-size ring and decoding them outside the interrupt handler. Head and tail positions identify where data is added and removed, and the queue must have a clear full/empty convention. When the consumer falls behind, count dropped bytes instead of silently overwriting unread input. Losing a prefix can leave a partial decoder sequence, so recovery includes resetting that partial state. Use the queue checkpoint to trace wraparound and full behavior before combining the queue with modifier and prefix handling."
         ],
         "teaching": {
@@ -914,11 +914,11 @@ export const foundations = [
       },
       {
         "id": "output",
-        "title": "A console is more than a pointer",
+        "title": "Build a console around device behavior",
         "paragraphs": [
           "Our first VGA routine wrote a fixed string at the screen's beginning. A reusable console needs more behavior: a cursor, ordinary character advancement, newline, carriage return, bounds, and scrolling. Decide those rules before adding more output sites. In 80×25 VGA text mode each cell still occupies two bytes, but the console chooses which cell a character changes. When scrolling, rows overlap in memory, so the copy direction or operation must preserve source bytes until they have been moved.",
           "A pixel framebuffer stores a different representation. Pitch is the number of bytes between row starts; it may be larger than width × bytes-per-pixel because rows can include padding. Pixel format tells you how the color channels are encoded. To locate a pixel, compute the row using pitch and then the pixel's offset within that row, after validating the full memory extent. A small bitmap font turns characters into pixel patterns. Keeping a text model in ordinary RAM also lets you redraw or scroll without treating device memory as your only record of the console contents.",
-          "Preserve a simple output interface so callers do not need to know whether the backend is VGA, serial, or a framebuffer. The same principle will help replace the PIC with APIC routing later: modern routes need discovered controller information, polarity, trigger mode, and a vector, rather than just a copied legacy IRQ number. Keep a minimal panic output path available outside normal console locking, because a fault may interrupt the console itself. Practice calculating one VGA cell and one framebuffer row address to see where the shared behavior meets different device layouts."
+          "Preserve a simple output interface so callers do not need to know whether the backend is VGA, serial, or a framebuffer. The same principle will help replace the PIC with APIC routing later: modern routes need discovered controller information, polarity, trigger mode, and a vector. Keep a minimal panic output path available outside normal console locking, because a fault may interrupt the console itself. Practice calculating one VGA cell and one framebuffer row address to see where the shared behavior meets different device layouts."
         ],
         "teaching": {
           "goal": "Define console behavior separately from the VGA or framebuffer layout that implements it.",
@@ -936,7 +936,7 @@ export const foundations = [
         "title": "Make latency and overflow visible",
         "paragraphs": [
           "Begin with hardware IRQs masked and verify that deliberate CPU exceptions still report correctly. Then enable only the timer, observe a bounded increase in its event counter, and finally enable keyboard input. This sequence separates a broken entry path from a device-specific problem. Useful counters include received vectors, completed acknowledgments, queue occupancy, dropped bytes, and unexpected events. They give the event path landmarks without requiring expensive printing in every handler.",
-          "Predict what happens when you slow the consumer and hold a key. The queue should fill according to its documented convention, then report losses while the kernel remains responsive. A single interrupt followed by silence can suggest a missing acknowledgment; repeated delivery can suggest a device source that was not cleared. These are clues to investigate, not universal diagnoses. Compare the device state and controller state before choosing a fix.",
+          "Predict what happens when you slow the consumer and hold a key. The queue should fill according to its documented convention, then report losses while the kernel remains responsive. A single interrupt followed by silence can suggest a missing acknowledgment; repeated delivery can suggest a device source that was not cleared. Use these clues to select the next observation and confirm the cause. Compare the device state and controller state before choosing a fix.",
           "At the focused checkpoint, implement the bounded queue operations and run the tests for ordinary insertion, removal, wraparound, and overflow behavior. Then connect the same ideas to a live keyboard experiment in your kernel. Finally consider the moment an idle consumer sleeps: work must not arrive between an unprotected empty check and sleep in a way that leaves the consumer asleep indefinitely. The scheduler chapter develops that problem further. For now, explain what protects each queue transition and how your counters would reveal a dropped event."
         ],
         "teaching": {
@@ -961,7 +961,7 @@ export const foundations = [
         "Reserve one slot so equal head and tail means empty.",
         "Return failure and increment a loss counter when the ring is full.",
         "Implement a pop operation that leaves its output unchanged on empty.",
-        "Test a wraparound sequence, not only the initial fill."
+        "Test initial fill and a sequence that wraps around the ring."
       ],
       "hints": [
         "Compute next = (head + 1) % capacity before writing.",
@@ -1029,7 +1029,7 @@ export const foundations = [
         "id": "unit",
         "title": "What a physical frame allocator returns",
         "paragraphs": [
-          "The physical memory manager, or PMM, allocates frames: fixed-size aligned pieces of physical RAM. We use 4096-byte frames, so frame 6 begins at physical address 6 × 4096 = 0x6000. A frame is storage, not yet a C object or a process address. The virtual memory manager will decide where that storage appears in an address space, and the heap will later divide mapped storage into smaller objects. Keeping those jobs separate makes this first allocator small enough to reason about.",
+          "The physical memory manager, or PMM, allocates frames: fixed-size aligned pieces of physical RAM. We use 4096-byte frames, so frame 6 begins at physical address 6 × 4096 = 0x6000. A frame provides physical storage; object allocation and process mappings give it additional roles. The virtual memory manager will decide where that storage appears in an address space, and the heap will later divide mapped storage into smaller objects. Keeping those jobs separate makes this first allocator small enough to reason about.",
           "A bitmap stores one yes-or-no value per frame in a single bit. A bit index selects the frame; dividing by eight selects its bitmap byte, and the remainder selects the bit within that byte. We use two ideas: eligible means the frame is allowed to participate in allocation, while busy means it is not currently free. This distinction matters during release. A frame containing firmware or the kernel must not become available merely because somebody passes its address to a free operation.",
           "For N frames, one bitmap needs ceil(N / 8) bytes. Managing 4 GiB with 4 KiB frames means 1,048,576 frame bits, or 128 KiB for each bitmap. Those metadata bytes themselves occupy RAM and must be reserved. Our smaller teaching implementation limits the managed range to match the initial machine. Before reading its scan loop, sketch a twelve-frame pool with two reserved holes and mark eligible and busy independently. Then walk through the first allocation and explain exactly which bit changes."
         ],
@@ -1049,7 +1049,7 @@ export const foundations = [
         "title": "Start unavailable and prove pages free",
         "paragraphs": [
           "An allocator can have a perfect search loop and still return unsafe memory if initialization marked the wrong frames free. Begin with every busy bit set and every eligibility bit clear. Then apply normalized usable ranges, followed by all reservations. This gives reservations the final say regardless of the firmware record order. Only after that preparation is complete should a runtime caller be allowed to request a frame.",
-          "List the memory already in use at boot: the kernel's instructions and data, .bss, stacks, boot information, bitmap storage, existing page tables, and any loaded modules. If any live byte touches a frame, reserve the whole frame. The reference manages at most 32 MiB, and its boot helpers accept half-open frame-number intervals rather than byte addresses. Convert and round ranges before calling them. Addresses above the cap stay unmanaged; they must not wrap around into a low bitmap index.",
+          "List the memory already in use at boot: the kernel's instructions and data, .bss, stacks, boot information, bitmap storage, existing page tables, and any loaded modules. If any live byte touches a frame, reserve the whole frame. The reference manages at most 32 MiB, and its boot helpers accept half-open intervals expressed as frame numbers. Convert and round ranges before calling them. Addresses above the cap stay unmanaged; they must not wrap around into a low bitmap index.",
           "The runtime interface separates success from the returned physical address by using a boolean result and an output parameter. This lets failure leave the output unchanged and avoids overloading a particular address as a universal error value. We still reserve frame zero as an explicit policy. The first-fit scan chooses the first eligible free frame, marks it busy, and reports its address. Do not rerun boot reservation helpers after allocation has begun: they do not know which existing caller owns a live frame. Practice the setup on your small pool before turning to the executable checkpoint's smaller API."
         ],
         "code": {
@@ -1081,7 +1081,7 @@ export const foundations = [
           "bridge": "One allocation works in a straight-line trace. Interrupts and additional CPUs introduce another caller between those steps.",
           "check": {
             "prompt": "An allocator saves IF=0, performs a successful allocation, then executes STI before returning. What caller expectation did it violate?",
-            "answer": "The caller entered with maskable interrupts disabled, possibly while updating another shared structure. Unconditionally enabling them changes that surrounding critical section. The allocator must restore the previous interrupt state rather than always enable interrupts."
+            "answer": "The caller entered with maskable interrupts disabled, possibly while updating another shared structure. Unconditionally enabling them changes that surrounding critical section. The allocator must restore the interrupt state captured on entry."
           },
           "takeaway": "Allocation is a protected decision-and-update sequence, followed by whatever preparation is required before the new owner can use the frame.",
           "diagramAfter": 2
@@ -1091,9 +1091,9 @@ export const foundations = [
         "id": "ownership",
         "title": "A mapping does not own a frame by default",
         "paragraphs": [
-          "A virtual mapping is a way to reach a frame; it is not automatically the frame's sole owner. Two virtual addresses, possibly in different processes, can map the same storage. Removing one mapping does not make the frame free while another user still depends on it. Conversely, a frame can be allocated before it has a usable virtual mapping, as when preparing a new page table. Shared memory therefore needs explicit ownership or reference accounting in addition to page-table entries.",
+          "A virtual mapping provides access to a frame. Track frame ownership separately because several users may share that storage. Two virtual addresses, possibly in different processes, can map the same storage. Removing one mapping does not make the frame free while another user still depends on it. Conversely, a frame can be allocated before it has a usable virtual mapping, as when preparing a new page table. Shared memory therefore needs explicit ownership or reference accounting in addition to page-table entries.",
           "Another distinction appears when a caller requests several frames. Four successful single-frame allocations produce four frames, but there may be reserved or busy holes between them. A device's DMA request may need one physically contiguous run, a particular alignment, or an address ceiling. That is a different allocator operation. A run allocator must find and validate the complete candidate interval and claim it under the same synchronization; failure should not leave an unexpected partial run allocated.",
-          "Use accounting that explains the represented states. Among eligible frames, free plus allocated should equal eligible. Reserved frames belong outside that equation rather than inflating an allocation counter. A debugging owner tag can tell you which subsystem holds each allocated frame, making a leak more informative than a shrinking free total. Practice releasing a shared frame: enumerate all users, remove their references, and explain the event after which returning it to the allocator is justified."
+          "Use accounting that explains the represented states. Among eligible frames, free plus allocated should equal eligible. Count reserved frames separately from this equation. A debugging owner tag can tell you which subsystem holds each allocated frame, making a leak more informative than a shrinking free total. Practice releasing a shared frame: enumerate all users, remove their references, and explain the event after which returning it to the allocator is justified."
         ],
         "teaching": {
           "goal": "Separate a frame’s lifetime from its mappings and distinguish individual-frame allocation from a contiguous-run request.",
@@ -1102,7 +1102,7 @@ export const foundations = [
             "prompt": "A frame is shared by two processes. Process A removes its mapping while process B still reads it. What could happen if A immediately returns the frame to the PMM?",
             "answer": "The PMM may give the frame to an unrelated caller, whose writes become visible through B’s still-live mapping. B could also corrupt the new owner. Reuse must wait until the lifetime accounting and mapping removal establish that no remaining user can access it."
           },
-          "takeaway": "A frame can be reused only after its ownership and access paths have ended; one removed mapping is not sufficient.",
+          "takeaway": "Reuse a frame after all of its owners and access paths have released it.",
           "diagramAfter": 2
         }
       },
@@ -1197,7 +1197,7 @@ export const foundations = [
         "title": "One address, three fields, two memory reads",
         "paragraphs": [
           "Until now, our flat segments and disabled paging made useful linear addresses numerically match physical addresses. Paging adds a translation step. In this chapter we use 32-bit non-PAE paging with 4 KiB pages. Split an address into three fields: ten bits choose a page-directory entry, ten choose a page-table entry, and twelve select a byte within the final page. The twelve-bit offset spans 4096 positions, explaining why it matches our frame size.",
-          "CR3 identifies the physical page containing the directory. Each present directory entry points to a physical page table, and each present table entry points to a data frame. For address 0x00805234, the directory index is 2, table index is 5, and offset is 0x234. If that walk selects frame 0x00678000, the byte resides at physical address 0x00678234. Draw the two entry fetches separately from the final data access: the addresses of the table records are not the translated data address.",
+          "CR3 identifies the physical page containing the directory. Each present directory entry points to a physical page table, and each present table entry points to a data frame. For address 0x00805234, the directory index is 2, table index is 5, and offset is 0x234. If that walk selects frame 0x00678000, the byte resides at physical address 0x00678234. Draw the two table-entry fetches and the final translated data access as three separate addresses.",
           "The processor caches translations in the Translation Lookaside Buffer, or TLB, so repeated accesses need not repeat every table fetch. Page tables describe the mapping, while the cache speeds up using it. We will need to invalidate cached information when mappings change. For now, practice extracting indices with shifts and masks, then perform a walk using actual entry values. Remember that the address stored in an entry is physical; the C pointer used by the kernel to edit that table depends on whatever virtual mapping gives it access."
         ],
         "teaching": {
@@ -1205,7 +1205,7 @@ export const foundations = [
           "bridge": "The PMM gives us physical storage. Paging lets us choose which virtual addresses refer to that storage.",
           "check": {
             "prompt": "For virtual address 0x00C07456, find the directory index, table index, and offset. If its table entry selects frame 0x01234000, what physical address results?",
-            "answer": "The directory index is 3, the table index is 7, and the offset is 0x456. Combining that offset with the selected frame gives 0x01234456. The index fields choose entries; they are not added directly to the final frame address."
+            "answer": "The directory index is 3, the table index is 7, and the offset is 0x456. Combining that offset with the selected frame gives 0x01234456. The index fields select the entries, and the offset field selects the byte within the resulting frame."
           },
           "takeaway": "A page walk selects a frame through two indexed tables, then preserves the offset within the page.",
           "diagramAfter": 2
@@ -1216,8 +1216,8 @@ export const foundations = [
         "title": "Map the instructions that turn mapping on",
         "paragraphs": [
           "Enabling paging changes how the CPU interprets subsequent linear memory accesses. The instruction after setting CR0.PG still has to be fetched, and the next stack access still has to reach valid storage. If the new tables omit either address, the transition fails immediately. An identity mapping is a convenient bridge: it maps a virtual address to the same numerical physical address, so existing low-address code can continue while translation becomes active.",
-          "The reference constructs a directory and one table mapping the first 4 MiB as supervisor-writable pages, except for page zero. This covers the low-loaded kernel, its current stack, descriptors, and diagnostic output in the stated setup. The table pages themselves must be 4096-byte aligned and reserved from the PMM. Before paging is active, their linked low addresses are usable as physical addresses; verify those locations in the linker map rather than assuming an alignment attribute also chooses where the object is loaded.",
-          "After pointing CR3 at the directory, the code enables paging and write protection through CR0. WP makes supervisor writes respect read-only page permissions, which later helps catch kernel mistakes. This first 4 MiB map is only a bootstrap map, not coverage of all installed RAM. Its non-PAE entry format also has no NX permission for forbidding instruction fetches. Draw every address needed for the transition, check each against the map, and then explain why leaving page zero absent is useful for detecting null-pointer accesses."
+          "The reference constructs a directory and one table mapping the first 4 MiB as supervisor-writable pages, except for page zero. This covers the low-loaded kernel, its current stack, descriptors, and diagnostic output in the stated setup. The table pages themselves must be 4096-byte aligned and reserved from the PMM. Before paging is active, their linked low addresses are usable as physical addresses; verify both alignment and load locations in the linker map.",
+          "After pointing CR3 at the directory, the code enables paging and write protection through CR0. WP makes supervisor writes respect read-only page permissions, which later helps catch kernel mistakes. This bootstrap map covers the first 4 MiB; additional RAM requires additional mappings. Its non-PAE entry format also has no NX permission for forbidding instruction fetches. Draw every address needed for the transition, check each against the map, and then explain why leaving page zero absent is useful for detecting null-pointer accesses."
         ],
         "code": {
           "language": "c",
@@ -1241,10 +1241,10 @@ export const foundations = [
         "paragraphs": [
           "A present mapping answers only whether translation has an entry; it does not imply that every caller may read or write it. In this paging mode, access permissions combine across the directory and table levels. A user access needs the user/supervisor permission at both levels. A user-capable PTE cannot make a supervisor-only PDE permissive. Read/write restrictions also combine, and the effect of read-only mappings on supervisor writes depends on CR0.WP. Read the whole route before deciding whether an access should succeed.",
           "This lets each process contain kernel mappings without allowing user code to access them. Shared supervisor-only kernel mappings simplify entry into the kernel during syscalls and interrupts. A higher-half layout can give the kernel stable high virtual addresses while placing its physical frames elsewhere. That introduces three distinct numbers to track: where bytes are loaded physically, where symbols are linked virtually, and any temporary identity mappings used during boot. The page tables connect those views.",
-          "Entries also carry information beyond permissions. The processor can set accessed and dirty bits, and cache-control fields help describe how memory should be treated. Updating an entry should preserve or deliberately handle such state rather than replacing unexplained bits blindly. Device memory needs a suitable memory type, not an assumption that the normal cached-RAM policy is always appropriate. Make a small table of PDE and PTE permissions to predict one allowed read, one rejected user access, and one rejected write before trying those cases in the kernel."
+          "Entries also carry information beyond permissions. The processor can set accessed and dirty bits, and cache-control fields help describe how memory should be treated. When updating an entry, preserve or deliberately handle each of these state fields. Choose a memory type that matches the device’s access requirements. Make a small table of PDE and PTE permissions to predict one allowed read, one rejected user access, and one rejected write before trying those cases in the kernel."
         ],
         "teaching": {
-          "goal": "Determine access permission from the full page walk rather than only the final entry.",
+          "goal": "Determine access permission from the combined directory and table permissions.",
           "bridge": "Address translation chooses storage. Page permissions decide which accesses to that storage are allowed.",
           "check": {
             "prompt": "A PDE is present and supervisor-only. Its PTE is present, writable, and user-accessible. Can ring 3 read the page? Which level determines the answer?",
@@ -1267,7 +1267,7 @@ export const foundations = [
           "bridge": "We can predict permitted accesses. A page fault tells us when the actual access could not satisfy the mapping rules.",
           "check": {
             "prompt": "A process faults on an unmapped address just beyond its permitted heap, while another address inside a valid lazy region is also unmapped. Why should “present bit is zero” not make the handler treat them identically?",
-            "answer": "The bit describes the failed translation, not whether the process is entitled to memory there. The virtual-area policy can permit backing allocation for the lazy region and reject the address outside the heap. Mapping both would erase that boundary."
+            "answer": "The bit describes the failed translation. A separate ownership check determines whether the process is entitled to memory there. The virtual-area policy can permit backing allocation for the lazy region and reject the address outside the heap. Mapping both would erase that boundary."
           },
           "takeaway": "A page-fault handler combines hardware evidence with the address-space policy before deciding to repair or reject an access.",
           "diagramAfter": 2
@@ -1286,9 +1286,9 @@ export const foundations = [
           "bridge": "The tables can change after paging starts. The translation cache adds one more participant to that change.",
           "check": {
             "prompt": "A virtual page once pointed to frame A. You remove its PTE and give A to another subsystem before invalidating the old translation. What access could still violate the new owner’s isolation?",
-            "answer": "The CPU may still use the cached old translation for the original virtual address and reach A. A read can expose the new owner’s data, and a write can corrupt it. Removing the authoritative entry is not enough while an old usable translation remains."
+            "answer": "The CPU may still use the cached old translation for the original virtual address and reach A. A read can expose the new owner’s data, and a write can corrupt it. Complete the required invalidation so the old translation can no longer reach the released frame."
           },
-          "takeaway": "Unmapping includes translation-cache synchronization and frame lifetime, not just clearing an entry.",
+          "takeaway": "Complete unmapping by clearing the entry, synchronizing translation caches, and resolving frame lifetime.",
           "diagramAfter": 2
         }
       }
@@ -1296,7 +1296,7 @@ export const foundations = [
     "lab": "paging",
     "challenge": {
       "title": "Walk the page tables without guessing",
-      "brief": "Repair a pure translation model. This is not a CPU emulator: it models present bits, a supplied PDE/PTE pair, and the final physical address. Prove it with the worked address before integrating page-table writes.",
+      "brief": "Repair a pure translation model. The model covers present bits, a supplied PDE/PTE pair, and the final physical address. Prove it with the worked address before integrating page-table writes.",
       "language": "c",
       "starter": "#include <stdint.h>\nuint32_t translate(uint32_t virtual_address, uint32_t pte) {\n    return pte + (virtual_address & 0xffffu);\n}\n",
       "tasks": [
@@ -1311,7 +1311,7 @@ export const foundations = [
         "Use frame = pte & 0xFFFFF000, then OR the offset."
       ],
       "solution": "#include <stdint.h>\n#include <stdbool.h>\n#include <assert.h>\nunsigned pd_index(uint32_t v) { return (v >> 22) & 0x3ffu; }\nunsigned pt_index(uint32_t v) { return (v >> 12) & 0x3ffu; }\nbool translate(uint32_t v, uint32_t pde, uint32_t pte, uint32_t *out) {\n    if (!out || !(pde & 1u) || !(pte & 1u)) return false;\n    /* This model only supports 4 KiB pages, not PDE large pages. */\n    if (pde & (1u << 7)) return false;\n    *out = (pte & 0xfffff000u) | (v & 0xfffu);\n    return true;\n}\nint main(void) {\n    uint32_t v = 0x0040307au, p = 0;\n    assert(pd_index(v) == 1 && pt_index(v) == 3);\n    assert(translate(v, 0x00102003, 0x00345067, &p));\n    assert(p == 0x0034507au);\n    p = 0xdeadbeefu;\n    assert(!translate(v, 0x00102003, 0, &p));\n    assert(p == 0xdeadbeefu);\n    assert(!translate(v, 0, 0x00345003, &p));\n    return 0;\n}\n",
-      "explanation": "The PTE’s low twelve bits are attributes, not address bits. The model intentionally does not perform memory reads, permission checking, TLB behavior, or large-page translation. Its narrow contract makes the arithmetic independently testable and leaves the architectural cases explicit.",
+      "explanation": "The PTE’s low twelve bits hold attributes; mask them out when extracting the frame address. The model intentionally does not perform memory reads, permission checking, TLB behavior, or large-page translation. Its narrow contract makes the arithmetic independently testable and leaves the architectural cases explicit.",
       "checks": [
         "The worked virtual address resolves to 0x0034507A.",
         "Missing entries fail without modifying the output.",
@@ -1369,7 +1369,7 @@ export const foundations = [
         ],
         "teaching": {
           "goal": "Explain how a heap serves small C allocations using storage supplied by the PMM and VMM.",
-          "bridge": "We can acquire frames and map pages. Most kernel data structures need a few bytes rather than a whole page.",
+          "bridge": "We can acquire frames and map pages. Many kernel data structures occupy only a small portion of a page.",
           "check": {
             "prompt": "A caller requests 40 bytes. Why is returning a whole physical frame directly a different interface from kmalloc, and which layers would normally make the resulting payload pointer usable?",
             "answer": "A frame request returns physical storage at page granularity. kmalloc returns an aligned virtual payload range sized for an object. The PMM supplies frames, the VMM maps them, and the heap subdivides that mapped arena so the C pointer reaches the intended bytes."
@@ -1408,7 +1408,7 @@ export const foundations = [
         "paragraphs": [
           "Internal fragmentation is space inside an allocated block that the caller did not request. Alignment padding and an unsplittable remainder are common causes. External fragmentation is different: enough free bytes may exist in total, but they are separated by live allocations, so no one free block is large enough. A heap with two free 2 KiB regions separated by a live block cannot satisfy a contiguous 3 KiB payload just because its free-byte total is 4 KiB.",
           "Draw three neighboring allocations A, B, and C, including every header. Free A and C while B remains live. The allocator cannot merge across B because doing so would give another caller bytes that B still owns. Once B is freed, the neighbors can coalesce into one continuous block, including the bytes previously used by the interior headers. This drawing explains why checking only a total free counter hides useful information. Also record the largest free block or a distribution of block sizes.",
-          "More elaborate allocators change these tradeoffs. Boundary tags help find a previous neighbor; size-segregated lists reduce search work; slab-style caches group objects of one size. Each introduces more metadata and update rules. Keep the simple first-fit allocator as a reference while exploring an optimization: two correct allocators may choose different addresses, so compare alignment, capacity, non-overlap, and lifetime behavior rather than demanding identical placement. First learn to explain why a request failed from the shape of the arena."
+          "More elaborate allocators change these tradeoffs. Boundary tags help find a previous neighbor; size-segregated lists reduce search work; slab-style caches group objects of one size. Each introduces more metadata and update rules. Keep the simple first-fit allocator as a reference while exploring an optimization: two correct allocators may choose different addresses, so compare alignment, capacity, non-overlap, and lifetime behavior for each chosen placement. First learn to explain why a request failed from the shape of the arena."
         ],
         "teaching": {
           "goal": "Distinguish wasted capacity inside allocations from free space separated by live allocations.",
@@ -1417,7 +1417,7 @@ export const foundations = [
             "prompt": "Two free blocks each have 96 payload bytes and a live block sits between them. Can they satisfy one 160-byte payload request? What changes if the middle block is freed?",
             "answer": "They cannot satisfy the request while separated because the payload must be contiguous in this arena. Freeing the middle block permits coalescing if all three are adjacent, producing one region that also recovers interior header space and can satisfy a larger request."
           },
-          "takeaway": "Allocation depends on the size and arrangement of free blocks, not only the sum of free bytes.",
+          "takeaway": "Allocation depends on total free capacity and the size and arrangement of individual free blocks.",
           "diagramAfter": 2
         }
       },
@@ -1425,7 +1425,7 @@ export const foundations = [
         "id": "defense",
         "title": "Find heap mistakes close to their cause",
         "paragraphs": [
-          "A heap corruption often appears much later than its cause. A caller writes past an object today, changing the next block's header; a later allocation follows the damaged pointer and crashes somewhere else. Debug patterns help shorten that distance. Fill newly allocated and freed payloads with different recognizable values, place a canary after a requested payload, and check list links periodically. An allocation-site tag can identify which code requested the damaged object. These are clues, not memory isolation, because privileged code can overwrite them too.",
+          "A heap corruption often appears much later than its cause. A caller writes past an object today, changing the next block's header; a later allocation follows the damaged pointer and crashes somewhere else. Debug patterns help shorten that distance. Fill newly allocated and freed payloads with different recognizable values, place a canary after a requested payload, and check list links periodically. An allocation-site tag can identify which code requested the damaged object. These debugging clues can reveal corruption; privileged code can also overwrite them.",
           "Synchronization has to fit the calling context. A heap lock can protect the list from concurrent updates, but an interrupt handler must not spin waiting for a lock held by the code it interrupted. A useful first policy is to prohibit general heap allocation in IRQ and panic paths and use bounded preallocated storage there. The allocator's own error logger must follow that rule too; otherwise reporting an allocation failure can recursively require an allocation. Explain the permitted contexts in the interface before sprinkling kmalloc into drivers.",
           "When the fixed arena eventually grows, the heap must coordinate with lower layers. Reserve virtual space, acquire frames, install mappings, and publish the additional arena only after the whole operation succeeds. If a step fails, unwind the newly acquired resources. Returning memory works at page granularity, so a partly occupied page cannot be released merely because it contains one free object. Remove mappings and finish the necessary translation invalidations before those physical frames become reusable. Draw this growth path as another ownership handoff, just as you did for boot stages."
         ],
@@ -1488,7 +1488,7 @@ export const foundations = [
       "tasks": [
         "Reject zero-sized requests according to this chapter’s API.",
         "Detect overflow before adding alignment padding.",
-        "Use a size_t mask rather than an accidentally narrower integer mask.",
+        "Use a size_t mask so its width matches the size calculation.",
         "Leave the output unchanged on failure and test the largest representable values."
       ],
       "hints": [
@@ -1551,7 +1551,7 @@ export const foundations = [
         "paragraphs": [
           "Imagine two functions that should both make progress, even though the CPU executes one instruction stream at a time. A thread records enough state to stop one stream and later continue it. That includes a stack holding its call history and local data, saved registers, a lifecycle state, and scheduling information. A process additionally supplies an address space and shared resources for its threads. We begin with kernel threads in one address space so the first lesson can focus on changing the execution state and stack.",
           "In cooperative scheduling, a thread calls a yield or switch function at an ordinary ABI boundary. The caller already knows that caller-saved registers may change. For our i386 convention, the switch routine must preserve EBX, ESI, EDI, and EBP, along with the stack position needed to resume. The CALL has already placed a return address on the current stack. Saving ESP after saving those registers captures a continuation: a place and a set of values from which execution can later proceed as though the call took a long time.",
-          "An interrupt-driven preemption can arrive between arbitrary instructions, where caller-saved registers may contain essential live values. Its entry path therefore preserves the full interrupted context and hardware return frame. The small cooperative switch is not by itself a complete timer-preemption mechanism. Keep those two frame types separate in your drawings. Give each thread its own mapped stack, and label which saved stack pointer belongs to which thread before following the first switch."
+          "An interrupt-driven preemption can arrive between arbitrary instructions, where caller-saved registers may contain essential live values. Its entry path therefore preserves the full interrupted context and hardware return frame. Timer preemption needs the full interrupted context in addition to the cooperative switch mechanism. Keep those two frame types separate in your drawings. Give each thread its own mapped stack, and label which saved stack pointer belongs to which thread before following the first switch."
         ],
         "teaching": {
           "goal": "Explain a thread as saved execution state plus a private stack, and distinguish cooperative switching from interrupt preemption.",
@@ -1592,8 +1592,8 @@ export const foundations = [
         "id": "states",
         "title": "Choose which thread runs next",
         "paragraphs": [
-          "Mechanism and policy are different questions. The context switch describes how execution moves; the scheduler decides where it moves. Give each thread a clear state: NEW while being prepared, RUNNABLE when eligible for CPU time, RUNNING while selected, BLOCKED while waiting for a condition, and DEAD after execution ends. A blocked thread is not simply a runnable thread that happens to do nothing. It leaves the run queue until its condition can make progress.",
-          "Round robin chooses runnable threads in turn and gives each a bounded time quantum. When a thread uses its quantum, place it behind its runnable peers. When it blocks early, select another immediately. Keep the current RUNNING thread either outside the queue or inside it according to one documented convention; accidental duplicate membership gives unfair extra turns and corrupts lifecycle reasoning. The idle thread is the fallback when no ordinary thread is eligible, rather than a competitor that receives turns while useful work waits.",
+          "Mechanism and policy are different questions. The context switch describes how execution moves; the scheduler decides where it moves. Give each thread a clear state: NEW while being prepared, RUNNABLE when eligible for CPU time, RUNNING while selected, BLOCKED while waiting for a condition, and DEAD after execution ends. A blocked thread leaves the run queue until its condition can make progress.",
+          "Round robin chooses runnable threads in turn and gives each a bounded time quantum. When a thread uses its quantum, place it behind its runnable peers. When it blocks early, select another immediately. Keep the current RUNNING thread either outside the queue or inside it according to one documented convention; accidental duplicate membership gives unfair extra turns and corrupts lifecycle reasoning. Select the idle thread only when no ordinary thread is eligible.",
           "Priority adds another selection rule. Strictly preferring higher-priority work can starve a lower-priority thread if high-priority work never stops. Aging or weighted policies can change that tradeoff. Priority inversion is a dependency problem: a high-priority thread waits for a lock owned by a low-priority thread while medium-priority work prevents the owner from running. Priority inheritance can help the owner finish the needed work. Before implementing a policy, trace a tiny workload and state what behavior it should favor."
         ],
         "teaching": {
@@ -1601,7 +1601,7 @@ export const foundations = [
           "bridge": "The switch mechanism can resume a chosen thread. Scheduling decides which eligible thread should be chosen next.",
           "check": {
             "prompt": "The runnable queue is A, B, C. A uses its full quantum; B then blocks before its quantum ends. Under ordinary round robin, which thread runs next, and where should blocked B be recorded?",
-            "answer": "After A’s turn the queue order gives B then C then A. Once B blocks, C runs next. B belongs to the appropriate wait condition or wait queue, not the runnable rotation, until a wakeup makes it eligible again."
+            "answer": "After A’s turn the queue order gives B then C then A. Once B blocks, C runs next. B stays with its wait condition or wait queue until a wakeup makes it eligible for the runnable rotation again."
           },
           "takeaway": "Choose among eligible threads according to a stated policy, while keeping lifecycle state and queue membership consistent.",
           "diagramAfter": 2
@@ -1612,7 +1612,7 @@ export const foundations = [
         "title": "Add timer-driven preemption",
         "paragraphs": [
           "First make two cooperative threads repeatedly update separate counters and yield. Verify that their stacks and callee-saved registers survive many switches. This gives you a working mechanism before the timer adds asynchronous entry. For preemption, the timer handler updates accounting and records that rescheduling is needed. The actual switch occurs through a path where the interrupted frame has been saved and the scheduler's lock and preemption rules permit changing the running thread.",
-          "Sometimes kernel code temporarily prevents rescheduling while it manipulates state that belongs to the current CPU or holds a lock whose use requires that restriction. Preemption disabling should be nested: an inner critical section must not cancel an outer section's request to remain unscheduled. A counter can record this depth. Masking local interrupts controls IRQ delivery; disabling preemption controls scheduler replacement at allowed points. They interact, but they are not the same operation. A long protected region can delay another thread even under a fair scheduling policy.",
+          "Sometimes kernel code temporarily prevents rescheduling while it manipulates state that belongs to the current CPU or holds a lock whose use requires that restriction. Preemption disabling should be nested: an inner critical section must not cancel an outer section's request to remain unscheduled. A counter can record this depth. Masking local interrupts controls IRQ delivery; disabling preemption controls scheduler replacement at allowed points. Track IRQ delivery and scheduler replacement as separate controls, with an explicit rule for how they interact. A long protected region can delay another thread even under a fair scheduling policy.",
           "Switching between processes later adds address-space selection, kernel-entry stack updates for privilege transitions, and any additional per-thread architectural state. Floating-point and SIMD usage requires a save/restore policy before code relies on those registers. Our small switch remains a complete teaching mechanism only for its stated cooperative subset. To extend it, list every piece of state that can differ between threads, identify which entry path saves it, and show where the resumed path restores it."
         ],
         "teaching": {
@@ -1683,7 +1683,7 @@ export const foundations = [
         "Use size_t for the scan but reject counts that cannot fit in the int result."
       ],
       "solution": "#include <stddef.h>\n#include <stdbool.h>\n#include <limits.h>\n#include <assert.h>\nint pick_next(const bool *runnable, size_t count, int current) {\n    if (!runnable || count == 0 || count > INT_MAX) return -1;\n    if (current < -1 || (current >= 0 && (size_t)current >= count))\n        return -1;\n    size_t start = current < 0 ? 0 : ((size_t)current + 1) % count;\n    for (size_t step = 0; step < count; ++step) {\n        size_t i = (start + step) % count;\n        if (runnable[i]) return (int)i;\n    }\n    return -1;\n}\nint main(void) {\n    bool run[] = {true, false, true, false};\n    assert(pick_next(run, 4, -1) == 0);\n    assert(pick_next(run, 4, 0) == 2);\n    assert(pick_next(run, 4, 2) == 0);\n    run[0] = false;\n    assert(pick_next(run, 4, 2) == 2);\n    run[2] = false;\n    assert(pick_next(run, 4, 2) == -1);\n    assert(pick_next(run, 0, -1) == -1);\n    return 0;\n}\n",
-      "explanation": "Round robin rotates among eligible tasks, not every allocated task slot. The bounded search supports a single runnable task and a fully blocked set without special spinning behavior. The scheduler still needs atomic state transitions and a context-switch protocol when this selector is integrated into the kernel.",
+      "explanation": "Round robin rotates among eligible tasks and skips blocked or unused slots. The bounded search supports a single runnable task and a fully blocked set without special spinning behavior. The scheduler still needs atomic state transitions and a context-switch protocol when this selector is integrated into the kernel.",
       "checks": [
         "The deterministic selector passes every assertion.",
         "Two yielding kernel threads preserve callee-saved registers and stack canaries.",

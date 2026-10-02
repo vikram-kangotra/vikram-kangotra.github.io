@@ -56,7 +56,7 @@ export const guidedAssemblyBySlug = {
         `    mov ax, 42
     call print_hex16`),
       checkpoint('derive-negative-values', 'Add a signed interpretation',
-        'Keep the existing 42 result. Add a newline, then load sixteen-bit minus one into AX and print that pattern on the next line. Explain why the formatter shows digits rather than a minus sign.', '002A\nFFFF',
+        'Keep the existing 42 result. Add a newline, then load sixteen-bit minus one into AX and print that pattern on the next line. Explain how the formatter displays a sixteen-bit pattern as hexadecimal digits.', '002A\nFFFF',
         ['The formatter shows the sixteen stored bits in hexadecimal.', 'Every bit is one in the sixteen-bit representation of -1.', 'Write a fresh AX value before the second print call; use newline to separate the results.'],
         'What unsigned decimal value has the same sixteen-bit pattern as signed -1?', 65535,
         'The all-ones pattern is 2^16 - 1 = 65535 when interpreted without a sign.',
@@ -91,7 +91,7 @@ export const guidedAssemblyBySlug = {
     call print_hex16`),
       checkpoint('observe-a-wide-register', 'Preserve and inspect EAX’s upper half',
         'The harness now supplies EAX (0x12345678 in the sample). Replace only AX with 0xbeef. Print the low word, then shift EAX right by 16 and print its remaining low word on another line. Explain why writing all of EAX for the replacement would destroy the second result.', 'BEEF\n1234',
-        ['The replacement destination must be AX, not EAX.', 'print_hex16 observes AX and preserves the rest of EAX.', 'The shift moves the original upper word into the printer’s sixteen-bit view.'],
+        ['Use AX as the replacement destination to preserve the upper sixteen bits.', 'print_hex16 observes AX and preserves the rest of EAX.', 'The shift moves the original upper word into the printer’s sixteen-bit view.'],
         'Before the shift, what decimal value is in EAX bits 31 through 16?', 4660,
         'Those bits remain 0x1234, which is decimal 4660, because the AX write changes only the low sixteen bits.',
         `    mov ax, 0xbeef
@@ -100,7 +100,7 @@ export const guidedAssemblyBySlug = {
     shr eax, 16
     call print_hex16`),
       checkpoint('repair-and-generalize', 'Construct the final word from two byte writes',
-        'Keep the two existing observations from the supplied EAX. Append a newline, clear AX, then set AH and AL separately so the third printed word is 3412. Describe the write set of each byte instruction rather than treating the names as independent registers.', 'BEEF\n1234\n3412',
+        'Keep the two existing observations from the supplied EAX. Append a newline, clear AX, then set AH and AL separately so the third printed word is 3412. Describe which shared bit positions each byte instruction writes.', 'BEEF\n1234\n3412',
         ['The high byte supplies the first two hexadecimal digits.', 'AH must receive 0x34 and AL must receive 0x12.', 'Keep the earlier AX-sized replacement so EAX’s original upper word survives.'],
         'Start with EAX=0x89ABCDEF, then write AX=0x1234 and AH=0x56. What decimal value is in AL?', 52,
         'The final EAX is 89AB5634. AH changes bits 15:8 only; AL remains hexadecimal 34, which is decimal 52.',
@@ -118,7 +118,7 @@ export const guidedAssemblyBySlug = {
     ]),
   'assembly-arithmetic': chapter(
     'Start with a small sum, extend the same draft to observe carry at a boundary, then use that carry to update a second word. Inspect both the computed value and the flags.', [
-      checkpoint('unsigned-carry', 'Compute a sum instead of loading its answer',
+      checkpoint('unsigned-carry', 'Compute a sum with ADD',
         'The harness supplies AX (decimal 41 in the sample). Add one and print the resulting word. Keep the actual ADD in your program. Use Run and the Registers view if you want to inspect its effect on CF.', '002A',
         ['The immediate value 1 is added to the old AX.', 'A sixteen-bit destination can hold 42 without discarding an upper bit.', 'The printed number is hexadecimal even though the input literal is decimal.'],
         'Immediately after this sixteen-bit ADD, what is CF: 0 or 1?', 0,
@@ -157,7 +157,7 @@ export const guidedAssemblyBySlug = {
         'In data.inc, declare packet as bytes 0xef, 0xbe. In lesson.asm, clear AX, load the first packet byte into AL through a bracketed memory operand, and print AX. Do not load the packet label itself as the answer.', '00EF',
         ['DB emits bytes; packet names the first byte’s address.', 'Brackets request a memory read at that address.', 'Clearing AX first gives its untouched high byte a known zero value.'],
         'What is the decimal value of the first byte loaded from packet?', 239,
-        'The byte EF is 14 × 16 + 15 = 239. It is data at packet, not packet’s address.',
+        'The byte EF is 14 × 16 + 15 = 239. It is the byte stored at packet.',
         `    xor ax, ax
     mov al, [packet]
     call print_hex16`, 'packet: db 0xef, 0xbe'),
@@ -404,7 +404,7 @@ export const guidedAssemblyBySlug = {
     'Grow one arithmetic report from a single mask result into a four-result pipeline. Add operations only after their section; retain the preceding results so each new observation has a clear cause.', [
       checkpoint('logic', 'Keep only a low nibble',
         'The harness supplies AX (0x00a5 in the sample). Use AND to retain only its lowest four bits, then print the resulting word. Predict which bits are cleared before writing the mask.', '0005',
-        ['A one in an AND mask preserves the corresponding destination bit.', 'The lowest four positions are selected by hexadecimal 000f.', 'Keep the AND in the program rather than loading the final result directly.'],
+        ['A one in an AND mask preserves the corresponding destination bit.', 'The lowest four positions are selected by hexadecimal 000f.', 'Use AND to compute the result from the supplied input.'],
         'What decimal value remains after 0x00a5 AND 0x000f?', 5,
         'The mask clears the high nibble A and preserves the low nibble 5.',
         `    and ax, 0x000f

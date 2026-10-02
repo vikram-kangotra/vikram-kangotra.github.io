@@ -28,7 +28,7 @@ export default function Playground() {
       </header>
       {error ? <div className={styles.message} role="alert"><h2>Workspace unavailable</h2><p>{error}</p><Link href="/learn/os/playground">Open my scratchpad</Link></div>
         : workspace ? <div className={styles.workspace}><h2 className={styles.srOnly}>Project workspace</h2><BootMachine key={workspace.id} chapterSlug={`playground-${workspace.id}`} playground={workspace} /></div>
-          : <div className={styles.message} role="status">Opening your saved workspace…</div>}
+          : <div className={`${styles.workspace} ${styles.message}`} role="status">Opening your saved workspace…</div>}
       <footer className={styles.footer}><span>Saved in this browser · Export source to keep a backup.</span><span>Course drafts stay separate. Download binaries from Build after compiling.</span></footer>
     </div>
   </CourseShell>;

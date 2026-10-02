@@ -29,7 +29,7 @@ export function makeProjectGuide(chapter) {
     kind: 'project', intro: 'Extend the kernel you have written. Add only the files introduced in this chapter.',
     ...(exercise ? { file: exercise.file } : {}),
     initialFiles: { 'README.md': 'Your kernel workspace\n\nStart with the bootloading chapter to build the boot stages and C entry point, one file at a time.\n' },
-    steps: [{ sectionId: chapter.sections[chapter.sections.length - 1].id, title: chapter.challenge.title,
+    steps: [{ sectionId: chapter.legacySectionIds?.at(-1) || chapter.sections[chapter.sections.length - 1].id, title: chapter.challenge.title,
       instructions: exercise ? exercise.instructions : `${chapter.challenge.brief} ${chapter.challenge.tasks.join(' ')}`, runnable: true,
       filesToCreate: exercise ? [exercise.file] : [], referenceFiles: exercise ? { [exercise.file]: exercise.reference } : {},
       ...(exercise ? { tests: exercise.tests, interface: exercise.starter } : {}),

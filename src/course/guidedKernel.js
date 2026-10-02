@@ -27,13 +27,13 @@ export const guidedKernel = {
         explanation: 'The reference BIOS path loads the sector at physical 0x7c00. This memory address is different from its disk location, LBA 0.',
       },
       referenceFiles: {
-        'README.md': '# Reference machine contract\n\nThe target is a BIOS/EDD PC starting our sector in real mode. LBA 0\nholds a 512-byte boot sector loaded at physical 0x7c00. Stage 1 loads\neight sectors from LBA 1 to 0x8000. Stage 2 loads 32 sectors from\nLBA 9 to 0x10000, establishes flat protected-mode segments, and jumps\nto the kernel entry. The entry establishes ESP=0x70000, clears BSS,\nand calls C. The first run must produce matching VGA and serial text.\nThis result tests the stated emulator contract, not universal PC support.\n',
+        'README.md': '# Reference machine contract\n\nThe target is a BIOS/EDD PC starting our sector in real mode. LBA 0\nholds a 512-byte boot sector loaded at physical 0x7c00. Stage 1 loads\neight sectors from LBA 1 to 0x8000. Stage 2 loads 32 sectors from\nLBA 9 to 0x10000, establishes flat protected-mode segments, and jumps\nto the kernel entry. The entry establishes ESP=0x70000, clears BSS,\nand calls C. The first run must produce matching VGA and serial text.\nThis result tests the stated emulator contract. Other PCs need separate validation.\n',
       },
     },
     {
       sectionId: 'stage-one',
       title: 'Write the first boot stage',
-      instructions: 'Create boot/stage1.asm. Establish a normalized entry, data segments, stack, and direction flag before using them. Preserve the BIOS boot-drive identifier. Write the EDD capability check and a call to the disk routine you will implement next. Name its load constants and the exact far-jump destination. Reserve partition-table bytes and construct a 512-byte sector with the signature. The missing disk routine is an explicit dependency; this checkpoint reviews your source and address calculation, not execution.',
+      instructions: 'Create boot/stage1.asm. Establish a normalized entry, data segments, stack, and direction flag before using them. Preserve the BIOS boot-drive identifier. Write the EDD capability check and a call to the disk routine you will implement next. Name its load constants and the exact far-jump destination. Reserve partition-table bytes and construct a 512-byte sector with the signature. The missing disk routine is an explicit dependency; this checkpoint reviews your source and address calculation. Execution is checked after the disk routine is complete.',
       filesToCreate: ['boot/stage1.asm'],
       runnable: false,
       prediction: {
@@ -65,7 +65,7 @@ export const guidedKernel = {
       prediction: {
         prompt: 'Which GDT entry index does selector 0x08 select?',
         answer: 1,
-        explanation: 'The index occupies selector bits 3 and above: 0x08>>3=1. Its low three bits describe the table choice and requested privilege, not an address.',
+        explanation: 'The index occupies selector bits 3 and above: 0x08>>3=1. Its low three bits describe the table choice and requested privilege.',
       },
       referenceFiles: references('boot/stage2.asm'),
     },
@@ -85,7 +85,7 @@ export const guidedKernel = {
     {
       sectionId: 'kernel',
       title: 'Build the C interface, driver, and caller in that order',
-      instructions: 'First create include/vga.h with the screen dimensions and function declarations. Next write kernel/vga.c: construct a VGA cell, clear the screen, and clip writes at a row boundary. Finally create kernel/main.c to call that interface, check initialized data and zeroed BSS, and send the same first message to COM1. Try writing each function from its contract; open its individual reference whenever you need a worked example. Use the three target lines shown in this lesson checkpoint so the later runtime check can compare real output. A header declaration is not an implementation; explain which translation unit supplies each symbol.',
+      instructions: 'First create include/vga.h with the screen dimensions and function declarations. Next write kernel/vga.c: construct a VGA cell, clear the screen, and clip writes at a row boundary. Finally create kernel/main.c to call that interface, check initialized data and zeroed BSS, and send the same first message to COM1. Try writing each function from its contract; open its individual reference whenever you need a worked example. Use the three target lines shown in this lesson checkpoint so the later runtime check can compare real output. For each declaration in the header, identify the translation unit that implements it.',
       filesToCreate: ['include/vga.h', 'kernel/vga.c', 'kernel/main.c'],
       runnable: false,
       expectedOutput: output,
@@ -120,7 +120,7 @@ export const guidedKernel = {
       prediction: {
         prompt: 'The uninitialized static bss_probe has no initial bytes stored in the kernel file. What value must the entry stub establish before kernel_main reads it?',
         answer: 0,
-        explanation: 'The entry stub zeroes the linked BSS interval before calling C. A friendly emulator’s initially zero memory is not a substitute for this initialization contract.',
+        explanation: 'The entry stub zeroes the linked BSS interval before calling C. The entry stub must perform this initialization even when an emulator starts with zeroed memory.',
       },
       referenceFiles: {},
     },

@@ -28,7 +28,7 @@ export default function CheckpointBrief({ brief, compact = false, upcoming = fal
       {brief.contract && <details className={styles.details}><summary>Exact requirements used by the tests</summary><p>{brief.contract}</p></details>}
       <h4>4. How to finish</h4><ol className={styles.tasks}>{brief.finish.map((item, index) => <li key={index}>{item}</li>)}</ol>
       {brief.scope && <details className={styles.details}><summary>What you have checked, and what comes later</summary><p>{brief.scope}</p></details>}
-      <p className={styles.help}>Stuck? Open the coding checkpoint, then use Check in the workspace for hints or Peek at answer. Comparing an answer never overwrites your files or marks the checkpoint complete.</p>
+      <p className={styles.help}>Stuck? Use Check in the workspace for hints or Peek at answer. Comparing an answer never overwrites your files or marks the checkpoint complete.</p>
     </div>
   </section>;
 }

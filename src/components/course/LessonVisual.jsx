@@ -14,7 +14,7 @@ const kindLabels = {
 
 const instructions = {
   flow: 'Select a component to inspect its role and the data it receives.',
-  memory: 'Select an address block to inspect what lives there. Blocks are schematic, not drawn to scale.',
+  memory: 'Select an address block to inspect what lives there. Block sizes are schematic.',
   bits: 'Select a field to see how its bits affect the machine. Field widths are not drawn to scale.',
   trace: 'Step through the example. Each step shows the state at that point.',
   compare: 'Select a case to compare its state, behavior, or constraints.',

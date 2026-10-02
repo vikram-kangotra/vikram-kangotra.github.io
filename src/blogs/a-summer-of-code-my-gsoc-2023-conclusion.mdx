@@ -14,7 +14,7 @@ My name is Vikram Kangotra, and as of September 24, 2023, I am a Computer Scienc
 
 Google Summer of Code (GSoC) is a prestigious global program that brings together talented student developers from around the world to work on open-source software projects. Organized and sponsored by Google, GSoC provides an opportunity for students to collaborate with established open-source organizations and contribute to their projects during the summer break.
 
-Participating in GSoC is a remarkable experience for aspiring developers like me. It offers a unique platform to dive into the world of open source, gain hands-on experience, and make meaningful contributions to real-world projects. The program is not just about coding; it's about learning, problem-solving, and becoming a part of the global open-source community.
+Participating in GSoC is a remarkable experience for aspiring developers like me. It offers a unique platform to dive into the world of open source, gain hands-on experience, and make meaningful contributions to real-world projects. Through the program, I learned to solve problems with other developers and contribute to an open-source project.
 
 GSoC provides students with stipends, mentorship, and a structured environment for their contributions. It's a journey of personal growth, skill development, and community engagement. Over the course of several weeks, students work closely with their mentors to complete project tasks, meet deadlines, and produce high-quality code.
 
@@ -71,7 +71,7 @@ This marked a profound shift in our objectives. Our challenge was now to port VL
 
         #### The Simplicity of the Task
 
-        From a technical standpoint, this task didn't demand intricate problem-solving or extensive code alterations. Instead, it revolved around ensuring that the build environment was up-to-date and meticulously configured to accommodate WebAssembly. The process was straightforward, culminating in the acceptance of the merge request, marking a significant enhancement to VLC's capabilities.
+        This task involved updating the build environment and configuring it for WebAssembly. The merge request was accepted.
 
 ### 2. Overcoming Path Errors and Undefined Constants
 
@@ -81,7 +81,7 @@ This marked a profound shift in our objectives. Our challenge was now to port VL
 
     > `Bindgen` is a tool that automatically generates Rust code to bridge the gap between Rust and C/C++ code, making it easier to use C/C++ libraries in Rust projects. It parses C/C++ header files and creates Rust bindings, simplifying interoperability between the two languages.
 
-    To surmount this obstacle, a strategic decision was made. Rather than grappling with the limitations of automated translation tools, I opted for a proactive approach. This involved manually adding the missing constants directly to the C/C++ codebase. This adjustment allowed bindgen to successfully port these essential constants to the Rust ecosystem.
+    I added the missing constants directly to the C/C++ codebase so that bindgen could generate their Rust bindings.
 
     This meticulous approach ensured that vital elements of the project remained intact and that the Rust implementation could seamlessly integrate with the existing C/C++ components.
 
@@ -234,11 +234,11 @@ This marked a profound shift in our objectives. Our challenge was now to port VL
 
           * In Rust, when writing to the custom section using em_asm, it appears to write to both the custom section and the data section simultaneously, based on my observations.
         
-          * When passing a string to Emscripten's main thread function, it passes the address of the string in the data section rather than the em_asm section.
+          * When passing a string to Emscripten's main thread function, it passes the string’s address in the data section.
         
           * The code I've written to read from the custom section retrieves the string's address from the custom section, resulting in different addresses.
         
-        To resolve this issue, I need a way to instruct wasm to read the string from the custom section address stored in ASM_CONSTS rather than from the data section. Previously, I was passing the address of the string from the data section, but it required manual updates to the offset in Emscripten.
+        To resolve this issue, I need wasm to read the string using the custom-section address stored in ASM_CONSTS. Previously, I was passing the address of the string from the data section, but it required manual updates to the offset in Emscripten.
         
         For further reference, here are links that support my theory:
         

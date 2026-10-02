@@ -243,7 +243,7 @@ export default function Explorer({ blogs }) {
             ? storageAvailable
               ? 'Saved on this browser'
               : 'Changes kept for this visit'
-            : 'A notebook, not a news feed.'}
+            : 'Notes from projects, experiments, and everyday work.'}
         </span>
       </div>
       <div className={`story-collection ${layout === 'grid' ? 'story-grid' : ''}`}>
