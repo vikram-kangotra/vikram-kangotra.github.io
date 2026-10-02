@@ -1,3 +1,4 @@
+import { assemblyOutput } from './assemblyOutput';
 import { foundations } from './foundations';
 import { systems } from './systems';
 import { assemblyBasics } from './assemblyBasics';
@@ -20,7 +21,8 @@ const handbook = {};
 for (const source of [architectureHandbook, memoryHandbook, systemsHandbook, assemblyHandbook, architectureFurtherHandbook, memoryFurtherHandbook, systemsFurtherHandbook]) {
   for (const [slug, topics] of Object.entries(source)) handbook[slug] = [...(handbook[slug] || []), ...topics];
 }
-export const chapters = [...assemblyBasics, ...assemblyMemory, ...assemblyControl, ...foundations, ...systems].map(chapter => {
+export const chapters = [...assemblyBasics, ...assemblyMemory, ...assemblyControl,
+  ...assemblyOutput, ...foundations, ...systems].map(chapter => {
   const sections = chapter.sections.map(section => {
     const deepDive = depthByChapter[chapter.slug]?.[section.id];
     const lesson = { ...section, ...(deepDive ? { deepDive } : {}) };
@@ -31,7 +33,7 @@ export const chapters = [...assemblyBasics, ...assemblyMemory, ...assemblyContro
     return { ...lesson, studyMinutes: lessonStudyMinutes(lesson) };
   })]);
   const studyPlan = chapterStudyPlan({ ...chapter, sections });
-  return { ...chapter, legacySectionIds: chapter.sections.map(section => section.id), sections, studyPlan, minutes: studyPlan.totalMinutes };
+  return { ...chapter, legacySectionIds: chapter.legacySectionIds || chapter.sections.map(section => section.id), sections, studyPlan, minutes: studyPlan.totalMinutes };
 });
 export const chapterSummary = (chapter) => {
   const { slug, title, subtitle, phase, minutes, studyPlan } = chapter;

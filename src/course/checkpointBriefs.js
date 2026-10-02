@@ -4,7 +4,7 @@ const sentences = text => text.match(/[^]+?(?:[.!?](?=\s+[A-Z]|$)|$)/g)?.map(par
 const cleanInstructions = text => text.split(' Machine contract:')[0];
 const hex = (value, width = 4) => typeof value === 'number' ? `0x${value.toString(16).toUpperCase().padStart(width, '0')} (${value})` : String(value);
 const bytes = values => values.map(value => value.toString(16).toUpperCase().padStart(2, '0')).join(' ');
-const flagNames = { carry: 'CF', overflow: 'OF', zero: 'ZF', sign: 'SF', direction: 'DF', interrupts: 'IF' };
+const flagNames = { carry: 'CF', parity: 'PF', auxiliary: 'AF', overflow: 'OF', zero: 'ZF', sign: 'SF', direction: 'DF', interrupt: 'IF', interrupts: 'IF' };
 const suppliedInterfaces = {
   'ipc-and-synchronization': [
     { label: 'p->lock', value: 'Condition lock shared by the ring and writer count. lock(&p->lock) acquires it; unlock(&p->lock) releases it.' },
@@ -47,12 +47,12 @@ export function checkpointStateRows(state = {}) {
   for (const [name, value] of Object.entries(state.registers || {})) rows.push({ label: name.toUpperCase(), value: hex(value, name.startsWith('e') ? 8 : /^[abcd][hl]$/.test(name) ? 2 : 4) });
   for (const [name, value] of Object.entries(state.flags || {})) rows.push({ label: flagNames[name] || name, value: value ? '1 (set)' : '0 (clear)' });
   for (const memory of state.memory || []) rows.push({ label: `Bytes at ${memory.address}`, value: bytes(memory.bytes) });
+  for (const [name, value] of Object.entries(state.segments || {})) rows.push({ label: name.toUpperCase(), value: hex(value) });
   if (typeof state.protectedMode === 'boolean') {
     rows.push({ label: 'C entry and return', value: 'Call kernel_main and let it return. The assembly entry stub owns the final halt loop.' });
     rows.push({ label: 'CR0.PE / CR0.PG', value: `${Number(state.protectedMode)} / ${Number(state.pagingEnabled)}: protected mode, paging disabled` });
     rows.push({ label: 'IF / DF', value: `${Number(state.interruptsEnabled)} / ${Number(state.directionFlag)}: interrupts disabled, forward string direction` });
-    for (const [name, value] of Object.entries(state.segments || {})) rows.push({ label: name.toUpperCase(), value: hex(value) });
-    if (state.stack) rows.push({ label: 'C entry stack', value: `Valid stack in the reserved ${hex(state.stack.min)} to ${hex(state.stack.max)} region; preserve the return address and calling convention.` });
+    if (state.stack) rows.push({ label: 'Stack after C returns', value: `Valid stack in the reserved ${hex(state.stack.min)} to ${hex(state.stack.max)} region; preserve the return address and calling convention.` });
     if (state.serial) rows.push({ label: 'COM1 serial output', value: state.serial });
   }
   return rows;
@@ -61,28 +61,33 @@ export function checkpointStateRows(state = {}) {
 export function makeCheckpointBrief(chapter, guide, step, index) {
   const lesson = chapter.sections.find(section => section.id === step.sectionId);
   const assembly = guide.kind === 'assembly';
+  const learnerHelpers = Boolean(guide.learnerHelpers || step.tests?.learnerHelpers);
+  const kernel = guide.kind === 'kernel';
   const cFunction = step.tests?.kind === 'c-function';
-  const draft = step.runnable === false;
+  const scaffoldPaths = Object.keys(step.tests?.scaffoldFiles || {});
   const problem = cProblems[chapter.slug];
   const tasks = sentences(cFunction ? step.tests.contract : cleanInstructions(step.instructions));
-  if (guide.kind === 'kernel' && (step.sectionId === 'kernel' || step.tests)) tasks.push('Let kernel_main return after writing the required output. The assembly entry stub owns the final halt loop; the test must observe both C entry and C return.');
-  const files = assembly ? ['lesson.asm', ...(step.reference?.data ? ['data.inc'] : [])] : step.filesToCreate?.length ? step.filesToCreate : guide.kind === 'kernel' ? step.sectionId === 'observe' ? ['README.md', 'boot/stage1.asm', 'kernel/main.c', 'kernel/entry.asm'] : ['README.md', 'kernel/main.c', 'kernel/entry.asm', 'include/vga.h', 'build.json'] : [guide.file];
+  if (kernel && step.tests?.requiredFiles?.includes('kernel/main.c')) tasks.push('Let kernel_main return after writing the required output. The assembly entry stub owns the final halt loop; the test must observe both C entry and C return.');
+  const files = assembly ? learnerHelpers ? [guide.file || 'console.asm', 'lesson.asm', 'data.inc'] : ['lesson.asm', ...(step.reference?.data ? ['data.inc'] : [])] : step.filesToCreate?.length ? step.filesToCreate : kernel ? step.sectionId === 'observe' ? ['boot/stage1.asm', 'kernel/main.c', 'kernel/entry.asm'] : ['kernel/main.c', 'include/vga.h', 'build.json'] : [guide.file];
   const cases = step.tests?.cases || [];
   const first = cases[0];
   const inputRows = checkpointStateRows(first?.input);
   const expectedRows = checkpointStateRows(first?.expect);
   const goal = problem?.[0] || tasks[0] || step.title;
   const startingPoint = assembly
-    ? index === 0 ? 'Start this chapter in lesson.asm. The editor contains a comment; write the instructions beneath it.' : 'Continue with your saved chapter draft. Follow the changes below; some checkpoints ask you to replace an earlier experiment.'
+    ? learnerHelpers ? `Implement the output functions in ${guide.file || 'console.asm'}. Use lesson.asm to call them and data.inc for strings. Keep the functions from earlier checkpoints as you add the next one.` : index === 0 ? 'Start this chapter in lesson.asm. The editor contains a comment; write the instructions beneath it.' : 'Continue with your saved chapter draft. Follow the changes below; some checkpoints ask you to replace an earlier experiment.'
     : cFunction ? 'Create the exercise file below in the file tree. Use the interface skeleton, then fill in its function bodies. This focused test can run before your complete kernel is ready.'
-      : index === 0 ? 'Open README.md and replace its prompts with your design decisions.' : 'Keep the files from earlier stages. Create or edit the paths below; the boot chain becomes runnable at the linker checkpoint.';
+      : index === 0 ? 'Open boot/stage1.asm. The editor contains a comment; write your boot sector beneath it.' : 'Keep the files from earlier stages and create or edit the paths below. Every checkpoint builds and boots your work with the dependencies listed here.';
   const supplied = assembly
-    ? inputRows.length ? 'The lab puts these sample values in registers or memory before your instructions begin. Work from those values. The tests then try other starting values so you can check that your method works beyond the example.' : 'For this exercise, you choose the starting values described in the task. Load them with instructions, or write the requested data declarations.'
-    : problem?.[3] || 'Use the BIOS/EDD machine contract and the files from earlier checkpoints. File names, linked addresses, and disk slots must agree across the build.';
-  const finish = draft ? [
-    'Write each listed file in the editor.',
-    'Choose Submit below the editor to record your written draft. This incomplete stage does not compile, run, or validate the source.',
-    'Choose Continue the lesson. The linker checkpoint will build and boot the connected project.',
+    ? learnerHelpers ? 'The lab supplies startup, a stack, VGA text mode, and the test inputs. You implement the output functions. Run executes your caller in lesson.asm. Submit calls the target helper directly with varied inputs and checks its output, preserved state, and safe return.' : inputRows.length ? 'The lab puts these sample values in registers or memory before your instructions begin. Work from those values. The tests then try other starting values so you can check that your method works beyond the example.' : 'For this exercise, you choose the starting values described in the task. Load them with instructions, or write the requested data declarations.'
+    : problem?.[3] || (scaffoldPaths.length
+      ? `Run and Submit supply these later dependencies: ${scaffoldPaths.join(', ')}. They use fixed supplied versions for this checkpoint and leave any saved drafts of those later files untouched. You must provide every file introduced up to this checkpoint. The supplied dependencies are never inserted into your workspace.`
+      : 'Use the BIOS/EDD machine contract and your files from earlier checkpoints. You now provide every source and build file. File names, linked addresses, and disk slots must agree across the build.');
+  const finish = learnerHelpers ? [
+    'Write the requested helper in console.asm. Preserve the caller’s 32-bit general registers, FLAGS, DS, and ES, and balance the stack before RET.',
+    'Use Run to execute your lesson.asm caller and experiment with characters, strings, and numbers from data.inc.',
+    'Open the coding checkpoint and choose Submit. Its tests call your helper directly with every declared input; changing only the caller cannot satisfy the helper contract.',
+    'Inspect any failed output or preservation checks, repair console.asm, and submit again. A pass unlocks Continue the lesson.',
   ] : cFunction ? [
     'Save the function implementation at the exact exercise path shown above. Match the interface names and types.',
     'Choose Submit below the editor. The browser compiles this file into a supplied test kernel and runs all declared cases on x86 automatically. Run is optional: it tries the sample case without awarding checkpoint credit.',
@@ -97,11 +102,13 @@ export function makeCheckpointBrief(chapter, guide, step, index) {
   return {
     number: index + 1, title: step.title, goal, startingPoint, tasks, files: files.filter(Boolean), supplied,
     ...(lesson?.teaching ? { learningGoal: lesson.teaching.goal, connection: lesson.teaching.takeaway } : {}),
-    inputRows, expectedRows, finish, draft,
+    inputRows, expectedRows, finish,
     ...(suppliedInterfaces[chapter.slug] ? { suppliedInterfaces: suppliedInterfaces[chapter.slug] } : {}),
     ...(problem ? { example: { input: problem[1], result: problem[2] } } : {}),
     ...(step.expectedOutput ? { output: step.expectedOutput } : {}),
     ...(step.tests ? { contract: step.tests.contract, scope: step.tests.scope, caseCount: cases.length } : {}),
-    ...(assembly ? { scaffold: 'The lab supplies a 16-bit boot wrapper, a stack, and putc (AL), print_hex16 (AX), newline, and puts (DS:SI). These helpers preserve general registers and FLAGS. Write only your routine in lesson.asm and declarations in data.inc; do not add ORG, boot padding, or a halt loop. Fall through to the supplied return, or return with a balanced stack. Keep local subroutines out of the fall-through path.' } : {}),
+    ...(assembly ? { scaffold: learnerHelpers
+      ? 'The lab supplies the BIOS loader, 16-bit startup at 0x8000, a stack, VGA text mode, and a halt path after your caller returns. You supply putc, newline, puts, and print_hex16 in console.asm as each checkpoint introduces them. Keep calls in lesson.asm and strings in data.inc. Each helper must preserve all 32-bit general registers, FLAGS, DS, and ES and restore the caller’s stack. Leave ORG, boot padding, and the final halt path to the supplied startup.'
+      : 'The lab supplies a BIOS loader and 16-bit startup at 0x8000, a stack, and putc (AL), print_hex16 (AX), newline, and puts (DS:SI). These helpers preserve general registers and FLAGS. Write only your routine in lesson.asm and declarations in data.inc; do not add ORG, boot padding, or a halt loop. Fall through to the supplied return, or return with a balanced stack. Keep local subroutines out of the fall-through path.' } : {}),
   };
 }

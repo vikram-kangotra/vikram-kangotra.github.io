@@ -2,14 +2,19 @@ import assert from 'node:assert/strict';
 import { readCourseModule } from './course-loader.mjs';
 
 const { isCheckpointPassed, isCheckpointSkipped, getLessonGate, getCheckpointLessonIndex } = await readCourseModule('src/course/lessonAccess.js');
-const tested = { sectionId: 'code', tests: { kind: 'routine' } };
+const tested = { sectionId: 'code', tests: { kind: 'routine', cases: [{ input: {}, expect: { output: 'OK' } }] } };
+const earlier = { ...tested, sectionId: 'plan' };
 const draft = { sectionId: 'plan', runnable: false };
 
 assert.equal(isCheckpointPassed(tested, 0), false);
 assert.equal(isCheckpointPassed(tested, 0, { buildSteps: [0] }), false, 'Output/draft records cannot replace behavior checks');
 assert.equal(isCheckpointPassed(tested, 0, { behaviorChecks: [0] }), true);
-assert.equal(isCheckpointPassed(draft, 0, { behaviorChecks: [0] }), false, 'A draft review needs its own pass record');
-assert.equal(isCheckpointPassed(draft, 0, { buildSteps: [0] }), true);
+assert.equal(isCheckpointPassed(draft, 0, { behaviorChecks: [0] }), false, 'Draft reviews cannot earn checkpoint credit');
+assert.equal(isCheckpointPassed(draft, 0, { buildSteps: [0] }), false, 'Legacy draft records cannot pass a checkpoint');
+assert.equal(isCheckpointPassed({ ...tested, runnable: false }, 0, { behaviorChecks: [0] }), false, 'A disabled runtime cannot pass even with stored behavior credit');
+for (const tests of [undefined, {}, { kind: 'routine' }, { cases: [] }, { cases: 'test' }]) {
+  assert.equal(isCheckpointPassed({ sectionId: 'code', runnable: true, tests }, 0, { behaviorChecks: [0], buildSteps: [0] }), false, 'A checkpoint without executable cases fails closed');
+}
 assert.equal(isCheckpointPassed(tested, 0, { behaviorChecks: ['0'] }), false);
 assert.equal(isCheckpointPassed(tested, 0, { behaviorChecks: '0' }), false);
 assert.equal(isCheckpointPassed(undefined, 0, { buildSteps: [0] }), false);
@@ -17,18 +22,19 @@ assert.equal(isCheckpointPassed(undefined, 0, { buildSteps: [0] }), false);
 const fixture = {
   sections: [{ id: 'intro' }, { id: 'plan' }, { id: 'explain' }, { id: 'code' }, { id: 'after' }],
   // Deliberately not in reading order: checkpoint indices belong to the guide.
-  guide: { steps: [tested, draft] },
+  guide: { steps: [tested, earlier] },
 };
 assert.deepEqual(getLessonGate(fixture), { lessonIndex: 1, stepIndex: 1 });
-assert.deepEqual(getLessonGate(fixture, { buildSteps: [1] }), { lessonIndex: 3, stepIndex: 0 });
-assert.equal(getLessonGate(fixture, { buildSteps: [1], behaviorChecks: [0] }), null);
-for (const field of ['buildAttempts', 'buildRuns', 'openBuilds', 'lessons']) {
+assert.deepEqual(getLessonGate(fixture, { behaviorChecks: [1] }), { lessonIndex: 3, stepIndex: 0 });
+assert.equal(getLessonGate(fixture, { behaviorChecks: [0, 1] }), null);
+for (const field of ['buildSteps', 'buildAttempts', 'buildRuns', 'openBuilds', 'lessons']) {
   assert.deepEqual(getLessonGate(fixture, { [field]: [0, 1, 2, 3, 4], read: true, complete: true, assembly: true }), { lessonIndex: 1, stepIndex: 1 }, `${field} must not unlock a checkpoint`);
 }
 assert.equal(getLessonGate({ sections: [], guide: { steps: [] } }), null);
 assert.equal(getLessonGate({ sections: [{ id: 'intro' }] }), null);
 assert.equal(getLessonGate({ sections: [{ id: 'intro' }], guide: { steps: [{ sectionId: 'removed' }] } }), null);
-assert.deepEqual(getLessonGate({ ...fixture, guide: { steps: [{ sectionId: 'removed' }, tested, draft] } }), { lessonIndex: 1, stepIndex: 2 }, 'An orphan checkpoint must not shadow a valid gate');
+assert.deepEqual(getLessonGate({ ...fixture, guide: { steps: [{ sectionId: 'removed' }, tested, earlier] } }), { lessonIndex: 1, stepIndex: 2 }, 'An orphan checkpoint must not shadow a valid gate');
+assert.deepEqual(getLessonGate({ ...fixture, guide: { steps: [draft] } }, { buildSteps: [0], behaviorChecks: [0] }), { lessonIndex: 1, stepIndex: 0 }, 'An accidental draft-only checkpoint cannot unlock later reading');
 
 const { chapters } = await readCourseModule('src/course/index.js');
 const { guidedAssemblyBySlug } = await readCourseModule('src/course/guidedAssembly.js');
@@ -44,10 +50,11 @@ for (const chapter of course) {
   assert(chapter.guide.steps.length > 0, `${chapter.slug}: guide must have a checkpoint`);
   for (const [index, step] of chapter.guide.steps.entries()) {
     assert(chapter.sections.some(section => section.id === step.sectionId), `${chapter.slug} checkpoint ${index}: missing section ${step.sectionId}`);
+    assert.notEqual(step.runnable, false, `${chapter.slug} checkpoint ${index}: every checkpoint must run learner code`);
+    assert(Array.isArray(step.tests?.cases) && step.tests.cases.length > 0, `${chapter.slug} checkpoint ${index}: missing executable test cases`);
     checkpointCount += 1;
   }
-  const complete = { buildSteps: [], behaviorChecks: [] };
-  chapter.guide.steps.forEach((step, index) => complete[step.tests ? 'behaviorChecks' : 'buildSteps'].push(index));
+  const complete = { behaviorChecks: chapter.guide.steps.map((_, index) => index) };
   assert.equal(getLessonGate(chapter, complete), null, `${chapter.slug}: every passed checkpoint should unlock all lessons`);
 }
 
@@ -78,7 +85,7 @@ assert.deepEqual(getLessonGate(first, editedSecond), { lessonIndex: 9, stepIndex
 const editedFirst = Object.fromEntries(Object.keys(passed).map(key => [key, []]));
 assert.deepEqual(getLessonGate(first, editedFirst), { lessonIndex: 7, stepIndex: 0 }, 'Earlier invalidation must relock later reading');
 
-console.log(`PASS lesson access: pass semantics, ordered gates, safe orphan handling, first-chapter boundaries, explicit skips without pass credit, suffix invalidation; ${course.length} actual chapter guides / ${checkpointCount} valid checkpoint mappings.`);
+console.log(`PASS lesson access: executable-pass semantics, ordered gates, safe orphan handling, first-chapter boundaries, explicit skips without pass credit, suffix invalidation; ${course.length} actual chapter guides / ${checkpointCount} executable checkpoint mappings.`);
 
 const expanded = { sections: [{id:'intro'},{id:'code'},{id:'table',parentSectionId:'code'},{id:'trace',parentSectionId:'code'},{id:'next'}], guide:{steps:[tested]} };
 assert.equal(getCheckpointLessonIndex(expanded,tested),3);

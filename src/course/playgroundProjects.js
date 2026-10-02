@@ -52,7 +52,7 @@ Iteration 4: SI=values+6, AX=29, CX becomes 0; LOOP falls through.
 5. Extract the sum into a function with a documented input/output/clobber contract. Test one element, zero elements, and a sum that exceeds 65535. Add ADC into a second word for a 32-bit total.
 
 ## Build contract
-Only the routine belongs in lesson.asm. Put data after the routine through data.inc. The harness supplies startup, putc(AL), puts(DS:SI), newline, print_hex16(AX), and the final halt. It wraps the complete result into 512 bytes with the BIOS signature. Large routines should move into the multi-stage C kernel project.
+Only the routine belongs in lesson.asm. Put data after the routine through data.inc. The harness supplies startup, putc(AL), puts(DS:SI), newline, print_hex16(AX), and the final halt. A separate boot sector loads the assembled routine at physical address 0x8000. Your code, startup, helpers, and data share a 16-KiB program area, so you can add functions, tables, and longer experiments. Build lists lesson.bin and the bootable disk image as separate artifacts. The Bytes view shows lesson.bin at its load address.
 The sum loop's pointer increment changes FLAGS, so observe overflow immediately after the ADD being investigated. The first demonstration prints a wrapped 16-bit sum and does not detect aggregate overflow.
 `,
 };

@@ -1,18 +1,25 @@
-import { bootProgram } from './assemblyPrograms';
-import { assemblyCaseInitialization } from './machineTestHarness';
+import { routineProgram } from './assemblyPrograms';
+import { assemblyCaseInitialization, machineTestLoader } from './machineTestHarness';
 import { getCExerciseTests } from './cExerciseTests';
 
 // The learner writes only the routine being taught. NASM still assembles every
 // instruction; the execution harness establishes the documented machine state.
-export function prepareGuidedBuild(files, kind, input, setupFile) {
+export function prepareGuidedBuild(files, kind, input, setupFile, options = {}) {
   if (kind !== 'assembly') return { ...files };
   if (typeof files['lesson.asm'] !== 'string') throw new Error('Create lesson.asm for your lesson routine.');
-  if (Object.hasOwn(files, '__lesson_boot.asm')) throw new Error('__lesson_boot.asm is reserved for the execution harness.');
+  for (const path of ['__lesson_boot.asm', '__lesson_routine.asm']) {
+    if (Object.hasOwn(files, path)) throw new Error(`${path} is reserved for the execution harness.`);
+  }
   if (setupFile && (!Object.hasOwn(files, setupFile) || !/^[A-Za-z0-9_.-]+$/.test(setupFile))) throw new Error('The playground input file is missing or has an invalid name.');
+  let manifest = {};
+  try { manifest = JSON.parse(files['build.json'] || '{}'); } catch { /* Rebuild the generated routine manifest. */ }
+  const learnerHelpers = options.learnerHelpers === true || manifest?.learnerHelpers === true;
+  if (learnerHelpers && typeof files['console.asm'] !== 'string') throw new Error('Create console.asm with your output helper implementations.');
   return {
     ...files,
-    '__lesson_boot.asm': bootProgram('%include "lesson.asm"', files['data.inc'] === undefined ? '' : '%include "data.inc"', input ? assemblyCaseInitialization(input) : setupFile ? `%include "${setupFile}"` : ''),
-    'build.json': JSON.stringify({ type: 'boot-sector', entry: '__lesson_boot.asm' }),
+    '__lesson_boot.asm': machineTestLoader,
+    '__lesson_routine.asm': routineProgram('%include "lesson.asm"', files['data.inc'] === undefined ? '' : '%include "data.inc"', input ? assemblyCaseInitialization(input) : setupFile ? `%include "${setupFile}"` : '', { learnerHelpers }),
+    'build.json': JSON.stringify({ type: 'assembly-routine', entry: '__lesson_routine.asm', loader: '__lesson_boot.asm', ...(learnerHelpers ? { learnerHelpers: true } : {}) }),
   };
 }
 

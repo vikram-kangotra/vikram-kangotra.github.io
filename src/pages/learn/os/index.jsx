@@ -10,7 +10,7 @@ import useCourseProgress from '@/components/course/useCourseProgress';
 import styles from '@/components/course/course-overview.module.css';
 
 const phaseDetails = {
-  'x86 Assembly': { description: 'Learn what instructions do to registers, memory, and the next instruction.', icon: FiCode },
+  'x86 Assembly': { description: 'Trace registers, memory, and calls, then implement your own character, string, and hexadecimal output routines.', icon: FiCode },
   Foundations: { description: 'Follow power-on into your own C code, then learn how the kernel handles hardware events.', icon: FiCpu },
   Memory: { description: 'Learn how the kernel finds free memory, maps addresses, and serves allocations.', icon: FiLayers },
   Processes: { description: 'Build the mechanisms that let programs run, take turns, and communicate.', icon: FiCode },
@@ -140,14 +140,14 @@ export default function Course({ roadmap, lessonCount, courseTitle }) {
           <section className={styles.sideCard} aria-labelledby="prerequisites-title">
             <h2 id="prerequisites-title">Before you begin</h2>
             <ul className={styles.prerequisites}><li><FiCheck aria-hidden="true" />Start with no assembly experience</li><li><FiCheck aria-hidden="true" />We teach binary, registers, memory, and the stack</li><li><FiCheck aria-hidden="true" />C pointers and a terminal are needed for the kernel stages</li></ul>
-            <p className={styles.smallCopy}>The first twelve chapters teach x86 assembly from the beginning. You can start in the browser. When we reach the kernel, you’ll use C functions, pointers, and arrays; the bootloading chapter also explains the optional local toolchain.</p>
+            <p className={styles.smallCopy}>The first {roadmap.filter(chapter => chapter.phase === 'x86 Assembly').length} chapters teach x86 assembly from the beginning, through writing your own output routines. You can start in the browser. When we reach the kernel, you’ll use C functions, pointers, and arrays; the bootloading chapter also explains the optional local toolchain.</p>
             <Link className={styles.download} href="/learn/os/assembly-first-instructions"><FiTerminal aria-hidden="true" /><span>Start with your own instructions<small>An empty draft, then one small build at a time</small></span><FiArrowRight aria-hidden="true" /></Link>
           </section>
 
           <section className={styles.references} aria-labelledby="references-title">
             <h2 id="references-title">Go deeper</h2>
-            <p>Read the corresponding source alongside each worked lesson. Topic pages link to the relevant chapters and specifications.</p>
-            <ul><li><a href="https://pages.cs.wisc.edu/~remzi/OSTEP/">Operating Systems: Three Easy Pieces<FiExternalLink aria-hidden="true" /></a></li><li><a href="https://www.os-book.com/OS10/">Operating System Concepts<FiExternalLink aria-hidden="true" /></a></li><li><a href="https://wiki.osdev.org/Expanded_Main_Page">OSDev Wiki<FiExternalLink aria-hidden="true" /></a></li><li><a href="https://www.ecsdump.net/wp-content/uploads/2020/12/os-dev.pdf">Nick Blundell’s guide<FiExternalLink aria-hidden="true" /></a></li><li><a href="https://os.phil-opp.com/">Writing an OS in Rust<FiExternalLink aria-hidden="true" /></a></li><li><Link href="/projects/zenos">ZenOS project<FiArrowRight aria-hidden="true" /></Link></li></ul>
+            <p>Use the NASM manual and Intel instruction reference alongside the assembly lessons. The OS books develop the kernel concepts; each chapter links to its relevant sources.</p>
+            <ul><li><a href="https://www.nasm.us/doc/nasm03.html">NASM language reference<FiExternalLink aria-hidden="true" /></a></li><li><a href="https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html">Intel instruction-set reference<FiExternalLink aria-hidden="true" /></a></li><li><a href="https://pages.cs.wisc.edu/~remzi/OSTEP/">Operating Systems: Three Easy Pieces<FiExternalLink aria-hidden="true" /></a></li><li><a href="https://www.os-book.com/OS10/">Operating System Concepts<FiExternalLink aria-hidden="true" /></a></li><li><a href="https://wiki.osdev.org/Expanded_Main_Page">OSDev Wiki<FiExternalLink aria-hidden="true" /></a></li><li><a href="https://www.ecsdump.net/wp-content/uploads/2020/12/os-dev.pdf">Nick Blundell’s guide<FiExternalLink aria-hidden="true" /></a></li><li><a href="https://os.phil-opp.com/">Writing an OS in Rust<FiExternalLink aria-hidden="true" /></a></li><li><Link href="/projects/zenos">ZenOS project<FiArrowRight aria-hidden="true" /></Link></li></ul>
           </section>
         </aside>
       </div>

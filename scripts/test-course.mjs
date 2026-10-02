@@ -3,8 +3,9 @@ import { readCourseModule as sourceModule } from './course-loader.mjs';
 
 const { chapters } = await sourceModule('src/course/index.js');
 const { assembleBoot, bootExample } = await sourceModule('src/course/bootAssembler.js');
-assert.equal(chapters.length, 30);
-assert.equal(new Set(chapters.map(chapter => chapter.slug)).size, 30);
+assert.equal(chapters.length, 31);
+assert.equal(new Set(chapters.map(chapter => chapter.slug)).size, chapters.length);
+assert(chapters.some(chapter => chapter.slug === 'assembly-output'), 'The output-helper chapter belongs to the published course');
 for (const chapter of chapters) {
   assert(chapter.sections.length >= 10, `${chapter.slug}: enough substantive lessons`);
   assert.equal(new Set(chapter.sections.map(section => section.id)).size, chapter.sections.length);
@@ -41,4 +42,4 @@ assert.throws(() => assembleBoot(bootExample.replace('mov si, message', 'mov si,
 assert.throws(() => assembleBoot(bootExample.replace('mov ah, 0x0e', 'mov ah, 256')), /8 bits/);
 assert.throws(() => assembleBoot(bootExample.replace('I booted my own code!', 'x'.repeat(600))), /512/);
 assert.throws(() => assembleBoot(bootExample.replace('bits 16', 'bits 32')), /Unsupported/);
-console.log('PASS: 30 chapter contracts; real x86 assembly layout, relocations, signature and malformed-input checks');
+console.log(`PASS: ${chapters.length} chapter contracts; real x86 assembly layout, relocations, signature and malformed-input checks`);

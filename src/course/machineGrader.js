@@ -1,6 +1,7 @@
 /* global Uint8Array, Uint32Array, DataView, Map, Set */
 import { buildProject } from './projectCompiler';
 import { kernelProjectFiles } from './kernelProject';
+import { prepareKernelCheckpointBuild } from './kernelCheckpointBuild';
 import { helperIds, machineAddress, machineTestLayout as L, machineTestLoader, routineTestSource, testFlagBits } from './machineTestHarness';
 
 // Test code is executed by the same pinned native x86 emulator as the visible
@@ -26,7 +27,7 @@ async function loadRuntime(signal) {
   });
   checkAbort(signal);
 }
-function compileRoutine(files, testCase, addresses, cookie, signal) {
+function compileRoutine(files, testCase, addresses, cookie, signal, tests) {
   checkAbort(signal);
   return new Promise((resolve, reject) => {
     const worker = new Worker('/course/grader/worker.js'); let finished = false;
@@ -36,7 +37,7 @@ function compileRoutine(files, testCase, addresses, cookie, signal) {
     signal?.addEventListener('abort', abort, { once: true });
     worker.onerror = event => finish(new Error(event.message || 'The machine-test compiler could not start.'));
     worker.onmessage = ({ data }) => data?.ok ? finish(null, new Uint8Array(data.disk)) : finish(new Error(data?.error || 'The machine-test harness could not assemble.'));
-    try { worker.postMessage({ files, source: routineTestSource(testCase.input, addresses, cookie, Object.hasOwn(files, 'data.inc')), loader: machineTestLoader }); }
+    try { worker.postMessage({ files, source: routineTestSource(testCase.input, addresses, cookie, Object.hasOwn(files, 'data.inc'), tests), loader: machineTestLoader }); }
     catch (error) { finish(error); }
   });
 }
@@ -81,11 +82,13 @@ function captureRoutine(machine, addresses) {
     observations.push({ helper: Object.keys(helperIds).find(name => helperIds[name] === view.getUint16(offset, true)) || 'unknown', registers: readRegisters(view, offset + 4), flags: readFlags(view.getUint32(offset + 36, true)) });
   }
   const length = Math.min(view.getUint16(L.length - L.complete, true), L.maxOutput);
-  return { registers: readRegisters(view, L.registers - L.complete), flags: readFlags(view.getUint32(L.flags - L.complete, true)), observations,
+  return { segments: { ds: view.getUint16(L.segments - L.complete, true), es: view.getUint16(L.segments + 2 - L.complete, true) }, registers: readRegisters(view, L.registers - L.complete), flags: readFlags(view.getUint32(L.flags - L.complete, true)), observations,
     output: machine.screen_adapter.get_text_screen().join('\n'),
     helperOutput: String.fromCharCode(...raw.subarray(L.output - L.complete, L.output - L.complete + length)),
     guard: [...raw.subarray(L.guard - L.complete, L.guard - L.complete + L.guardSize)], offsets,
-    memory: (address, size) => [...machine.read_memory(offsets.get(machineAddress(address)), size)],
+    // CPU reads include memory-mapped devices such as VGA text memory.
+    // read_memory exposes the backing RAM and bypasses those device mappings.
+    memory: (address, size) => Array.from({ length: size }, (_, index) => machine.v86.cpu.read8(offsets.get(machineAddress(address)) + index)),
   };
 }
 function evaluateRoutine(machine, testCase, addresses) {
@@ -95,6 +98,7 @@ function evaluateRoutine(machine, testCase, addresses) {
     assertion('Stack boundary guard preserved', true, state.guard.every(value => value === L.guardValue), 'Your stack or memory writes reached reserved bytes below the lesson stack.'),
     ...registerAssertions(expected.registers, state.registers, address => state.offsets.get(machineAddress(address))),
     ...flagAssertions(expected.flags, state.flags),
+    ...registerAssertions(expected.segments, state.segments, () => 0),
     assertion('Data boundary guards preserved', true, ['__grade_data_before', '__grade_data_after'].every(address => state.memory(address, 16).every(byte => byte === 0xa7)), 'A write escaped your data declarations. Check its width, count, and final address.')];
   if (expected.output !== undefined) assertions.push(assertion('Actual VGA output', normalize(expected.output), normalize(state.output), 'Follow the values reaching putc, print_hex16, or puts. Printing a constant does not satisfy the register and memory checks.'));
   for (const memory of expected.memory || []) {
@@ -209,7 +213,7 @@ function kernelState(machine) {
 function evaluateKernel(machine, testCase, cookie, serial) {
   const state = kernelState(machine); const expected = testCase.expect || {};
   const marker = machine.read_memory(L.complete + 4, 4); const entered = new DataView(marker.buffer, marker.byteOffset, 4).getUint32(0, true) === ((cookie ^ 0x13579bdf) >>> 0);
-  const assertions = [assertion('Learner kernel_main was called and returned', true, entered, 'Your assembly entry must call kernel_main and the C routine must return to its caller.'), assertion('CR0.PE (protected mode)', true, state.protectedMode), assertion('CPU privilege level', 0, state.ring)];
+  const assertions = [assertion('kernel_main was called and returned', true, entered, 'The assembly entry must call kernel_main and the C routine must return to its caller.'), assertion('CR0.PE (protected mode)', true, state.protectedMode), assertion('CPU privilege level', 0, state.ring)];
   if (expected.output !== undefined) assertions.push(assertion('Actual VGA memory text', normalize(expected.output), normalize(state.output), 'Check the VGA addresses and character bytes written by your C code.'));
   for (const [name, value] of Object.entries(expected.segments || {})) assertions.push(assertion(`${name.toUpperCase()} selector`, asHex(value), asHex(state.segments[name])));
   if (expected.stack) assertions.push(assertion('ESP is inside the reserved kernel stack', true, state.esp >= expected.stack.min && state.esp <= expected.stack.max, `Expected ESP in ${asHex(expected.stack.min)} through ${asHex(expected.stack.max)}; observed ${asHex(state.esp)}.`));
@@ -304,7 +308,7 @@ export async function runCheckpointTests({ files, guide, signal, onProgress }) {
   checkAbort(signal);
   const tests = guide?.step?.tests;
   if (!tests || !['routine', 'kernel', 'c-function'].includes(tests.kind) || !Array.isArray(tests.cases) || !tests.cases.length) {
-    return { passed: false, kind: 'manual', summary: 'This project does not yet have an automated behavior contract.', scope: 'Record the boot observation alongside the chapter’s requested correctness evidence.', cases: [] };
+    return { passed: false, kind: 'unavailable', summary: 'This checkpoint has no executable test cases and cannot be completed.', scope: 'Checkpoint completion requires a compiled program that passes its machine tests.', cases: [] };
   }
   if (tests.cases.length > 24) throw new Error('A checkpoint may run at most twenty-four machine-test cases.');
   const snapshot = { ...files }; const cases = [];
@@ -317,11 +321,12 @@ export async function runCheckpointTests({ files, guide, signal, onProgress }) {
     try {
       let result;
       if (tests.kind === 'routine') {
-        if (typeof snapshot['lesson.asm'] !== 'string') throw new Error('Create lesson.asm for this routine.');
-        const addresses = caseAddresses(testCase); const disk = await compileRoutine(snapshot, testCase, addresses, cookie, signal);
+        const entryFile = tests.learnerHelpers ? 'console.asm' : 'lesson.asm';
+        if (typeof snapshot[entryFile] !== 'string') throw new Error(`Create ${entryFile} for this routine.`);
+        const addresses = caseAddresses(testCase); const disk = await compileRoutine(snapshot, testCase, addresses, cookie, signal, tests);
         result = await execute(disk, { signal, cookie, capture: machine => evaluateRoutine(machine, testCase, addresses) });
       } else {
-        const built = await buildProject(kernelInstrumentedFiles(snapshot, cookie), { signal, onProgress });
+        const built = await buildProject(kernelInstrumentedFiles(prepareKernelCheckpointBuild(snapshot, tests), cookie), { signal, onProgress });
         result = await execute(built.disk, { signal, cookie, capture: (machine, serial) => evaluateKernel(machine, testCase, cookie, serial) });
       }
       cases.push(result.timeout ? timeoutCase(testCase, result.phase) : result);

@@ -1,7 +1,7 @@
 /** A test run, an attempt, or reading a lesson is not a checkpoint pass. */
 export function isCheckpointPassed(step, index, state = {}) {
-  if (!step) return false;
-  const passed = step.tests ? state?.behaviorChecks : state?.buildSteps;
+  if (!step || step.runnable === false || !Array.isArray(step.tests?.cases) || step.tests.cases.length === 0) return false;
+  const passed = state?.behaviorChecks;
   return Array.isArray(passed) && passed.includes(index);
 }
 

@@ -2,7 +2,7 @@
 'use strict';
 
 // Course-owned adapter. NASM and the LLVM/WASI assets remain unmodified upstream.
-const LIMITS = { files: 64, source: 1048576, file: 262144, object: 1048576, elf: 2097152, diagnostics: 65536 };
+const LIMITS = { files: 64, source: 1048576, file: 262144, object: 1048576, elf: 2097152, routine: 16384, diagnostics: 65536 };
 const encoder = new TextEncoder();
 let busy = false;
 let diagnostics = [];
@@ -60,6 +60,9 @@ function validateProject(files) {
   if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) throw new Error('build.json: expected an object.');
   if (manifest.type === 'boot-sector') {
     manifest.entry = requirePath(manifest.entry || 'boot.asm', files, 'build.json entry');
+  } else if (manifest.type === 'assembly-routine') {
+    manifest.entry = requirePath(manifest.entry, files, 'build.json entry');
+    manifest.loader = requirePath(manifest.loader, files, 'build.json loader');
   } else if (manifest.type === 'kernel32') {
     if (!Array.isArray(manifest.boot) || manifest.boot.length !== 2) throw new Error('build.json: kernel32 requires two boot-stage paths.');
     manifest.boot.forEach(path => requirePath(path, files, 'build.json boot'));
@@ -70,7 +73,7 @@ function validateProject(files) {
       if (!/\.(c|asm)$/i.test(path)) throw new Error(`${path}: kernel sources must end in .c or .asm.`);
     });
     requirePath(manifest.linker, files, 'build.json linker');
-  } else throw new Error('build.json: supported project types are boot-sector and kernel32.');
+  } else throw new Error('build.json: supported project types are boot-sector, assembly-routine, and kernel32.');
   const include = manifest.include || [];
   if (!Array.isArray(include) || include.length > 16 || include.some(path => !pathValid(path))) {
     throw new Error('build.json: include must contain at most 16 relative directory paths.');
@@ -274,13 +277,31 @@ self.onmessage = async ({ data }) => {
     progress('validate', `Validated ${Object.keys(files).length} project files`);
     let nasm = await loadNasm(files);
     const artifacts = {};
-    let sector, listing = '', stage2, kernel;
+    let sector, listing = '', stage2, kernel, routine;
     if (manifest.type === 'boot-sector') {
       const assembled = assemble(nasm, manifest.entry, 'bin', '.course-build/boot.bin', 512, manifest.include, true);
       sector = assembled.bytes;
       listing = assembled.listing;
       validateSector(sector, manifest.entry);
       artifacts['boot.bin'] = sector;
+    } else if (manifest.type === 'assembly-routine') {
+      let assembled;
+      try {
+        assembled = assemble(nasm, manifest.entry, 'bin', '.course-build/lesson.bin', LIMITS.routine, manifest.include, true);
+      } catch (error) {
+        if (String(error.message).includes(`exceeds ${LIMITS.routine} bytes`)) {
+          throw new Error(`${manifest.entry}: assembly routine exceeds the 16-KiB loaded program limit, including startup, helpers, code, and data.`);
+        }
+        throw error;
+      }
+      routine = assembled.bytes;
+      listing = assembled.listing;
+      if (!routine.length) throw new Error(`${manifest.entry}: assembly routine cannot be empty.`);
+      nasm = await loadNasm(files);
+      sector = assemble(nasm, manifest.loader, 'bin', '.course-build/boot.bin', 512, manifest.include).bytes;
+      validateSector(sector, manifest.loader);
+      artifacts['boot.bin'] = sector;
+      artifacts['lesson.bin'] = routine;
     } else {
       sector = assemble(nasm, manifest.boot[0], 'bin', '.course-build/stage1.bin', 512, manifest.include).bytes;
       validateSector(sector, manifest.boot[0]);
@@ -319,13 +340,15 @@ self.onmessage = async ({ data }) => {
     progress('image', 'Building the 16-MiB boot disk');
     const disk = new Uint8Array(16 * 1024 * 1024);
     disk.set(sector, 0);
+    if (routine) disk.set(routine, 512);
     if (stage2) disk.set(stage2, 512);
     if (kernel) disk.set(kernel, 9 * 512);
     artifacts['os.img'] = disk;
     flushDiagnostics();
-    progress('ready', manifest.type === 'kernel32' ? 'Build complete: native x86 kernel is ready to boot' : 'Build complete: boot sector is ready to run');
+    progress('ready', manifest.type === 'kernel32' ? 'Build complete: native x86 kernel is ready to boot' : manifest.type === 'assembly-routine' ? 'Build complete: assembly routine and loader are ready to run' : 'Build complete: boot sector is ready to run');
     const buffers = new Set([sector.buffer, disk.buffer, ...Object.values(artifacts).map(value => value.buffer)]);
-    self.postMessage({ ok: true, type: manifest.type, entry: manifest.entry || manifest.sources[0], sector, disk, artifacts, listing, diagnostics, log }, [...buffers]);
+    const loadAddress = manifest.type === 'assembly-routine' ? 0x8000 : manifest.type === 'kernel32' ? 0x10000 : 0x7c00;
+    self.postMessage({ ok: true, type: manifest.type, entry: manifest.entry || manifest.sources[0], loadAddress, sector, disk, artifacts, listing, diagnostics, log }, [...buffers]);
   } catch (error) {
     flushDiagnostics();
     const detail = error instanceof Error ? error.message : String(error);

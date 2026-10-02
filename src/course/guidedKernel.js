@@ -9,33 +9,18 @@ const references = (...paths) => Object.fromEntries(paths.map(path => [path, ker
 // selecting a checkpoint must never insert these files into the learner's work.
 export const guidedKernel = {
   kind: 'kernel',
-  file: 'README.md',
-  intro: 'Build the project a file at a time. Begin with your machine contract, then write the boot path before opening C. Submit records your written files at early checkpoints without compiling or validating them. At the linker checkpoint, the connected project becomes runnable and Submit builds, boots, and tests it. Your own files stay in the workspace as you move between lessons.',
+  file: 'boot/stage1.asm',
+  intro: 'Build the project a file at a time, starting with the boot path before opening C. Every checkpoint builds a disk, boots it, and tests the running machine. Early checkpoints use your completed files with supplied later dependencies so you can test each addition immediately. Those dependencies are used only for Run and Submit; your saved files stay in the workspace as you move between lessons. At the linker checkpoint, you own every source and build file.',
   initialFiles: {
-    'README.md': '# My first operating-system project\n\nWrite your machine contract here before creating source files.\n\n- Firmware interface and CPU mode at entry:\n- Boot-sector load address and size:\n- Stage-2 disk and memory location:\n- Kernel disk and memory location:\n- Stack location and direction of growth:\n- What a successful first run should demonstrate:\n',
+    'boot/stage1.asm': '; Write your first boot stage here.\n',
   },
   steps: [
     {
-      sectionId: 'contract',
-      title: 'State the machine contract before writing instructions',
-      instructions: 'Complete README.md in your own words. Draw disk-sector positions separately from physical-memory addresses. Name the BIOS entry mode, the boot-sector size and load address, the two loader responsibilities, and the first observable C result. This is a design checkpoint: no executable exists yet. State the behavior that the later boot should demonstrate.',
-      filesToCreate: ['README.md'],
-      runnable: false,
-      prediction: {
-        prompt: 'At which physical address does the BIOS load the first byte of this boot sector? Enter decimal or hex.',
-        answer: 0x7c00,
-        explanation: 'The reference BIOS path loads the sector at physical 0x7c00. This memory address is different from its disk location, LBA 0.',
-      },
-      referenceFiles: {
-        'README.md': '# Reference machine contract\n\nThe target is a BIOS/EDD PC starting our sector in real mode. LBA 0\nholds a 512-byte boot sector loaded at physical 0x7c00. Stage 1 loads\neight sectors from LBA 1 to 0x8000. Stage 2 loads 32 sectors from\nLBA 9 to 0x10000, establishes flat protected-mode segments, and jumps\nto the kernel entry. The entry establishes ESP=0x70000, clears BSS,\nand calls C. The first run must produce matching VGA and serial text.\nThis result tests the stated emulator contract. Other PCs need separate validation.\n',
-      },
-    },
-    {
       sectionId: 'stage-one',
       title: 'Write the first boot stage',
-      instructions: 'Create boot/stage1.asm. Establish a normalized entry, data segments, stack, and direction flag before using them. Preserve the BIOS boot-drive identifier. Write the EDD capability check and a call to the disk routine you will implement next. Name its load constants and the exact far-jump destination. Reserve partition-table bytes and construct a 512-byte sector with the signature. The missing disk routine is an explicit dependency; this checkpoint reviews your source and address calculation. Execution is checked after the disk routine is complete.',
+      instructions: 'Write boot/stage1.asm. Establish a normalized entry, data segments, stack, and direction flag before using them. Preserve the BIOS boot-drive identifier. Check EDD support, then call read_disk with LOAD_SECTORS=8, LOAD_SEGMENT=0x0800, and LOAD_LBA=1 before jumping to 0000:8000. Include disk.inc, reserve partition-table bytes, and construct a 512-byte sector with the signature. Run and Submit supply the shared disk routine, stage 2, C runtime, C code, and build files. Your boot sector must load and transfer to that supplied chain so the machine reaches C and produces the expected output.',
       filesToCreate: ['boot/stage1.asm'],
-      runnable: false,
+      runnable: true,
       prediction: {
         prompt: 'Your stage-2 destination is 0800:0000 in real mode. What is its physical address?',
         answer: 0x8000,
@@ -46,9 +31,9 @@ export const guidedKernel = {
     {
       sectionId: 'disk-read',
       title: 'Implement the shared, bounded disk read',
-      instructions: 'Create boot/disk.inc to satisfy stage 1’s interface. Define the Disk Address Packet, preserve the drive number, restore the sector count before retries, and stop after three failed reads. Make the failure path observable. Explain how LOAD_SECTORS, LOAD_SEGMENT, and LOAD_LBA allow the next stage to reuse this file. Review the packet’s bytes and bounds; the stage-2 and kernel payloads do not exist yet.',
+      instructions: 'Create boot/disk.inc to satisfy stage 1’s interface. Define read_disk, boot_drive, the Disk Address Packet, and an observable fatal path. Preserve the drive number, restore the sector count before retries, and stop after three failed reads. Use LOAD_SECTORS, LOAD_SEGMENT, and LOAD_LBA so both boot stages can include this routine. Run and Submit use your stage 1 and disk routine with the supplied stage-2 and kernel files. The successful read path must load both payloads and reach the expected C output; the runtime contract below describes the behavior checked by these tests.',
       filesToCreate: ['boot/disk.inc'],
-      runnable: false,
+      runnable: true,
       prediction: {
         prompt: 'The kernel read requests 32 sectors of 512 bytes each. How many bytes must its destination accommodate?',
         answer: 16384,
@@ -59,9 +44,9 @@ export const guidedKernel = {
     {
       sectionId: 'stage-two',
       title: 'Connect loading to a deliberate mode transition',
-      instructions: 'Create boot/stage2.asm. Re-establish the real-mode contract, select VGA text mode, and read the kernel slot before leaving firmware. Define the three-entry GDT, mask legacy IRQs, set CR0.PE, and use a far jump to load the code descriptor. Establish flat data selectors and a protected-mode stack, then transfer to 0x10000. Label which statements are assembler directives and which change CPU state. C is still absent; do not mistake assembling this file for proving the transition.',
+      instructions: 'Create boot/stage2.asm. Re-establish the real-mode contract, select VGA text mode, and read the kernel slot before leaving firmware. Define the three-entry GDT, mask legacy IRQs, set CR0.PE, and use a far jump to load the code descriptor. Establish flat data selectors and a protected-mode stack, then transfer to 0x10000. Run and Submit use your complete loader with the supplied C entry, C sources, and build files. The tests must observe protected-mode execution, the expected output, and a safe return from the supplied C function.',
       filesToCreate: ['boot/stage2.asm'],
-      runnable: false,
+      runnable: true,
       prediction: {
         prompt: 'Which GDT entry index does selector 0x08 select?',
         answer: 1,
@@ -72,9 +57,9 @@ export const guidedKernel = {
     {
       sectionId: 'c-entry',
       title: 'Write the runtime that makes C possible',
-      instructions: 'Create kernel/entry.asm as an ELF32 assembly translation unit. Export _start, import kernel_main and the BSS bounds, establish ESP and the direction flag, clear the entire BSS interval, and call C with the documented stack alignment. Provide a defined halt path if C returns. The C-writing steps begin after this checkpoint because their stack and initialization requirements now have a named owner. You still need a C definition and linker script before this project can boot.',
+      instructions: 'Create kernel/entry.asm as an ELF32 assembly translation unit. Export _start, import kernel_main and the BSS bounds, establish ESP and the direction flag, clear the entire BSS interval, and call C with the documented stack alignment. Provide a defined halt path after C returns. Run and Submit use your loader and entry stub with supplied C sources, header, linker script, and build manifest. The tests check the output, the return from C, and the resulting stack and CPU state.',
       filesToCreate: ['kernel/entry.asm'],
-      runnable: false,
+      runnable: true,
       prediction: {
         prompt: 'ESP is 0x70000 immediately before a 32-bit near CALL with no arguments. What is ESP immediately after that CALL pushes its return address?',
         answer: 0x6fffc,
@@ -85,9 +70,9 @@ export const guidedKernel = {
     {
       sectionId: 'kernel',
       title: 'Build the C interface, driver, and caller in that order',
-      instructions: 'First create include/vga.h with the screen dimensions and function declarations. Next write kernel/vga.c: construct a VGA cell, clear the screen, and clip writes at a row boundary. Finally create kernel/main.c to call that interface, check initialized data and zeroed BSS, and send the same first message to COM1. Try writing each function from its contract; open its individual reference whenever you need a worked example. Use the three target lines shown in this lesson checkpoint so the later runtime check can compare real output. For each declaration in the header, identify the translation unit that implements it.',
+      instructions: 'First create include/vga.h with the screen dimensions and function declarations. Next write kernel/vga.c: construct a VGA cell, clear the screen, and clip writes at a row boundary. Finally create kernel/main.c to call that interface, check initialized data and zeroed BSS, and send the same first message to COM1. Try writing each function from its contract; open its individual reference whenever you need a worked example. Write the three target lines shown below, then return from kernel_main to the assembly entry stub. Run and Submit supply only linker.ld and build.json at this checkpoint; your own loader, entry stub, header, and C files must work together to pass the runtime tests.',
       filesToCreate: ['include/vga.h', 'kernel/vga.c', 'kernel/main.c'],
-      runnable: false,
+      runnable: true,
       expectedOutput: output,
       prediction: {
         prompt: 'VGA text memory begins at 0xb8000. With 80 columns and two bytes per cell, what is the address of row 1, column 0?',
@@ -113,7 +98,7 @@ export const guidedKernel = {
     {
       sectionId: 'observe',
       title: 'Distinguish a successful build from a successful boot',
-      instructions: 'Use Run to explore your assembled and linked files. Record the VGA text and serial line separately. Download kernel.elf and the disk, and identify which artifact retains symbols and which contains the sector layout. Explain why the final stationary screen is a deliberate halt. Introduce one failure at a time: an undefined C symbol, an invalid boot signature, or a changed initialized-data probe. Record which phase reports each failure, then restore the expected three-line output and choose Submit to build, boot, and test this checkpoint automatically.',
+      instructions: 'Use Run to inspect the VGA text and serial line from your complete project. Introduce one code failure at a time: an undefined C symbol, an invalid boot signature, or a changed initialized-data probe. Build and run each change to locate its failure phase, then repair the code. Restore the expected three-line output, COM1 first line, and return from kernel_main. Choose Submit to verify the repaired project with the machine tests. You can download kernel.elf to inspect symbols and the disk image to inspect the sector layout.',
       filesToCreate: [],
       runnable: true,
       expectedOutput: output,
@@ -127,7 +112,7 @@ export const guidedKernel = {
     {
       sectionId: 'experiment',
       title: 'Prove that changing one file changes the running machine',
-      instructions: 'Change the message in kernel/main.c and the color attribute in include/vga.h; predict which character and attribute bytes change, then choose Run to rebuild and observe. Remove kernel/vga.c from build.json and explain the unresolved symbols; restore it. Test the data/BSS probes with a deliberately wrong initialization. Keep a short evidence log in README.md. Finally restore the canonical three-line output and choose Submit for the complete build, boot, and runtime checks. The machine tests check the declared first-kernel contract, while your evidence log explains the separate experiments and remaining assumptions. Peek at a reference when you need help, then explain the relevant instruction or C statement before continuing.',
+      instructions: 'Change the message in kernel/main.c and the color attribute in include/vga.h, then choose Run to rebuild and observe the changed character and attribute bytes. Remove kernel/vga.c from build.json, inspect the unresolved-symbol errors, and restore the source path. Change the data/BSS initialization to exercise the runtime probes, then repair it. Finally restore the canonical three-line output and choose Submit for the complete build, boot, and runtime checks. Passing requires your code to satisfy the machine contract below. You may keep personal notes about the experiments; checkpoint completion comes from the executable tests.',
       filesToCreate: [],
       runnable: true,
       expectedOutput: output,
@@ -141,9 +126,19 @@ export const guidedKernel = {
   ],
 };
 
+const projectPaths = guidedKernel.steps.flatMap(step => step.filesToCreate);
+const requiredFiles = [];
 for (const step of guidedKernel.steps) {
-  if (step.runnable) {
-    step.tests = kernelCheckpointTests;
-    step.instructions += ` Machine contract: ${kernelCheckpointTests.contract}`;
-  }
+  requiredFiles.push(...step.filesToCreate);
+  const scaffoldPaths = projectPaths.filter(path => !requiredFiles.includes(path));
+  step.tests = {
+    ...kernelCheckpointTests,
+    scope: scaffoldPaths.length
+      ? `Builds your ${requiredFiles.join(', ')} with supplied later dependencies: ${scaffoldPaths.join(', ')}. ${kernelCheckpointTests.scope}`
+      : kernelCheckpointTests.scope,
+    requiredFiles: [...requiredFiles],
+    scaffoldFiles: references(...scaffoldPaths),
+  };
+  step.expectedOutput = output;
+  step.instructions += ` Machine contract: ${kernelCheckpointTests.contract}`;
 }

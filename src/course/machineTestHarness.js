@@ -15,7 +15,15 @@ export function assemblyCaseInitialization(input = {}) {
     if (!Array.isArray(memory.bytes) || memory.bytes.length > 512 || memory.bytes.some(byte => !Number.isInteger(byte) || byte < 0 || byte > 255)) throw new Error('Machine test memory must contain at most 512 bytes.');
     memory.bytes.forEach((byte, index) => lines.push(`    mov byte [cs:${address}+${index}], ${byte}`));
   }
+  for (const [segment, value] of Object.entries(input.segments || {})) {
+    if (!['ds', 'es'].includes(segment) || !Number.isInteger(value) || value < 0 || value > 65535) throw new Error('Invalid segment input.');
+    lines.push('    push ax', `    mov ax, ${value}`, `    mov ${segment}, ax`, '    pop ax');
+  }
   for (const [register, value] of Object.entries(input.registers || {})) {
+    if (typeof value === 'string' && widths[register] >= 16) {
+      lines.push(`    mov ${register}, ${machineAddress(value)}`);
+      continue;
+    }
     if (!widths[register] || !Number.isInteger(value) || value < -(2 ** (widths[register] - 1)) || value >= 2 ** widths[register]) throw new Error(`Invalid ${register} input for a machine test.`);
     lines.push(`    mov ${register}, ${value}`);
   }
@@ -31,11 +39,12 @@ export function assemblyCaseInitialization(input = {}) {
   return lines.join('\n');
 }
 
-export const machineTestLayout = { complete: 0x5000, registers: 0x5008, flags: 0x5028, count: 0x502c, length: 0x502e, observations: 0x5100, addresses: 0x5e00, output: 0x6000, guard: 0x6fe0, guardSize: 32, guardValue: 0xa7, maxObservations: 64, maxOutput: 2048 };
+export const machineTestLayout = { complete: 0x5000, registers: 0x5008, flags: 0x5028, segments: 0x5030, count: 0x502c, length: 0x502e, observations: 0x5100, addresses: 0x5e00, output: 0x6000, guard: 0x6fe0, guardSize: 32, guardValue: 0xa7, maxObservations: 64, maxOutput: 2048 };
 const helperIds = { putc: 1, print_hex16: 2, newline: 3, puts: 4 };
 export { helperIds };
 
-export function routineTestSource(input, addresses, cookie, hasData) {
+export function routineTestSource(input, addresses, cookie, hasData, options = {}) {
+  if (options.learnerHelpers && !['putc', 'newline', 'puts', 'print_hex16'].includes(options.entry)) throw new Error('Unknown output-helper entry point.');
   const L = machineTestLayout;
   const log = name => `
     pushfd
@@ -120,7 +129,7 @@ ${addresses.map((address, index) => `    mov dword [cs:${L.addresses + index * 4
 ${assemblyCaseInitialization(input)}
     ; Signal learner entry without changing the supplied registers or FLAGS.
     mov dword [cs:${L.complete + 4}], ${((cookie ^ 0x13579bdf) >>> 0)}
-    call lesson
+    call ${options.learnerHelpers ? options.entry : 'lesson'}
     mov [cs:${L.registers}], eax
     mov [cs:${L.registers + 4}], ebx
     mov [cs:${L.registers + 8}], ecx
@@ -129,6 +138,8 @@ ${assemblyCaseInitialization(input)}
     mov [cs:${L.registers + 20}], edi
     mov [cs:${L.registers + 24}], ebp
     mov [cs:${L.registers + 28}], esp
+    mov [cs:${L.segments}], ds
+    mov [cs:${L.segments + 2}], es
     pushfd
     pop dword [cs:${L.flags}]
     mov dword [cs:${L.complete}], ${cookie >>> 0}
@@ -136,7 +147,7 @@ ${assemblyCaseInitialization(input)}
 __grade_halt:
     hlt
     jmp __grade_halt
-lesson:
+${options.learnerHelpers ? '%include "console.asm"' : `lesson:
 %include "lesson.asm"
     ret
 putc:
@@ -207,6 +218,7 @@ puts:
     popad
     popfd
     ret
+`}
 __grade_data_before: times 16 db 0xa7
 ${hasData ? '%include "data.inc"' : ''}
 __grade_data_after: times 16 db 0xa7

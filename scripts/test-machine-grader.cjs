@@ -30,7 +30,7 @@ const server = http.createServer((req, res) => {
     });
     const run = (slug, index, body, options = {}) => page.evaluate(async ({ slug, index, body, options }) => {
       const step = structuredClone(window.guides[slug].steps[index]); if (options.oneCase) step.tests.cases = step.tests.cases.slice(0, 1);
-      return window.grade({ files: { 'lesson.asm': body || step.reference.body, ...(step.reference.data ? { 'data.inc': step.reference.data } : {}) }, guide: { step } });
+      return window.grade({ files: { ...step.reference.files, 'lesson.asm': body || step.reference.body, ...(step.reference.data ? { 'data.inc': step.reference.data } : {}) }, guide: { step } });
     }, { slug, index, body, options });
     const verify = (label, report, expected) => { assert.equal(report.passed, expected, `${label}: ${JSON.stringify(report)}`); console.log(`PASS ${label}`); };
     if (!process.argv.includes('--cancel-init-only')) {

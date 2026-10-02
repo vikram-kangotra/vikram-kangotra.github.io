@@ -57,7 +57,7 @@ export function buildProject(files, { signal, onProgress } = {}) {
       const artifacts = {};
       for (const [name, contents] of Object.entries(data.artifacts || {})) artifacts[name] = new Uint8Array(contents);
       finish(null, {
-        type: data.type, entry: data.entry,
+        type: data.type, entry: data.entry, loadAddress: data.loadAddress,
         sector: new Uint8Array(data.sector), disk: new Uint8Array(data.disk),
         diagnostics: data.diagnostics || [], artifacts, log: data.log || [], listing: data.listing || '',
       });

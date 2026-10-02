@@ -20,12 +20,15 @@ function projectMode(files, kind) {
 
 // Each copy gets an independent workspace; neither the lesson nor an existing
 // playground is overwritten. Source is validated before it reaches storage.
-export function savePlaygroundCopy(files, kind, { activeFile, title, setupFile } = {}) {
+export function savePlaygroundCopy(files, kind, { activeFile, title, setupFile, learnerHelpers } = {}) {
   const validated = validateProjectFiles(files);
+  if (learnerHelpers) {
+    validated['build.json'] = JSON.stringify({ type: 'assembly-routine', learnerHelpers: true });
+  }
   if (setupFile && (typeof setupFile !== 'string' || !Object.hasOwn(validated, setupFile))) throw new Error('The playground input file must name one of the copied source files.');
   const id = `${Date.now().toString(36)}-${globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)}`;
   const copy = {
-    version: 1, mode: projectMode(validated, kind), files: validated,
+    version: 1, learnerHelpers: learnerHelpers === true, mode: projectMode(validated, kind), files: validated,
     activeFile: Object.hasOwn(validated, activeFile) ? activeFile : Object.keys(validated)[0],
     title: typeof title === 'string' ? title.slice(0, 120) : 'Copied course draft',
     ...(setupFile ? { setupFile } : {}),
@@ -45,7 +48,7 @@ export function loadPlayground(workspace) {
   if (copy.setupFile && (typeof copy.setupFile !== 'string' || !Object.hasOwn(files, copy.setupFile))) throw new Error('This workspace input file could not be restored.');
   return {
     id: workspace, title: typeof copy.title === 'string' ? copy.title.slice(0, 120) : 'Copied course draft',
-    initialMode: copy.mode, initialFiles: files,
+    initialMode: copy.mode, initialFiles: files, learnerHelpers: copy.learnerHelpers === true,
     activeFile: Object.hasOwn(files, copy.activeFile) ? copy.activeFile : Object.keys(files)[0],
     ...(copy.setupFile ? { setupFile: copy.setupFile } : {}),
     projects: { ...projects, [copy.mode]: files },

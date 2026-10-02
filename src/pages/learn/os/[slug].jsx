@@ -13,7 +13,7 @@ import { getCExerciseTests } from '@/course/cExerciseTests';
 import { makeCheckpointBrief } from '@/course/checkpointBriefs';
 import { assemblyReadingAids } from '@/course/assemblyReadingAids';
 import { systemsReadingAids } from '@/course/systemsReadingAids';
-import { getCheckpointLessonIndex, getLessonGate, isCheckpointSkipped } from '@/course/lessonAccess';
+import { getCheckpointLessonIndex, getLessonGate, isCheckpointPassed, isCheckpointSkipped } from '@/course/lessonAccess';
 import { resolveLessonProgress, lessonProgressPatch, isChapterComplete } from '@/course/lessonProgress';
 import CourseShell from '@/components/course/CourseShell';
 import ChapterOutline from '@/components/course/ChapterOutline';
@@ -107,11 +107,11 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
   const atCheckpoint = readerTab === 'problem' ? buildStep.sectionId === section.id : checkpointReadingEnd === lessonIndex;
   const readingCheckpointGroup = section.id === buildStep.sectionId || section.parentSectionId === buildStep.sectionId;
   const checkpointReady = atCheckpoint && (readerTab === 'problem' || (state.openBuilds || []).includes(buildIndex));
-  const checkpointPassed = (buildStep.tests ? state.behaviorChecks || [] : state.buildSteps || []).includes(buildIndex);
+  const checkpointPassed = isCheckpointPassed(buildStep, buildIndex, state);
   const checkpointSkipped = !checkpointPassed && isCheckpointSkipped(buildIndex, state);
-  const skippedBuilds = guide.steps.filter((step, index) => isCheckpointSkipped(index, state) && !(step.tests ? state.behaviorChecks || [] : state.buildSteps || []).includes(index)).length;
-  const allBuildsPassed = guide.steps.every((step, index) => (step.tests ? state.behaviorChecks || [] : state.buildSteps || []).includes(index));
-  const lessonSkipped = (index) => guide.steps.some((step, stepIndex) => getCheckpointLessonIndex(chapter, step) === index && isCheckpointSkipped(stepIndex, state) && !(step.tests ? state.behaviorChecks || [] : state.buildSteps || []).includes(stepIndex));
+  const skippedBuilds = guide.steps.filter((step, index) => isCheckpointSkipped(index, state) && !isCheckpointPassed(step, index, state)).length;
+  const allBuildsPassed = guide.steps.every((step, index) => isCheckpointPassed(step, index, state));
+  const lessonSkipped = (index) => guide.steps.some((step, stepIndex) => getCheckpointLessonIndex(chapter, step) === index && isCheckpointSkipped(stepIndex, state) && !isCheckpointPassed(step, stepIndex, state));
   const chapterAttempted = (state.buildAttempts || []).includes(guide.steps.length - 1);
   const longCode = section.code && /^(asm|c|cpp)$/i.test(section.code.language) && (section.code.source.split('\n').length > 12 || section.code.source.includes('; --- Your lesson program starts here ---'));
   const diagramAfter = Math.min(section.paragraphs.length, Math.max(1, section.teaching?.diagramAfter || 2));
@@ -120,8 +120,8 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
   const labComplete = machinePractice ? allBuildsPassed : !!state.lab;
   const ready = !!state.read && labComplete && allBuildsPassed;
   const completed = !!state.complete && ready;
-  const passedBuilds = guide.steps.filter((step, index) => (step.tests ? state.behaviorChecks || [] : state.buildSteps || []).includes(index)).length;
-  const firstUnpassed = guide.steps.findIndex((step, index) => !(step.tests ? state.behaviorChecks || [] : state.buildSteps || []).includes(index));
+  const passedBuilds = guide.steps.filter((step, index) => isCheckpointPassed(step, index, state)).length;
+  const firstUnpassed = guide.steps.findIndex((step, index) => !isCheckpointPassed(step, index, state));
   const firstUnread = chapter.sections.findIndex((_, index) => !readLessons.includes(index));
   const remaining = [
     ...(!state.read ? [`Read ${Math.max(1, chapter.sections.length - readLessons.length)} remaining lesson${chapter.sections.length - readLessons.length === 1 ? '' : 's'}.`] : []),
@@ -355,8 +355,8 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
               <div className={styles.prose}>{section.paragraphs.slice(0, diagramAfter).map((text, i) => <p key={i}><Inline text={text} /></p>)}</div>
               {section.aid && <LessonVisual aid={section.aid} />}
               <div className={styles.prose}>{section.paragraphs.slice(diagramAfter).map((text, i) => <p key={i}><Inline text={text} /></p>)}</div>
-              {section.code && !longCode && <CodeBlock code={section.code} />}
-              {section.code && longCode && <aside className={styles.callout}><FiCode /><div><strong>Build this part step by step.</strong><p>{guide.kind === 'assembly' ? <>Practice this idea in <code>lesson.asm</code>; put any data declarations in <code>data.inc</code>. The coding checkpoint specifies which part to write and which inputs the lab supplies.</> : <>Use the explanation to implement <code>{section.code.filename}</code> in your growing project.</>} Open the checkpoint’s hints or peek at an answer whenever you need help.</p>{guide.kind === 'project' && <details><summary>Peek at this section’s reference</summary><CodeBlock code={section.code.source.includes('; --- Your lesson program starts here ---') ? { ...section.code, source: section.code.source.split('lesson:\n')[1].split('; --- End of lesson program ---')[0] } : section.code} /></details>}</div></aside>}
+              {section.code && (!longCode || guide.learnerHelpers) && <CodeBlock code={section.code} />}
+              {section.code && longCode && !guide.learnerHelpers && <aside className={styles.callout}><FiCode /><div><strong>Build this part step by step.</strong><p>{guide.kind === 'assembly' ? <>Practice this idea in <code>{guide.file || 'lesson.asm'}</code>; put any data declarations in <code>data.inc</code>. {guide.learnerHelpers ? <>Write reusable output functions in <code>console.asm</code> and call them from <code>lesson.asm</code>. </> : null}The coding checkpoint specifies which part to write and which inputs the lab supplies.</> : <>Use the explanation to implement <code>{section.code.filename}</code> in your growing project.</>} Open the checkpoint’s hints or peek at an answer whenever you need help.</p>{guide.kind === 'project' && <details><summary>Peek at this section’s reference</summary><CodeBlock code={section.code.source.includes('; --- Your lesson program starts here ---') ? { ...section.code, source: section.code.source.split('lesson:\n')[1].split('; --- End of lesson program ---')[0] } : section.code} /></details>}</div></aside>}
               {section.callout && <aside className={styles.callout}><FiBookOpen /><div><strong>{section.callout.title}</strong><p><Inline text={section.callout.text} /></p></div></aside>}
               <LessonDepth key={`depth:${section.id}`} depth={section.deepDive} />
               <DetailedGuide key={`topics:${section.id}`} topics={section.topics} lessonTopic={!!section.parentSectionId} onPractice={() => { setFurtherPractice(true); setReaderTab('problem'); setMobilePane('reading'); if (!workspacePinned) setWorkspaceOpen(false); requestAnimationFrame(() => { readerScroll.current?.scrollTo({ top: 0 }); problemHeading.current?.focus({ preventScroll: true }); }); }} />
@@ -408,7 +408,7 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
         <div className={styles.paneTop}><Tabs id="practice" label="Practice tools" items={practiceTabs} active={practiceTab} onChange={openPractice} /><div className={styles.workspaceActions}><button className={styles.pinButton} aria-pressed={workspacePinned} aria-label="Keep workspace open while reading" title="Keep workspace open while reading" onClick={() => setWorkspacePinned(!workspacePinned)}><FiAnchor /></button><button className={styles.focusButton} onClick={() => setFocusMode(!focusMode)} aria-label={focusMode ? 'Restore split view' : 'Focus on code'} title={focusMode ? 'Restore split view' : 'Focus on code'}>{focusMode ? <FiMinimize2 /> : <FiMaximize2 />}</button><button className={styles.closeWorkspace} onClick={closeWorkspace} aria-label="Close workspace" title="Close workspace"><FiX /></button></div></div>
         <div ref={practiceBody} className={styles.practiceBody}>
           <div id="practice-panel-machine" role="tabpanel" aria-labelledby="practice-tab-machine" hidden={practiceTab !== 'machine'} className={styles.machinePanel}>
-            <section id="machine-lab" tabIndex={-1} className={styles.machineContainer} aria-label="Project editor and x86 emulator">{workspaceMounted && <BootMachine chapterSlug={chapter.slug} exercise={chapter.assembly} guided={{ ...guide, step: buildStep, stepIndex: buildIndex, stepCount: guide.steps.length, ready: loaded && !blockedLesson && checkpointReady, attempted: sectionAttempted, sectionTitle: chapter.sections.find(item => item.id === buildStep.sectionId)?.title, onAttempt: recordAttempt, onBoot: () => update({ buildRuns: [...new Set([...(state.buildRuns || []), buildIndex])] }), onPassed: recordBuild, onContinue: completeLesson, onSkip: skipCheckpoint, onBusyChange: onCheckpointBusyChange, passed: checkpointPassed, skipped: checkpointSkipped }} onSourceChange={(code) => update({ code, checks: [], complete: false })} challengeEnabled={machinePractice} onSolved={() => update({ assembly: true })} onInvalidate={invalidateBuild} />}</section>
+            <section id="machine-lab" tabIndex={-1} className={styles.machineContainer} aria-label="Project editor and x86 emulator">{workspaceMounted && <BootMachine chapterSlug={chapter.slug} exercise={chapter.assembly} guided={{ ...guide, step: buildStep, stepIndex: buildIndex, stepCount: guide.steps.length, canRun: loaded && !blockedLesson, ready: loaded && !blockedLesson && checkpointReady && readerTab === 'problem' && !furtherPractice, attempted: sectionAttempted, sectionTitle: chapter.sections.find(item => item.id === buildStep.sectionId)?.title, onAttempt: recordAttempt, onBoot: () => update({ buildRuns: [...new Set([...(state.buildRuns || []), buildIndex])] }), onPassed: recordBuild, onContinue: completeLesson, onSkip: skipCheckpoint, onBusyChange: onCheckpointBusyChange, passed: checkpointPassed, skipped: checkpointSkipped }} onSourceChange={(code) => update({ code, checks: [], complete: false })} challengeEnabled={machinePractice} onSolved={() => update({ assembly: true })} onInvalidate={invalidateBuild} />}</section>
           </div>
           <div ref={practiceScroll} className={styles.practiceScroll} hidden={practiceTab === 'machine'}>
 

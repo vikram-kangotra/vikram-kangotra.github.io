@@ -4,6 +4,8 @@ import { readCourseModule } from './course-loader.mjs';
 const { chapters } = await readCourseModule('src/course/index.js');
 const maps = await Promise.all(['assembly', 'foundations', 'systems'].map(async name => (await readCourseModule(`src/course/${name}Depth.js`))[`${name}Depth`]));
 const depthMap = Object.assign({}, ...maps);
+const { assemblyOutput } = await readCourseModule('src/course/assemblyOutput.js');
+const inlineChapters = new Map(assemblyOutput.map(chapter => [chapter.slug, chapter]));
 function words(value) {
   if (typeof value === 'string') return value.trim().split(/\s+/).filter(Boolean).length;
   if (Array.isArray(value)) return value.reduce((sum, item) => sum + words(item), 0);
@@ -11,12 +13,15 @@ function words(value) {
   return 0;
 }
 let examples = 0;
+let inlineExamples = 0;
 let charts = 0;
 let addedWords = 0;
 
-assert.equal(Object.keys(depthMap).length, chapters.length, 'every chapter has added teaching material');
+assert.deepEqual(new Set([...Object.keys(depthMap), ...inlineChapters.keys()]), new Set(chapters.map(chapter => chapter.slug)), 'every chapter has registered teaching material, either a depth map or inline sections');
 for (const chapter of chapters) {
-  assert.deepEqual(Object.keys(depthMap[chapter.slug]).sort(), chapter.sections.filter(section => !section.parentSectionId).map(section => section.id).sort(), `${chapter.slug}: no missing or orphaned original lesson content`);
+  const mapped = depthMap[chapter.slug];
+  const rawInline = inlineChapters.get(chapter.slug);
+  assert.deepEqual((mapped ? Object.keys(mapped) : rawInline.sections.map(section => section.id)).sort(), chapter.sections.filter(section => !section.parentSectionId).map(section => section.id).sort(), `${chapter.slug}: no missing or orphaned original lesson content`);
   let chapterCharts = 0;
   assert.equal(chapter.minutes, chapter.studyPlan.readingMinutes + chapter.studyPlan.practiceMinutes);
   assert(chapter.studyPlan.practiceMinutes >= 20, 'study estimate reserves time for practice');
@@ -27,6 +32,16 @@ for (const chapter of chapters) {
     }
     const label = `${chapter.slug}/${section.id}`;
     const dive = section.deepDive;
+    assert(Number.isInteger(section.studyMinutes) && section.studyMinutes > 0);
+    if (!mapped) {
+      assert(section.paragraphs.length >= 3 && section.paragraphs.every(text => typeof text === 'string' && text.trim()), `${label}: inline lesson explains its mechanism`);
+      const teaching = section.teaching;
+      for (const field of ['goal', 'bridge', 'takeaway']) assert(typeof teaching?.[field] === 'string' && teaching[field].trim(), `${label}: ${field} exists`);
+      assert(teaching.check?.prompt && teaching.check.answer, `${label}: core teaching includes a check and its explanation`);
+      assert(words([section.paragraphs, teaching]) >= 200, `${label}: inline core teaching is substantive`);
+      assert.equal(!!dive, !!rawInline.sections.find(item => item.id === section.id).deepDive, `${label}: published chapter preserves its inline worked example`);
+      if (!dive) continue;
+    }
     assert(dive?.title && dive.paragraphs.length >= 1, `${label}: explanation exists`);
     assert(dive.paragraphs.every(text => typeof text === 'string' && text.trim()), label);
     assert(dive.example?.title && dive.example.intro && dive.example.conclusion, `${label}: example has setup and interpretation`);
@@ -35,8 +50,7 @@ for (const chapter of chapters) {
     assert(dive.transfer && words(dive.transfer) >= 15, `${label}: transfer case is explained`);
     assert(words(dive) >= 200, `${label}: added lesson is substantive`);
     assert(!JSON.stringify(dive).includes('\u2014'), `${label}: no em dashes`);
-    assert(Number.isInteger(section.studyMinutes) && section.studyMinutes > 0);
-    examples++;
+    if (mapped) examples++; else inlineExamples++;
     addedWords += words(dive);
     if (!dive.flowchart) continue;
     chapterCharts++;
@@ -65,4 +79,5 @@ for (const chapter of chapters) {
   assert(chapterCharts > 0, `${chapter.slug}: contains a flowchart`);
 }
 assert.equal(examples, 234, 'all existing lessons are expanded');
-console.log(`PASS: ${examples} expanded lessons, ${charts} connected flowcharts, complete examples and accessible diagram data; approximately ${addedWords.toLocaleString()} added words including labels`);
+assert.equal(inlineExamples, assemblyOutput.flatMap(chapter => chapter.sections).filter(section => section.deepDive).length, 'all registered inline worked examples are validated');
+console.log(`PASS: ${examples} mapped and ${inlineExamples} inline expanded lessons, ${charts} connected flowcharts, complete examples and accessible diagram data; approximately ${addedWords.toLocaleString()} added words including labels`);

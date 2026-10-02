@@ -1,13 +1,24 @@
 // Shared, executable scaffolding for the assembly foundation.
 // Every lesson body runs on the real v86 CPU; helpers only provide visible output.
 export function bootProgram(body, data = '', initialization = '') {
+  return assemblyProgram(body, data, initialization, true);
+}
+
+// Routine exercises are loaded after a separate BIOS sector, leaving room for
+// learner instructions and data without changing their real-mode call contract.
+export function routineProgram(body, data = '', initialization = '', options = {}) {
+  return assemblyProgram(body, data, initialization, false, options);
+}
+
+function assemblyProgram(body, data, initialization, bootSector, options = {}) {
   return `; x86 assembly foundation: NASM, 386-or-newer CPU, real mode
 ; Edit the lesson routine. The scaffold makes its results visible on VGA.
-; At lesson entry: CS=DS=ES=SS=0, SP=0x7bfe, DF=0.
+; Startup: CS=DS=ES=SS=0, SP=0x7bfe at CALL, DF=0.
+; Checkpoint input setup can then supply different registers, segments or flags.
 ; Helpers preserve general registers and flags; putc reads AL,
 ; print_hex16 reads AX, puts reads the zero-terminated string at DS:SI.
 bits 16
-org 0x7c00
+org ${bootSector ? '0x7c00' : '0x8000'}
 jmp 0x0000:start
 
 start:
@@ -35,7 +46,7 @@ ${body.trimEnd()}
     ret
 ; --- End of lesson program ---
 
-; Output helpers. You will unpack CALL, PUSH and BIOS INT later.
+${options.learnerHelpers ? '%include "console.asm"' : `; Output helpers. You will unpack CALL, PUSH and BIOS INT later.
 putc:
     pushfd
     pushad
@@ -97,8 +108,8 @@ puts:
     popfd
     ret
 
+`}
 ${data.trimEnd()}
-times 510-($-$$) db 0
-dw 0xaa55
+${bootSector ? 'times 510-($-$$) db 0\ndw 0xaa55' : ''}
 `;
 }

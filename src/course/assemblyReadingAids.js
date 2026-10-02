@@ -21,11 +21,11 @@ export const assemblyReadingAids = {
     'a-machine-you-can-question': visual('flow', 'Where your two instructions actually run',
       'Follow one program from the editor to a visible machine effect. Select a stage to distinguish your responsibility from the support already provided.', [
         node('source', 'Your source', 'lesson.asm', 'You author a small routine. Its instructions run on the emulated x86 CPU. The editor stores text; changing that text has no effect on an already running machine.', [fact('You own', 'Instructions inside the lesson')]),
-        node('assembler', 'NASM + harness', 'source → x86 bytes', 'NASM assembles your routine together with setup and output helpers. The generated boot sector contains actual machine code, padding, and a signature. Assembly validates the instruction encodings. Run and test the program to check its behavior.', [fact('Artifact', '512-byte boot sector')]),
-        node('cpu', 'Emulated x86', 'fetch → decode → execute', 'The emulator runs firmware, which loads the sector. The harness initializes a known environment and calls your routine. A register write changes the guest CPU state.', [fact('Execution', 'Real x86 instruction semantics')]),
+        node('assembler', 'NASM + harness', 'source → x86 bytes', 'NASM assembles your routine together with setup and output helpers. The generated lesson.bin contains the routine, startup, helpers, and data. A separate boot sector loads this program into memory at 0x8000. Assembly validates the instruction encodings. Run and test the program to check its behavior.', [fact('Artifact', 'lesson.bin, up to 16 KiB')]),
+        node('cpu', 'Emulated x86', 'fetch → decode → execute', 'The emulator runs firmware, which loads the boot sector. That loader reads the lesson program from disk. The harness initializes a known environment and calls your routine. A register write changes the guest CPU state.', [fact('Execution', 'Real x86 instruction semantics')]),
         node('screen', 'Visible evidence', 'guest VGA display', 'Only an output operation changes the screen. The course reads guest output and, in behavior tests, relevant machine state. Correct-looking text alone cannot prove a general algorithm.', [fact('Observe', 'Output and tested machine state')]),
       ], 'The harness is a temporary teaching interface. In bootloading, you will take over each setup responsibility.',
-      '; Focused experiment for the supplied boot-sector wrapper.\nmov al, \'Z\'     ; Establish one input byte.\ncall putc       ; Ask the supplied helper to display it.',
+      '; Focused experiment for the supplied routine wrapper.\nmov al, \'Z\'     ; Establish one input byte.\ncall putc       ; Ask the supplied helper to display it.',
       [{ from: 'source', to: 'assembler', label: 'assemble' }, { from: 'assembler', to: 'cpu', label: 'boot' }, { from: 'cpu', to: 'screen', label: 'perform I/O' }]),
     'state-before-syntax': visual('compare', 'Four different places state can live',
       'Changing one part of the machine does not automatically update the others. Read the effect of MOV before assuming that it printed anything.', [
@@ -74,11 +74,12 @@ export const assemblyReadingAids = {
     'the-scaffold-contract': visual('flow', 'Who establishes the starting state?',
       'Read this as a responsibility boundary. The course makes these promises; they are not general BIOS guarantees.', [
         node('firmware', 'Firmware', 'loads the boot sector', 'The legacy BIOS environment recognizes a boot sector and transfers control. Real boot programs must establish the state they require.'),
+        node('loader', 'Disk loader', 'lesson.bin at 0x8000', 'The boot sector reads the program from the following disk sectors. The routine, setup, helpers, and data share a 16-KiB area.'),
         node('harness', 'Teaching harness', 'known execution environment', 'The wrapper normalizes segments, creates a stack, clears the direction flag, and selects text video mode before calling your lesson.', [fact('DS / ES / SS', '0'), fact('DF', '0'), fact('Lesson-entry SP', '0x7BFE')]),
         node('lesson', 'Your routine', 'instructions under study', 'You use only the documented entry state and helper contracts. Preserve the return path and any state required by the exercise.'),
         node('finish', 'Return and halt', 'completed experiment', 'After your routine returns, the wrapper deliberately halts. The expected text remains on the stable display after completion.'),
       ], 'The bootloading chapter replaces the wrapper with setup code you can explain yourself.', undefined,
-      [{ from: 'firmware', to: 'harness', label: 'boot entry' }, { from: 'harness', to: 'lesson', label: 'CALL' }, { from: 'lesson', to: 'finish', label: 'return' }]),
+      [{ from: 'firmware', to: 'loader', label: 'boot entry' }, { from: 'loader', to: 'harness', label: 'loaded program' }, { from: 'harness', to: 'lesson', label: 'CALL' }, { from: 'lesson', to: 'finish', label: 'return' }]),
     'build-your-first-program': visual('compare', 'Three outcomes, three next actions',
       'A useful debugging decision starts with the observed failure layer. Do not change correct runtime logic to fix a syntax error.', [
         node('syntax', 'Does not assemble', 'No executable produced', 'Read the diagnostic file and line. Check spelling, legal operand widths, and unresolved names. No new machine run can prove this edited source until it builds.', [fact('Example', 'MOV AX, BL has mismatched widths')], 'mov ax, bl       ; Intentional invalid-width example'),

@@ -19,6 +19,18 @@ for (const name of ['architecture', 'memory', 'systems', 'assembly', 'architectu
     }
   }
 }
+// Instruction lessons own their inline topics directly rather than registering
+// them in a handbook map. Validate the raw destinations before publication too.
+const { outputMechanicsSections } = await readCourseModule('src/course/assemblyOutputMechanics.js');
+const outputChapter = chapters.find(chapter => chapter.slug === 'assembly-output');
+for (const section of outputMechanicsSections) {
+  assert(outputChapter.sections.some(item => item.id === section.id), `${section.id}: inline lesson must be published`);
+  for (const topic of section.topics || []) {
+    assert.equal(topic.sectionId, section.id, `${topic.id}: inline topic belongs to its raw section`);
+    assert(!registered.has(topic.id), `duplicate raw topic ${topic.id}`);
+    registered.add(topic.id);
+  }
+}
 const ids = new Set();
 const types = new Set(['prose', 'table', 'bits', 'code', 'steps', 'trace', 'flow', 'exercise']);
 const counts = { topics: 0, diagrams: 0, exercises: 0, code: 0, runnable: 0 };

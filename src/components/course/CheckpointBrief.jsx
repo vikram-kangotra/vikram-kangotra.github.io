@@ -12,7 +12,7 @@ export default function CheckpointBrief({ brief, compact = false, upcoming = fal
   const id = useId();
   if (!brief) return null;
   return <section className={styles.brief} data-compact={compact} aria-labelledby={`${id}-title`} data-checkpoint-brief>
-    <header className={styles.heading}><div className={styles.kicker}><span>{upcoming ? 'UPCOMING PROBLEM' : 'YOUR CHECKPOINT'} · {String(brief.number).padStart(2, '0')}</span><span>{brief.draft ? 'Draft review' : `${brief.caseCount || 1} machine ${brief.caseCount === 1 ? 'case' : 'cases'}`}</span></div><h3 id={`${id}-title`}>{brief.title}</h3><p className={styles.goal}>{brief.goal}</p></header>
+    <header className={styles.heading}><div className={styles.kicker}><span>{upcoming ? 'UPCOMING PROBLEM' : 'YOUR CHECKPOINT'} · {String(brief.number).padStart(2, '0')}</span><span>{`${brief.caseCount || 1} machine ${brief.caseCount === 1 ? 'case' : 'cases'}`}</span></div><h3 id={`${id}-title`}>{brief.title}</h3><p className={styles.goal}>{brief.goal}</p></header>
     <div className={styles.body}>
       {brief.learningGoal && <div className={styles.connection}><strong>Put the lesson into practice</strong><p><Inline text={brief.learningGoal} /></p><p><Inline text={brief.connection} /></p></div>}
       <h4>1. Where to work</h4><p>{brief.startingPoint}</p><ul className={styles.files}>{brief.files.map(path => <li key={path}>{onOpenFile ? <button type="button" disabled={disabled} onClick={() => onOpenFile(path)} title={`Open or create ${path}`}><code>{path}</code><span>Open file →</span></button> : <code>{path}</code>}</li>)}</ul>
@@ -21,7 +21,7 @@ export default function CheckpointBrief({ brief, compact = false, upcoming = fal
       {brief.suppliedInterfaces && <State rows={brief.suppliedInterfaces} label="Supplied API: already implemented by the test harness" />}
       {brief.example && <div className={styles.example}><div><strong>Given</strong><p>{brief.example.input}</p></div><div><strong>Expected behavior</strong><p>{brief.example.result}</p></div></div>}
       <State rows={brief.inputRows} label="Sample state before your instructions begin" />
-      {brief.output && <div className={styles.output}><h5>{brief.draft ? 'Target output for the later complete build' : 'Expected VGA output for the sample'}</h5><pre>{brief.output}</pre></div>}
+      {brief.output && <div className={styles.output}><h5>Expected VGA output for the sample</h5><pre>{brief.output}</pre></div>}
       <State rows={brief.expectedRows} label="Machine state after your code finishes (sample)" />
       {brief.scaffold && <details className={styles.details}><summary>What the assembly lab already supplies</summary><p>{brief.scaffold}</p></details>}
       {interfaceCode && <details className={styles.details} open={!compact}><summary>Function interface: start here</summary><CodeBlock code={interfaceCode} /></details>}

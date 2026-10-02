@@ -7,7 +7,7 @@ import { readCourseModule } from './course-loader.mjs';
 
 const { chapters } = await readCourseModule('src/course/index.js');
 const lessons = chapters.filter((chapter) => chapter.assembly);
-assert.equal(lessons.length, 12);
+assert(lessons.length >= 12, 'Keep the established complete boot-sector examples');
 const workspace = await mkdtemp(join(tmpdir(), 'os-assembly-course-'));
 const cases = [];
 try {
@@ -30,5 +30,5 @@ try {
     console.log(`PASS ${chapter.id} ${chapter.slug}: example, starter, solution assemble`);
   }
   if (process.argv[2]) await writeFile(process.argv[2], JSON.stringify(cases));
-  console.log('PASS 36 complete boot sectors; run the browser checks to verify their behavior.');
+  console.log(`PASS ${lessons.length * 3} complete boot-sector examples across ${lessons.length} legacy labs; guided helper implementations have separate executable tests.`);
 } finally { await rm(workspace, { recursive: true, force: true }); }

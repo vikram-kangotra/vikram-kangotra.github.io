@@ -1,3 +1,4 @@
+import { guidedOutput } from './guidedOutput';
 import { assemblyCheckpointTests } from './checkpointTests';
 
 // Progressive checkpoints. References are available on request;
@@ -16,6 +17,7 @@ const chapter = (intro, steps) => ({
 });
 
 export const guidedAssemblyBySlug = {
+  'assembly-output': guidedOutput,
   'assembly-first-instructions': chapter(
     'Start with an empty lesson.asm. You will make one character visible, add a second character, then revise the same two-character program. The hidden scaffold supplies putc, which reads AL, and newline; you only write the instructions you have reached in the reading.', [
       checkpoint('why-printing-is-explicit', 'Make one character visible',
@@ -490,7 +492,7 @@ export const guidedAssemblyBySlug = {
 // machine grader. The first test case supplies the ordinary Run inputs.
 for (const [slug, guide] of Object.entries(guidedAssemblyBySlug)) {
   guide.steps.forEach((step, index) => {
-    step.tests = assemblyCheckpointTests[slug][index];
-    step.instructions += ` Machine contract: ${step.tests.contract}`;
+    step.tests = step.tests || assemblyCheckpointTests[slug][index];
+    if (!step.instructions.includes(' Machine contract:')) step.instructions += ` Machine contract: ${step.tests.contract}`;
   });
 }
