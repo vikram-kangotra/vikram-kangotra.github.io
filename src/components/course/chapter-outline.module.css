@@ -1,23 +1,19 @@
 .outline{display:flex;flex-direction:column;width:100%;height:100%;min-width:0;min-height:0;overflow:hidden;border-right:1px solid var(--line);background:var(--canvas);color:var(--ink)}
-.header{flex-shrink:0;padding:24px 20px 20px}
-.header h2{margin:0;font-size:13px;font-weight:600;line-height:1.5;letter-spacing:-.01em}
-.header p{margin:7px 0 12px;font-size:11px;line-height:1.6;color:var(--muted)}
-.progress{display:block;width:100%;height:3px;border:0;border-radius:2px;overflow:hidden;appearance:none;background:var(--line);color:var(--accent);accent-color:var(--accent)}
-.progress::-webkit-progress-bar{background:var(--line);border-radius:2px}.progress::-webkit-progress-value{background:var(--accent);border-radius:2px}.progress::-moz-progress-bar{background:var(--accent);border-radius:2px}
-.scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line) transparent;padding:0 10px 16px}
-.lessons{list-style:none;margin:0;padding:0}.lessons li{margin:0;padding:0}.lessons li+li{margin-top:3px}
-.lesson{display:flex;align-items:flex-start;gap:10px;width:100%;min-height:43px;padding:11px 10px;border:0;border-left:2px solid transparent;border-radius:4px;background:transparent;color:var(--muted);text-align:left;font-family:inherit;font-size:12px;font-weight:400;line-height:1.6;cursor:pointer;transition:none}
-.lesson:hover{background:var(--surface);color:var(--ink)}
-.lesson[aria-current='step']{border-left-color:var(--accent);background:var(--soft);color:var(--ink);font-weight:550}
-.number{display:flex;align-items:center;justify-content:center;flex:0 0 18px;min-height:19px;font:10px/1.9 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--muted);font-variant-numeric:tabular-nums}
-.number svg{width:13px;height:13px;color:var(--accent);stroke-width:2}
-.lesson[aria-current='step'] .number{color:var(--accent)}
-.title{min-width:0;flex:1;overflow-wrap:anywhere}
-.codeMarker{display:flex;align-items:center;justify-content:center;flex:0 0 13px;height:19px;color:var(--muted)}.codeMarker svg{width:13px;height:13px}
-.lesson[data-checkpoint-state='passed'] .codeMarker{color:var(--accent)}
-.checkpoints{display:flex;align-items:center;gap:8px;flex-shrink:0;padding:17px 20px;border-top:1px solid var(--line);color:var(--muted);font-size:11px;line-height:1.6}.checkpoints svg{width:14px;height:14px;flex-shrink:0}
-.outline button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.outline[data-outline-view='overview']{height:auto;overflow:visible;border:0;background:transparent}
+.header{flex-shrink:0;padding:24px 22px 18px}.header h2{margin:0;font-size:14px;font-weight:600;line-height:1.5}.header p{margin:6px 0 13px;font-size:11px;line-height:1.6;color:var(--muted)}
+.progress{display:block;width:100%;height:2px;border:0;overflow:hidden;appearance:none;background:var(--line);color:var(--accent);accent-color:var(--accent)}
+.progress::-webkit-progress-bar{background:var(--line)}.progress::-webkit-progress-value{background:var(--accent)}.progress::-moz-progress-bar{background:var(--accent)}
+.search{display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--line);margin-top:18px;min-width:0;color:var(--muted)}.search>svg{flex:0 0 14px}.search input{width:100%;min-width:0;border:0;border-radius:0;background:transparent;color:var(--ink);padding:9px 0;font-size:12px;line-height:1.5;appearance:none}.search input::-webkit-search-cancel-button{display:none}.search input::placeholder{color:var(--muted)}.search button{display:grid;place-items:center;flex:0 0 26px;width:26px;height:30px;border:0;background:transparent;color:var(--muted)}.header .searchStatus{margin:10px 0 0;font-size:11px}
+.scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line) transparent;padding:0 12px 20px}
+.outline[data-outline-view='overview'] .header{padding:0 0 20px}.outline[data-outline-view='overview'] .scroll{overflow:visible;padding:0;flex:none}.outline[data-outline-view='overview'] .checkpoints{padding-inline:0}
+.lessons{list-style:none;margin:0;padding:0}.lessons li{margin:0;padding:0}.lessons li+li{margin-top:2px}.lessons li:not([data-sublesson='true'])+li:not([data-sublesson='true']){margin-top:5px}
+.lesson{display:flex;align-items:flex-start;gap:9px;width:100%;min-height:40px;padding:10px 10px;border:0;border-left:2px solid transparent;border-radius:0;background:transparent;color:var(--ink);text-align:left;font-family:inherit;font-size:12px;font-weight:500;line-height:1.65;cursor:pointer;transition:none}
+.lesson:hover{background:var(--surface)}.lesson[aria-current='step']{border-left-color:var(--accent);color:var(--accent);background:var(--soft)}
+.lessons li[data-sublesson='true']{margin-left:20px;border-left:1px solid var(--line)}.lessons li[data-sublesson='true'] .lesson{font-size:11px;font-weight:400;color:var(--muted);padding-block:8px;min-height:34px}.lessons li[data-sublesson='true'] .lesson[aria-current='step']{color:var(--accent)}.lessons li[data-search-context='true'] .lesson{color:var(--muted);font-weight:400}
+.number{display:flex;align-items:center;justify-content:center;flex:0 0 20px;min-height:20px;font:10px/2 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--muted);font-variant-numeric:tabular-nums}.number svg{width:12px;height:12px;color:var(--accent)}
+.title{min-width:0;flex:1;overflow-wrap:anywhere}.codeMarker{display:flex;align-items:center;justify-content:center;flex:0 0 12px;height:20px;color:var(--muted)}.codeMarker svg{width:12px;height:12px}.lesson[data-checkpoint-state='passed'] .codeMarker{color:var(--accent)}
+.checkpoints{display:flex;align-items:center;gap:8px;flex-shrink:0;padding:16px 22px;border-top:1px solid var(--line);color:var(--muted);font-size:11px;line-height:1.6}.checkpoints svg{width:14px;height:14px;flex-shrink:0}.checkpoints small{display:block;font-size:10px;margin-top:4px}
+.outline button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}.lesson[aria-disabled='true']{cursor:not-allowed;color:var(--muted)}.lesson[aria-disabled='true']:hover{background:transparent}
+.lesson[data-checkpoint-state='skipped'] .codeMarker,.skippedLabel{color:var(--amber)}.skippedLabel{display:block;margin-top:3px;font-size:10px;font-weight:400}.empty{font-size:12px;line-height:1.8;padding:6px 10px;color:var(--muted)}.empty a{color:var(--accent);text-underline-offset:3px}
+.srOnly{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media print{.outline{display:none}}
-.lesson[aria-disabled='true']{cursor:not-allowed}.lesson[aria-disabled='true']:hover{background:transparent;color:var(--muted)}
-.lesson[data-checkpoint-state='skipped'] .codeMarker{color:var(--amber)}.checkpoints small{display:block;font-size:10px;margin-top:4px;color:var(--muted)}
-.skippedLabel{display:block;margin-top:3px;font-size:10px;font-weight:400;color:var(--amber)}

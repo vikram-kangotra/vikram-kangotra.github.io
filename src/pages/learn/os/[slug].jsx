@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
-import { FiArrowLeft, FiArrowRight, FiBookOpen, FiCheck, FiCheckCircle, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiCode, FiDownload, FiExternalLink, FiGrid, FiList, FiLock, FiMaximize2, FiMinimize2, FiAnchor, FiTerminal, FiX } from 'react-icons/fi';
+import { FiArrowRight, FiBookOpen, FiCheck, FiCheckCircle, FiChevronDown, FiChevronLeft, FiChevronRight, FiClock, FiCode, FiDownload, FiExternalLink, FiGrid, FiList, FiLock, FiMaximize2, FiMinimize2, FiAnchor, FiTerminal, FiX } from 'react-icons/fi';
 import { SEO } from '@/components/ui';
 import { chapters, chapterSummary } from '@/course';
 import { guidedAssemblyBySlug } from '@/course/guidedAssembly';
@@ -17,6 +17,8 @@ import { getCheckpointLessonIndex, getLessonGate, isCheckpointPassed, isCheckpoi
 import { resolveLessonProgress, lessonProgressPatch, isChapterComplete } from '@/course/lessonProgress';
 import CourseShell from '@/components/course/CourseShell';
 import ChapterOutline from '@/components/course/ChapterOutline';
+import useTopicCatalog from '@/components/course/useTopicCatalog';
+import { searchTopics } from '@/course/topicCatalog';
 import CodeBlock from '@/components/course/CodeBlock';
 import LessonVisual from '@/components/course/LessonVisual';
 import LessonDepth from '@/components/course/LessonDepth';
@@ -70,6 +72,8 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
   const [split, setSplit] = useState(45);
   const [dragging, setDragging] = useState(false);
   const [chapterQuery, setChapterQuery] = useState('');
+  const [catalogEnabled, setCatalogEnabled] = useState(false);
+  const { catalog, loading: catalogLoading, error: catalogError } = useTopicCatalog(catalogEnabled);
   const [restored, setRestored] = useState(false);
   const [navigationNotice, setNavigationNotice] = useState(null);
   const [checkpointBusy, setCheckpointBusy] = useState(false);
@@ -111,7 +115,6 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
   const checkpointSkipped = !checkpointPassed && isCheckpointSkipped(buildIndex, state);
   const skippedBuilds = guide.steps.filter((step, index) => isCheckpointSkipped(index, state) && !isCheckpointPassed(step, index, state)).length;
   const allBuildsPassed = guide.steps.every((step, index) => isCheckpointPassed(step, index, state));
-  const lessonSkipped = (index) => guide.steps.some((step, stepIndex) => getCheckpointLessonIndex(chapter, step) === index && isCheckpointSkipped(stepIndex, state) && !isCheckpointPassed(step, stepIndex, state));
   const chapterAttempted = (state.buildAttempts || []).includes(guide.steps.length - 1);
   const longCode = section.code && /^(asm|c|cpp)$/i.test(section.code.language) && (section.code.source.split('\n').length > 12 || section.code.source.includes('; --- Your lesson program starts here ---'));
   const diagramAfter = Math.min(section.paragraphs.length, Math.max(1, section.teaching?.diagramAfter || 2));
@@ -324,10 +327,20 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
   function resize(value) { const nextSplit = clampSplit(value); setSplit(nextSplit); try { localStorage.setItem('vk-os-pane-split', String(nextSplit)); } catch { /* Keep the current layout. */ } }
   function drag(event) { if (!dragging || !columns.current) return; const rect = columns.current.getBoundingClientRect(); resize((event.clientX - rect.left) / rect.width * 100); }
   function resizeKey(event) { const value = event.key === 'ArrowLeft' ? split - 2 : event.key === 'ArrowRight' ? split + 2 : event.key === 'Home' ? 35 : event.key === 'End' ? 60 : null; if (value !== null) { event.preventDefault(); resize(value); } }
-  function showCurriculum() { setChapterQuery(''); dialog.current?.showModal(); }
-  function closeCurriculum() { dialog.current?.close(); curriculumTrigger.current?.focus(); }
+  function showCurriculum() { setChapterQuery(''); setCatalogEnabled(true); dialog.current?.showModal(); dialog.current?.querySelector('input')?.focus(); }
+  function closeCurriculum() { dialog.current?.close(); setCatalogEnabled(false); curriculumTrigger.current?.focus(); }
   function chooseChapter(slug) { closeCurriculum(); if (slug !== chapter.slug) router.push(`/learn/os/${slug}`); }
-  const matchingChapters = roadmap.filter((item) => `${item.id} ${item.title} ${item.subtitle} ${item.phase} ${item.slug}`.toLowerCase().includes(chapterQuery.trim().toLowerCase()));
+  function chooseTopic(event, item) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    closeCurriculum();
+    if (item.kind === 'lesson' && item.chapterSlug === chapter.slug) {
+      event.preventDefault();
+      const index = chapter.sections.findIndex(section => item.lessonHref.endsWith(`#lesson-${section.id}`));
+      if (index >= 0) goLesson(index);
+    }
+  }
+  const matchingTopics = chapterQuery.trim() ? searchTopics(catalog, chapterQuery) : [];
+  const searching = !!chapterQuery.trim();
 
   return <>
     <SEO title={`${chapter.title}: Building an OS from Scratch`} description={chapter.subtitle} path={`/learn/os/${chapter.slug}`} />
@@ -381,10 +394,10 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
           <div id="reader-panel-overview" role="tabpanel" aria-labelledby="reader-tab-overview" hidden={readerTab !== 'overview'} tabIndex={0} className={styles.guide}>
             <span className={styles.eyebrow}>CHAPTER {chapterNumber} · {chapter.phase}</span><h2>{chapter.title}</h2><p className={styles.lead}>{chapter.subtitle}</p><div className={styles.guideMeta}><span><FiClock /> {chapter.minutes} min guided work</span><span><FiBookOpen /> {chapter.sections.length} lessons</span></div>
             <ChapterStudyPlan plan={chapter.studyPlan} />
-            <h3>What you’ll build and understand</h3><ul className={styles.outcomes}>{chapter.outcomes.map((item) => <li key={item}><FiCheck /><span>{item}</span></li>)}</ul>
+            <h3>Learning objectives</h3><ul className={styles.outcomes}>{chapter.outcomes.map((item) => <li key={item}><FiCheck /><span>{item}</span></li>)}</ul>
             <details className={styles.prerequisites}><summary>Before you begin</summary><ul>{chapter.prerequisites.map((item) => <li key={item}>{item}</li>)}</ul></details>
-            <p><Link href="/learn/os/reference">Search the detailed topic reference</Link> for table layouts, algorithms, and worked traces.</p><h3>Your route through this chapter</h3><ol className={styles.lessonList}>{chapter.sections.map((item, i) => <li key={item.id}><button onClick={() => goLesson(i)} data-lesson-index={i} data-locked={lessonLocked(i)} aria-disabled={lessonLocked(i) || undefined} aria-describedby={lessonLocked(i) || lessonSkipped(i) ? `outline-status-${item.id}` : undefined} title={lockReason(i) || undefined} aria-current={lessonIndex === i ? 'step' : undefined}><span className={readLessons.includes(i) ? styles.lessonDone : ''}>{readLessons.includes(i) ? <FiCheck /> : String(i + 1).padStart(2, '0')}</span><span>{item.title}</span>{lessonLocked(i) ? <><small>Finish lesson {gate.lessonIndex + 1}</small><FiLock aria-hidden="true" /></> : <>{lessonSkipped(i) ? <small>Skipped</small> : lessonIndex === i && <small>Current</small>}<FiChevronRight /></>}</button>{(lessonLocked(i) || lessonSkipped(i)) && <span id={`outline-status-${item.id}`} hidden>{lessonLocked(i) ? `Locked. ${lockReason(i)}` : 'Checkpoint skipped; submission pending.'}</span>}</li>)}</ol>
-            <div className={styles.resources}><h3>Continue with the sources</h3>{chapter.sources.filter(source => !source.url.startsWith('/course/') || (state.read && chapterAttempted)).map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer">{source.title}<FiExternalLink /></a>)}{state.read && chapterAttempted && <a href="/course/module-1-source.tar.gz" download><span><FiDownload /> Module 1 reference project: compare after your build</span><FiArrowRight /></a>}</div>
+            <p><Link href="/learn/os/reference">Search the detailed topic reference</Link> for table layouts, algorithms, and worked traces.</p><h3>Chapter contents</h3><ChapterOutline idPrefix="overview" chapter={chapter} lessonIndex={lessonIndex} readLessons={readLessons} guide={guide} state={state} gate={gate} onSelectLesson={goLesson} />
+            <div className={styles.resources}><h3>References</h3>{chapter.sources.filter(source => !source.url.startsWith('/course/') || (state.read && chapterAttempted)).map((source) => <a key={source.url} href={source.url} target="_blank" rel="noreferrer">{source.title}<FiExternalLink /></a>)}{state.read && chapterAttempted && <a href="/course/module-1-source.tar.gz" download><span><FiDownload /> Module 1 reference project: compare after your build</span><FiArrowRight /></a>}</div>
           </div>
           <div id="reader-panel-review" role="tabpanel" aria-labelledby="reader-tab-review" hidden={readerTab !== 'review'} tabIndex={0} className={styles.checkpoint}>
             <span className={styles.eyebrow}>CHAPTER PROGRESS</span><h2 id="checkpoint-heading" tabIndex={-1}>{completed ? 'Chapter completed.' : 'Your next steps.'}</h2><p className={styles.lead}>Follow your progress through the lessons and guided practice. Your work stays saved on this device.</p>
@@ -396,7 +409,7 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
             <p className={styles.small}>Completion records the guided practice above. Building and validating these ideas in your full kernel is a separate milestone.</p>
             {guide.kind === 'project' && <details className={styles.experiments}><summary>Further experiments <span>Optional</span></summary><p>Use these cases to review or extend your experiments. Some require additional kernel facilities. Record a case after you have run it; these notes do not affect chapter completion or independently verify your kernel. Editing your code clears them.</p><fieldset><legend>Cases you have tried</legend>{chapter.challenge.checks.map((text, index) => <label key={text}><input type="checkbox" checked={(state.checks || []).includes(index)} onChange={() => update({ checks: (state.checks || []).includes(index) ? state.checks.filter(item => item !== index) : [...(state.checks || []), index] })} /><span>{text}</span></label>)}</fieldset></details>}
             {!storageAvailable && <p role="status">Browser storage is unavailable. Download your code before leaving.</p>}
-            <div className={styles.carry}><span className={styles.eyebrow}>CARRY IT INTO YOUR KERNEL</span><p>{chapter.nextBuild}</p></div>
+            <div className={styles.carry}><span className={styles.eyebrow}>PROJECT APPLICATION</span><p>{chapter.nextBuild}</p></div>
             {next && <Link prefetch={false} className={styles.nextChapter} href={`/learn/os/${next.slug}`}><div><small>UP NEXT · CHAPTER {next.id}</small><strong>{next.title}</strong></div><FiArrowRight /></Link>}
           </div>
         </div>
@@ -418,7 +431,17 @@ function ChapterWorkspace({ chapter, roadmap, previous, next }) {
       </section>
     </div>
     <dialog ref={dialog} className={styles.curriculumDialog} aria-labelledby="curriculum-heading" onKeyDownCapture={(event) => { if (event.key === 'Escape') { event.preventDefault(); closeCurriculum(); } }} onClose={() => curriculumTrigger.current?.focus()} onClick={(event) => { if (event.target === dialog.current) closeCurriculum(); }}>
-      <div className={styles.dialogInner}><header><div><span className={styles.eyebrow}>YOUR LEARNING PATH</span><h2 id="curriculum-heading">One layer at a time.</h2></div><button onClick={closeCurriculum} aria-label="Close curriculum"><FiX /></button></header><label className={styles.chapterSearch}><span className={styles.srOnly}>Search chapters</span><input type="search" value={chapterQuery} onChange={(event) => setChapterQuery(event.target.value)} placeholder="Find a chapter or concept…" autoComplete="off" /></label><nav aria-label="Course curriculum">{matchingChapters.map((item, i) => <div key={item.slug}>{(i === 0 || matchingChapters[i - 1].phase !== item.phase) && <h3>{item.phase}</h3>}<button aria-current={item.slug === chapter.slug ? 'page' : undefined} onClick={() => chooseChapter(item.slug)}><span>{isChapterComplete(item, progress[item.slug]) ? <FiCheck /> : item.id}</span><span>{item.title}<small>{item.minutes} min guided work</small></span><FiChevronRight /></button></div>)}{!matchingChapters.length && <p className={styles.empty}>No matching chapters. Try “memory” or “boot”.</p>}</nav><footer><Link prefetch={false} href="/learn/os"><FiArrowLeft /> Course overview</Link><span>{roadmap.filter((item) => isChapterComplete(item, progress[item.slug])).length} / {roadmap.length} completed</span></footer></div>
+      <div className={styles.dialogInner}>
+        <header><div><span className={styles.eyebrow}>BUILDING AN OS</span><h2 id="curriculum-heading">Course contents</h2></div><button onClick={closeCurriculum} aria-label="Close curriculum"><FiX /></button></header>
+        <label className={styles.chapterSearch}><span className={styles.srOnly}>Search course topics</span><input type="search" value={chapterQuery} onChange={(event) => setChapterQuery(event.target.value)} placeholder="Search GDT, IDT, paging, registers…" autoComplete="off" /></label>
+        {searching && <p className={styles.dialogSearchStatus} role="status">{catalogLoading ? 'Loading topic index…' : catalogError ? 'Search could not load.' : `${matchingTopics.length} matching lessons and topics`}{catalogError && <> <Link prefetch={false} href={`/learn/os/reference?q=${encodeURIComponent(chapterQuery)}`}>Search the topic reference</Link></>}</p>}
+        <nav aria-label={searching ? 'Topic search results' : 'Course curriculum'}>
+          {searching ? matchingTopics.slice(0, 40).map(item => <Link prefetch={false} className={styles.chapterResult} key={item.id} href={item.href} onClick={event => chooseTopic(event, item)}><span><strong>{item.title}</strong><small>{item.chapterTitle} · {item.kind === 'topic' ? 'Topic reference' : 'Lesson'}</small></span><FiChevronRight aria-hidden="true" /></Link>) : roadmap.map((item, i) => <div key={item.slug}>{(i === 0 || roadmap[i - 1].phase !== item.phase) && <h3>{item.phase}</h3>}<button aria-current={item.slug === chapter.slug ? 'page' : undefined} onClick={() => chooseChapter(item.slug)}><span>{isChapterComplete(item, progress[item.slug]) ? <FiCheck /> : item.id}</span><span>{item.title}<small>{item.lessons} lessons</small></span><FiChevronRight /></button></div>)}
+          {searching && !catalogLoading && !catalogError && !matchingTopics.length && <p className={styles.empty}>No results for “{chapterQuery}”. Try a topic such as “interrupt”, “paging”, or “stack”.</p>}
+          {searching && matchingTopics.length > 40 && <p className={styles.dialogSearchStatus}>Showing the first 40 results. Add another word to narrow your search.</p>}
+        </nav>
+        <footer><Link prefetch={false} href="/learn/os">All chapters</Link><Link prefetch={false} href="/learn/os/reference">Browse topics <FiArrowRight /></Link></footer>
+      </div>
     </dialog>
   </>;
 }
