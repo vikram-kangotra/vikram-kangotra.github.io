@@ -8,6 +8,7 @@ import { SEO } from '@/components/ui';
 import { chapters, chapterSummary } from '@/course';
 import { guidedAssemblyBySlug } from '@/course/guidedAssembly';
 import { guidedKernel } from '@/course/guidedKernel';
+import { guidedUefiBySlug } from '@/course/guidedUefi';
 import { makeProjectGuide } from '@/course/guidedBuild';
 import { getCExerciseTests } from '@/course/cExerciseTests';
 import { makeCheckpointBrief } from '@/course/checkpointBriefs';
@@ -449,7 +450,7 @@ export function getStaticPaths() { return { paths: chapters.map((chapter) => ({ 
 export function getStaticProps({ params }) {
   const index = chapters.findIndex((chapter) => chapter.slug === params.slug);
   const exercise = getCExerciseTests(chapters[index]);
-  const guide = guidedAssemblyBySlug[params.slug] ? { kind: 'assembly', ...guidedAssemblyBySlug[params.slug] } : params.slug === 'bootloading' ? guidedKernel : makeProjectGuide(chapters[index]);
+  const guide = guidedAssemblyBySlug[params.slug] ? { kind: 'assembly', ...guidedAssemblyBySlug[params.slug] } : params.slug === 'bootloading' ? guidedKernel : guidedUefiBySlug[params.slug] || makeProjectGuide(chapters[index]);
   const aids = assemblyReadingAids[params.slug] || systemsReadingAids[params.slug] || {};
   return { props: { chapter: { ...chapters[index], sections: chapters[index].sections.map(section => ({ ...section, ...(aids[section.id] ? { aid: aids[section.id] } : {}) })), ...(exercise ? { challenge: { ...chapters[index].challenge, starter: exercise.starter, solution: exercise.reference } } : {}), guide: { ...guide, steps: guide.steps.map((step, stepIndex) => ({ ...step, brief: makeCheckpointBrief(chapters[index], guide, step, stepIndex) })) } }, roadmap: chapters.map(chapterSummary), previous: index > 0 ? chapterSummary(chapters[index - 1]) : null, next: index + 1 < chapters.length ? chapterSummary(chapters[index + 1]) : null } };
 }

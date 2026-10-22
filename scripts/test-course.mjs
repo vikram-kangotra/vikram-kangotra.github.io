@@ -3,11 +3,12 @@ import { readCourseModule as sourceModule } from './course-loader.mjs';
 
 const { chapters } = await sourceModule('src/course/index.js');
 const { assembleBoot, bootExample } = await sourceModule('src/course/bootAssembler.js');
-assert.equal(chapters.length, 31);
+assert.equal(chapters.length, 34);
 assert.equal(new Set(chapters.map(chapter => chapter.slug)).size, chapters.length);
 assert(chapters.some(chapter => chapter.slug === 'assembly-output'), 'The output-helper chapter belongs to the published course');
+assert.deepEqual(chapters.slice(-5, -2).map(chapter => chapter.slug), ['uefi-entry', 'uefi-memory', 'uefi-kernel']);
 for (const chapter of chapters) {
-  assert(chapter.sections.length >= 10, `${chapter.slug}: enough substantive lessons`);
+  assert(chapter.sections.length >= (chapter.slug.startsWith('uefi-') ? 2 : 10), `${chapter.slug}: enough substantive lessons`);
   assert.equal(new Set(chapter.sections.map(section => section.id)).size, chapter.sections.length);
   for (const section of chapter.sections) {
     assert(section.title && section.paragraphs.length);

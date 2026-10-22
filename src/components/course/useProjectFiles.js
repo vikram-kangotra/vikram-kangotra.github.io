@@ -65,15 +65,15 @@ export default function useProjectFiles({ chapterSlug, exampleSource, challengeS
     setStorageAvailable(true);
     try { saved = JSON.parse(localStorage.getItem(key) || 'null'); }
     catch { setStorageAvailable(false); }
-    try { kernel = readSavedKernel(kernelStorageKey, defaults.kernel); }
+    try { if (guided?.kind !== 'uefi') kernel = readSavedKernel(kernelStorageKey, defaults.kernel); }
     catch { kernelUnreadable = true; setStorageAvailable(false); }
-    const next = { ...defaults, kernel: kernel.files };
+    const next = { ...defaults, kernel: guided?.kind === 'uefi' ? safeFiles(saved?.uefiFiles, defaults.kernel) : kernel.files };
     for (const name of ['example', 'challenge']) {
       const legacy = saved?.drafts?.[name];
       if (typeof legacy === 'string' && legacy.length <= 131072) next[name] = { 'boot.asm': legacy };
       if (saved?.projects?.[name]) next[name] = safeFiles(saved.projects[name], next[name]);
     }
-    let selected = ['example', 'kernel', ...(allowChallenge ? ['challenge'] : [])].includes(saved?.example) ? saved.example : initialMode;
+    let selected = guided?.kind === 'uefi' ? 'kernel' : ['example', 'kernel', ...(allowChallenge ? ['challenge'] : [])].includes(saved?.example) ? saved.example : initialMode;
     if (!saved?.example && challengeEnabled && !playground && typeof saved?.source === 'string') selected = 'challenge';
     if (selected !== 'kernel' && !saved?.projects?.[selected] && typeof saved?.source === 'string' && saved.source.length <= 131072) next[selected] = { 'boot.asm': saved.source };
     if (!guided && !playground && !saved && chapterSlug === 'bootloading') {
@@ -82,15 +82,15 @@ export default function useProjectFiles({ chapterSlug, exampleSource, challengeS
     // A divergent draft is saved under this chapter's key, never over the shared
     // project. Refreshing the page therefore does not silently discard it.
     const preservedDraft = safeFiles(saved?.kernelRecovery?.files, null);
-    if (preservedDraft) next.kernel = preservedDraft;
+    if (preservedDraft && guided?.kind !== 'uefi') next.kernel = preservedDraft;
     const previousRecovery = safeFiles(saved?.recoveredKernelFiles, null);
     recoveredKernel.current = previousRecovery; setRecoveredKernelFiles(previousRecovery);
     kernelSignature.current = kernel.signature;
-    markConflict(Boolean(preservedDraft) || kernelUnreadable);
+    markConflict(guided?.kind !== 'uefi' && (Boolean(preservedDraft) || kernelUnreadable));
     const activeModes = {
       example: firstFile(next.example, saved?.activeFiles?.example || (selected === 'example' ? saved?.activeFile || playground?.activeFile : null) || 'boot.asm'),
       challenge: firstFile(next.challenge, saved?.activeFiles?.challenge || (selected === 'challenge' ? saved?.activeFile || playground?.activeFile : null) || 'boot.asm'),
-      kernel: firstFile(next.kernel, preservedDraft ? saved?.kernelRecovery?.activeFile : saved?.activeFiles?.kernel || (playground?.initialMode === 'kernel' ? playground.activeFile : null) || kernel.activeFile),
+      kernel: firstFile(next.kernel, guided?.kind === 'uefi' ? saved?.activeFiles?.kernel || guided.file : preservedDraft ? saved?.kernelRecovery?.activeFile : saved?.activeFiles?.kernel || (playground?.initialMode === 'kernel' ? playground.activeFile : null) || kernel.activeFile),
     };
     activeByMode.current = activeModes;
     projects.current = next; modeRef.current = selected; filesRef.current = next[selected];
@@ -106,13 +106,14 @@ export default function useProjectFiles({ chapterSlug, exampleSource, challengeS
         source: filesRef.current['boot.asm'] || '', example: modeRef.current,
         activeFile: activeRef.current, activeFiles: activeByMode.current,
         projects: { example: projects.current.example, challenge: projects.current.challenge },
+        uefiFiles: guided?.kind === 'uefi' ? projects.current.kernel : undefined,
         kernelRecovery: conflictRef.current ? { files: projects.current.kernel, activeFile: activeByMode.current.kernel } : undefined,
         recoveredKernelFiles: recoveredKernel.current || undefined,
       }));
     } catch { setStorageAvailable(false); }
   }
   function persist() {
-    if (modeRef.current === 'kernel' && !conflictRef.current) {
+    if (modeRef.current === 'kernel' && guided?.kind !== 'uefi' && !conflictRef.current) {
       try {
         const saved = readSavedKernel(kernelStorageKey, defaults.kernel);
         // Check at the write boundary too: a storage event can arrive after an
@@ -130,7 +131,7 @@ export default function useProjectFiles({ chapterSlug, exampleSource, challengeS
   useEffect(() => {
     function storageChanged(event) {
       if (event.key !== kernelStorageKey && event.key !== null) return;
-      if (modeRef.current !== 'kernel') return;
+      if (modeRef.current !== 'kernel' || guided?.kind === 'uefi') return;
       try {
         if (readSavedKernel(kernelStorageKey, defaults.kernel).signature === kernelSignature.current) return;
       } catch { setStorageAvailable(false); }

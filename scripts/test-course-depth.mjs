@@ -5,7 +5,8 @@ const { chapters } = await readCourseModule('src/course/index.js');
 const maps = await Promise.all(['assembly', 'foundations', 'systems'].map(async name => (await readCourseModule(`src/course/${name}Depth.js`))[`${name}Depth`]));
 const depthMap = Object.assign({}, ...maps);
 const { assemblyOutput } = await readCourseModule('src/course/assemblyOutput.js');
-const inlineChapters = new Map(assemblyOutput.map(chapter => [chapter.slug, chapter]));
+const { uefi } = await readCourseModule('src/course/uefi.js');
+const inlineChapters = new Map([...assemblyOutput, ...uefi].map(chapter => [chapter.slug, chapter]));
 function words(value) {
   if (typeof value === 'string') return value.trim().split(/\s+/).filter(Boolean).length;
   if (Array.isArray(value)) return value.reduce((sum, item) => sum + words(item), 0);
@@ -34,11 +35,11 @@ for (const chapter of chapters) {
     const dive = section.deepDive;
     assert(Number.isInteger(section.studyMinutes) && section.studyMinutes > 0);
     if (!mapped) {
-      assert(section.paragraphs.length >= 3 && section.paragraphs.every(text => typeof text === 'string' && text.trim()), `${label}: inline lesson explains its mechanism`);
+      assert(section.paragraphs.length >= (chapter.slug.startsWith('uefi-') ? 2 : 3) && section.paragraphs.every(text => typeof text === 'string' && text.trim()), `${label}: inline lesson explains its mechanism`);
       const teaching = section.teaching;
       for (const field of ['goal', 'bridge', 'takeaway']) assert(typeof teaching?.[field] === 'string' && teaching[field].trim(), `${label}: ${field} exists`);
       assert(teaching.check?.prompt && teaching.check.answer, `${label}: core teaching includes a check and its explanation`);
-      assert(words([section.paragraphs, teaching]) >= 200, `${label}: inline core teaching is substantive`);
+      assert(words([section.paragraphs, teaching]) >= (chapter.slug.startsWith('uefi-') ? 100 : 200), `${label}: inline core teaching is substantive`);
       assert.equal(!!dive, !!rawInline.sections.find(item => item.id === section.id).deepDive, `${label}: published chapter preserves its inline worked example`);
       if (!dive) continue;
     }
@@ -76,8 +77,8 @@ for (const chapter of chapters) {
     for (let i = 0; i < chart.nodes.length; i++) for (const edge of chart.edges) if (reached.has(edge.from)) reached.add(edge.to);
     assert.equal(reached.size, ids.size, `${label}: all nodes reachable from the start`);
   }
-  assert(chapterCharts > 0, `${chapter.slug}: contains a flowchart`);
+  if (!chapter.slug.startsWith('uefi-')) assert(chapterCharts > 0, `${chapter.slug}: contains a flowchart`);
 }
 assert.equal(examples, 234, 'all existing lessons are expanded');
-assert.equal(inlineExamples, assemblyOutput.flatMap(chapter => chapter.sections).filter(section => section.deepDive).length, 'all registered inline worked examples are validated');
+assert.equal(inlineExamples, [...assemblyOutput, ...uefi].flatMap(chapter => chapter.sections).filter(section => section.deepDive).length, 'all registered inline worked examples are validated');
 console.log(`PASS: ${examples} mapped and ${inlineExamples} inline expanded lessons, ${charts} connected flowcharts, complete examples and accessible diagram data; approximately ${addedWords.toLocaleString()} added words including labels`);

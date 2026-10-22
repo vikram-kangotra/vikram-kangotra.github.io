@@ -1,6 +1,7 @@
 import { assemblyOutput } from './assemblyOutput';
 import { foundations } from './foundations';
 import { systems } from './systems';
+import { uefi } from './uefi';
 import { assemblyBasics } from './assemblyBasics';
 import { assemblyMemory } from './assemblyMemory';
 import { assemblyControl } from './assemblyControl';
@@ -22,7 +23,7 @@ for (const source of [architectureHandbook, memoryHandbook, systemsHandbook, ass
   for (const [slug, topics] of Object.entries(source)) handbook[slug] = [...(handbook[slug] || []), ...topics];
 }
 export const chapters = [...assemblyBasics, ...assemblyMemory, ...assemblyControl,
-  ...assemblyOutput, ...foundations, ...systems].map(chapter => {
+  ...assemblyOutput, ...foundations, ...systems.slice(0, -2), ...uefi, ...systems.slice(-2)].map(chapter => {
   const sections = chapter.sections.map(section => {
     const deepDive = depthByChapter[chapter.slug]?.[section.id];
     const lesson = { ...section, ...(deepDive ? { deepDive } : {}) };

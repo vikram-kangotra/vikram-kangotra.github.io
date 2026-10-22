@@ -10,6 +10,7 @@ import { searchTopics } from '@/course/topicCatalog';
 import { isChapterComplete, resolveLessonProgress } from '@/course/lessonProgress';
 import { guidedAssemblyBySlug } from '@/course/guidedAssembly';
 import { guidedKernel } from '@/course/guidedKernel';
+import { guidedUefiBySlug } from '@/course/guidedUefi';
 import { makeProjectGuide } from '@/course/guidedBuild';
 import CourseShell from '@/components/course/CourseShell';
 import useCourseProgress from '@/components/course/useCourseProgress';
@@ -172,7 +173,7 @@ export function getStaticProps() {
   return { props: {
     courseTitle,
     roadmap: chapters.map(chapter => {
-      const guide = guidedAssemblyBySlug[chapter.slug] || (chapter.slug === 'bootloading' ? guidedKernel : makeProjectGuide(chapter));
+      const guide = guidedAssemblyBySlug[chapter.slug] || guidedUefiBySlug[chapter.slug] || (chapter.slug === 'bootloading' ? guidedKernel : makeProjectGuide(chapter));
       const directory = chapterDirectory[chapter.slug];
       return { ...chapterSummary(chapter), cardTitle: directory.title, cardDescription: directory.description, topics: directory.topics, checkpoints: guide.steps.length };
     }),

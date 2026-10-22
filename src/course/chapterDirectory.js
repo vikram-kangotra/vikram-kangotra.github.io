@@ -145,6 +145,21 @@ export const chapterDirectory = {
     description: 'Plan long-mode entry, UEFI handoff, 64-bit calling conventions, and safe syscall returns.',
     topics: ['Long mode', 'UEFI handoff', '64-bit descriptors', 'SYSCALL and SYSRET'],
   },
+  'uefi-entry': {
+    title: 'UEFI entry & EFI image',
+    description: 'Build a 64-bit PE/COFF application, follow the system table, and boot it with OVMF.',
+    topics: ['PE/COFF', 'EFI_SYSTEM_TABLE', 'x64 firmware ABI', 'FAT boot'],
+  },
+  'uefi-memory': {
+    title: 'UEFI memory map & exit',
+    description: 'Query descriptors, preserve the map key, and leave boot services safely.',
+    topics: ['GetMemoryMap', 'Descriptor stride', 'Map key', 'ExitBootServices'],
+  },
+  'uefi-kernel': {
+    title: 'UEFI kernel handoff',
+    description: 'Load a separate ELF64 kernel and transfer boot information into independent code.',
+    topics: ['ELF64 segments', 'Kernel entry', 'Boot information', 'Ownership'],
+  },
   'apic-and-smp': {
     title: 'APIC & multicore startup',
     description: 'Start additional CPUs, route interrupts, and coordinate shared data and translation changes.',

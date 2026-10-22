@@ -17,6 +17,9 @@ const headers = {
 };
 for (const [name, source] of Object.entries(headers)) writeFileSync(join(include, name), source);
 const mutants = {
+  'uefi-entry': source => source.replace('if (!path) return false;', 'if (!path) return true;'),
+  'uefi-memory': source => source.replace('bytes % stride == 0', 'bytes % stride != 0'),
+  'uefi-kernel': source => source.replace('bytes <= file_size - offset', 'bytes <= file_size + offset'),
   'descriptors-and-interrupts': source => source.replace('out[5] = 0x8e', 'out[5] = 0x0e'),
   'memory-discovery': source => source.replace('base / 4096 + (base % 4096 != 0)', 'base / 4096'),
   'drivers-and-irqs': source => source.replace('++q->lost;', '/* forget loss accounting */'),
@@ -61,4 +64,4 @@ for (const chapter of chapters) {
   }
   console.log(`PASS ${chapter.slug}: reference passes; realistic mutant rejected (${tests.cases.length} cases)`);
 }
-console.log(`PASS 17 C exercises, ${totalCases} cases, 17 rejected mutants; each checkpoint stays within the 128-assertion mailbox.`);
+console.log(`PASS 20 C exercises, ${totalCases} cases, 20 rejected mutants; each checkpoint stays within the 128-assertion mailbox.`);

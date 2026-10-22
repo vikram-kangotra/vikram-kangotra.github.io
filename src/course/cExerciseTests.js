@@ -14,6 +14,30 @@ const common = `#include <stdint.h>
 `;
 const standardScope = 'Tests the declared C function on native 32-bit x86, including boundary inputs and observable state. Passing this isolated function contract does not validate your complete kernel.';
 const definitions = {
+  'uefi-entry': {
+    contract: 'Implement bool efi_fallback(const char *path). Accept exactly EFI/BOOT/BOOTX64.EFI; reject null and every other spelling.',
+    cases: [
+      test('Exact path and nearby alternatives', 'COURSE_ASSERT_EQ(efi_fallback("EFI/BOOT/BOOTX64.EFI"), true); COURSE_ASSERT_EQ(efi_fallback("EFI/BOOT/BOOTX64.EF"), false); COURSE_ASSERT_EQ(efi_fallback("EFI/BOOT/BOOTX64.EFIx"), false); COURSE_ASSERT_EQ(efi_fallback("efi/boot/bootx64.efi"), false);'),
+      test('Null and empty input', 'COURSE_ASSERT_EQ(efi_fallback(0), false); COURSE_ASSERT_EQ(efi_fallback(""), false); COURSE_ASSERT_EQ(efi_fallback("EFI/BOOT/BOOTAA.EFI"), false);'),
+    ],
+    scope: 'Checks only a bounded image-path predicate in the browser x86 machine. Boot the EFI image under OVMF to validate firmware discovery and execution.',
+  },
+  'uefi-memory': {
+    contract: 'Implement bool map_layout(unsigned bytes, unsigned stride). Accept nonempty maps whose descriptor stride is at least 40 and divides the returned byte count exactly.',
+    cases: [
+      test('Valid descriptor counts', 'COURSE_ASSERT_EQ(map_layout(40, 40), true); COURSE_ASSERT_EQ(map_layout(96, 48), true); COURSE_ASSERT_EQ(map_layout(4096, 64), true);'),
+      test('Empty, short, and partial maps', 'COURSE_ASSERT_EQ(map_layout(0, 40), false); COURSE_ASSERT_EQ(map_layout(40, 0), false); COURSE_ASSERT_EQ(map_layout(40, 39), false); COURSE_ASSERT_EQ(map_layout(81, 40), false);'),
+    ],
+    scope: 'Checks descriptor stride arithmetic on x86. The native OVMF run validates GetMemoryMap and ExitBootServices.',
+  },
+  'uefi-kernel': {
+    contract: 'Implement bool segment_fits(unsigned long long file_size, unsigned long long offset, unsigned long long bytes, unsigned long long memory_bytes). Reject offsets past EOF, file overrun, and file bytes larger than memory bytes without overflowing.',
+    cases: [
+      test('Valid empty and bounded spans', 'COURSE_ASSERT_EQ(segment_fits(4096, 0, 512, 1024), true); COURSE_ASSERT_EQ(segment_fits(4096, 4096, 0, 0), true); COURSE_ASSERT_EQ(segment_fits(4096, 4000, 96, 96), true);'),
+      test('Overrun and overflow boundaries', 'COURSE_ASSERT_EQ(segment_fits(4096, 4097, 0, 0), false); COURSE_ASSERT_EQ(segment_fits(4096, 4000, 97, 100), false); COURSE_ASSERT_EQ(segment_fits(4096, 0, 101, 100), false); COURSE_ASSERT_EQ(segment_fits(4096, 4096, ~0ULL, ~0ULL), false);'),
+    ],
+    scope: 'Checks a file-range predicate on x86. It does not validate a complete ELF64 parser or separate kernel loading in OVMF.',
+  },
   'descriptors-and-interrupts': {
     contract: 'Implement void encode_gate(uint8_t out[8], uint32_t handler). Emit an interrupt gate for selector 0x08, attributes 0x8e, little-endian handler halves, and zero reserved bytes. Change exactly eight bytes.',
     cases: [0, 0x12345678, 0xffffffff, 0x80000001].map(handler => test(`Gate for 0x${handler.toString(16).padStart(8, '0')}`, `
